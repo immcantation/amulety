@@ -1,7 +1,4 @@
-===========
-BCRembed
-===========
-
+# BCRembed
 
 .. image:: https://img.shields.io/pypi/v/bcrembedder.svg
         :target: https://pypi.python.org/pypi/bcrembedder
@@ -21,13 +18,11 @@ Python package to create embeddings of BCR amino acid sequences..
 * Documentation: TODO
 
 
-Features
---------
+# Features
 
 * TODO
 
-Credits
--------
+# Credits
 
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
 
