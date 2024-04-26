@@ -1,4 +1,4 @@
-"""Console script for bcrembedder."""
+"""Console script for bcrembed"""
 import typer
 from rich.console import Console
 from antiberty import AntiBERTyRunner
@@ -31,26 +31,24 @@ app = typer.Typer()
 stderr = Console(stderr=True)
 stdout = Console()
 
-# TODO: detect CPU or GPU
-
 @app.command()
 def antiberty(inpath: str, colname: str, outpath: str):
     """
     AntiBERTy
     Usage:
-    bcrembed antiberty /gpfs/gibbs/pi/kleinstein/embeddings/example_data/single_cell/MG-1__clone-pass_translated.tsv HL ~/palmer_scratch/test.pt
+    bcrembed antiberty tests/AIRR_rearrangement_translated.tsv HL ~/palmer_scratch/test.pt
     """
-
+    
     dat = pivot_airr(inpath) # H, L, HL
     stdout.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
     max_length = 512-2
-    #max_length = 20
     X = dat.loc[:,colname]
     X = X.dropna()
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
     X = X.apply(insert_space_every_other_except_cls)
     sequences = X.str.replace('  ', ' ')
+    # detect 
     antiberty = AntiBERTyRunner()
     start_time = time.time()
     batch_size = 500
@@ -77,7 +75,8 @@ def antiberty(inpath: str, colname: str, outpath: str):
 @app.command()
 def antiberta2(inpath: str, colname: str, outpath: str):
     """Console script for bcrembedder."""
-    dat = pd.read_table(inpath)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
     max_length = 256
     X = X.apply(lambda a: a[:max_length])
@@ -88,7 +87,7 @@ def antiberta2(inpath: str, colname: str, outpath: str):
 
     tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2")
     model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
-    model = model.to('cuda')
+    model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     stdout.print(f"Model loaded. Size: {model_size/1e6:.2f}M")
 
@@ -107,8 +106,8 @@ def antiberta2(inpath: str, colname: str, outpath: str):
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
-                         return_special_tokens_mask=True) for seq in batch]).to('cuda')
-        attention_mask = (x != tokenizer.pad_token_id).float().to('cuda')
+                         return_special_tokens_mask=True) for seq in batch]).to(device)
+        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
         with torch.no_grad():
             outputs = model(x, attention_mask = attention_mask,
                            output_hidden_states = True)
@@ -134,7 +133,8 @@ def antiberta2(inpath: str, colname: str, outpath: str):
 @app.command()
 def esm2(inpath: str, colname: str, outpath: str):
     """Console script for bcrembedder."""
-    dat = pd.read_table(inpath)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
@@ -142,7 +142,7 @@ def esm2(inpath: str, colname: str, outpath: str):
 
     tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
     model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
-    model = model.to('cuda')
+    model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     stdout.print(f"Model size: {model_size/1e6:.2f}M")
 
@@ -161,8 +161,8 @@ def esm2(inpath: str, colname: str, outpath: str):
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
-                         return_special_tokens_mask=True) for seq in batch]).to('cuda')
-        attention_mask = (x != tokenizer.pad_token_id).float().to('cuda')
+                         return_special_tokens_mask=True) for seq in batch]).to(device)
+        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
         with torch.no_grad():
             outputs = model(x, attention_mask = attention_mask,
                            output_hidden_states = True)
@@ -188,6 +188,7 @@ def esm2(inpath: str, colname: str, outpath: str):
 @app.command()
 def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     """Console script for bcrembedder."""
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = pd.read_table(inpath)
     X = dat.loc[:,colname]
     max_length = 512
@@ -196,7 +197,7 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
 
     tokenizer = AutoTokenizer.from_pretrained(modelpath)
     model = AutoModelForMaskedLM.from_pretrained(modelpath)
-    model = model.to('cuda')
+    model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     stdout.print(f"Model size: {model_size/1e6:.2f}M")
 
@@ -215,8 +216,8 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
-                         return_special_tokens_mask=True) for seq in batch]).to('cuda')
-        attention_mask = (x != tokenizer.pad_token_id).float().to('cuda')
+                         return_special_tokens_mask=True) for seq in batch]).to(device)
+        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
         with torch.no_grad():
             outputs = model(x, attention_mask = attention_mask,
                            output_hidden_states = True)
