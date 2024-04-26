@@ -8,11 +8,11 @@ from antiberty import AntiBERTyRunner
 import torch
 from transformers import (
     RoFormerModel,
-    RoFormerForMaskedLM, 
-    RoFormerTokenizer, 
-    pipeline, 
+    RoFormerForMaskedLM,
+    RoFormerTokenizer,
+    pipeline,
     RoFormerForSequenceClassification,
-    AutoTokenizer, 
+    AutoTokenizer,
     AutoModelForMaskedLM,
     DataCollatorForLanguageModeling,
     TrainingArguments,
@@ -33,8 +33,8 @@ console = Console()
 def antiberty(inpath: str, colname: str, outpath: str):
     """
     AntiBERTy
-    Usage: 
-    python cli.py antiberty /gpfs/gibbs/pi/kleinstein/embeddings/example_data/single_cell/MG-1__clone-pass_translated.tsv HL ~/palmer_scratch/test.pt 
+    Usage:
+    bcrembed antiberty /gpfs/gibbs/pi/kleinstein/embeddings/example_data/single_cell/MG-1__clone-pass_translated.tsv HL ~/palmer_scratch/test.pt
     """
 
     dat = bcrembedder.pivot_airr(inpath) # H, L, HL
@@ -51,10 +51,10 @@ def antiberty(inpath: str, colname: str, outpath: str):
     batch_size = 500
     n_seqs = len(sequences)
     dim = 512
-    
+
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
-    
+
     i = 1
     for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
@@ -62,10 +62,10 @@ def antiberty(inpath: str, colname: str, outpath: str):
         x = [a.mean(axis = 0) for a in x]
         embeddings[start:end] = torch.stack(x)
         i += 1
-    
+
     end_time = time.time()
     console.print(f"Took {end_time - start_time} seconds")
-    
+
     torch.save(embeddings, outpath)
     console.print(f"Saved embedding at {outpath}")
 
@@ -93,12 +93,12 @@ def antiberta2(inpath: str, colname: str, outpath: str):
     dim = 1024
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
-    
+
     i = 1
     for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = torch.tensor([
-        tokenizer.encode(seq, 
+        tokenizer.encode(seq,
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
@@ -109,17 +109,17 @@ def antiberta2(inpath: str, colname: str, outpath: str):
                            output_hidden_states = True)
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
-        
+
         # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1,:].mean(0)
-            
+
         embeddings[start:end] = torch.stack(outputs)
         del x
         del attention_mask
         del outputs
         i += 1
-        
+
     end_time = time.time()
     console.print(f"Took {end_time - start_time} seconds")
 
@@ -136,7 +136,7 @@ def esm2(inpath: str, colname: str, outpath: str):
     sequences = X.values
 
     tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D") 
+    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
     model = model.to('cuda')
     model_size = sum(p.numel() for p in model.parameters())
     console.print(f"Model size: {model_size/1e6:.2f}M")
@@ -147,12 +147,12 @@ def esm2(inpath: str, colname: str, outpath: str):
     dim = 1280
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
-    
+
     i = 1
     for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = torch.tensor([
-        tokenizer.encode(seq, 
+        tokenizer.encode(seq,
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
@@ -163,17 +163,17 @@ def esm2(inpath: str, colname: str, outpath: str):
                            output_hidden_states = True)
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
-        
+
         # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1,:].mean(0)
-            
+
         embeddings[start:end] = torch.stack(outputs)
         del x
         del attention_mask
         del outputs
         i += 1
-        
+
     end_time = time.time()
     console.print(f"Took {end_time - start_time} seconds")
 
@@ -190,7 +190,7 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     sequences = X.values
 
     tokenizer = AutoTokenizer.from_pretrained(modelpath)
-    model = AutoModelForMaskedLM.from_pretrained(modelpath) 
+    model = AutoModelForMaskedLM.from_pretrained(modelpath)
     model = model.to('cuda')
     model_size = sum(p.numel() for p in model.parameters())
     console.print(f"Model size: {model_size/1e6:.2f}M")
@@ -201,12 +201,12 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     dim = 1280
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
-    
+
     i = 1
     for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = torch.tensor([
-        tokenizer.encode(seq, 
+        tokenizer.encode(seq,
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
@@ -217,26 +217,25 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
                            output_hidden_states = True)
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
-        
+
         # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1,:].mean(0)
-            
+
         embeddings[start:end] = torch.stack(outputs)
         del x
         del attention_mask
         del outputs
         i += 1
-        
+
     end_time = time.time()
     console.print(f"Took {end_time - start_time} seconds")
 
     torch.save(embeddings, outpath)
     console.print(f"Saved embedding at {outpath}")
 
-
-
-
+def main():
+    app()
 
 if __name__ == "__main__":
-    app()
+    main()

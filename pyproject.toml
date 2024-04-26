@@ -2,62 +2,36 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "bcrembedder"
-version = "0.1.0"
-description = "Python package to create embeddings of BCR amino acid sequences.."
-readme = "README.rst"
-authors = [
-  {name = "Mamie Wang", email = "mamie.wang@yale.edu"}
-]
-maintainers = [
-  {name = "Mamie Wang", email = "mamie.wang@yale.edu"}
-]
-classifiers = [
 
-]
-license = {text = "MIT license"}
-dependencies = [
-  
+[tool.pytest.ini_options]
+markers = ["datafiles: load datafiles"]
+testpaths = ["tests"]
+norecursedirs = [
+    ".*",
+    "build",
+    "dist",
+    "*.egg",
+    "data",
+    "__pycache__",
+    ".github",
+    "src",
+    "docs",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "coverage",  # testing
-    "mypy",  # linting
-    "pytest",  # testing
-    "ruff"  # linting
-]
 
-[project.urls]
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+cache-dir = "~/.cache/ruff"
 
-bugs = "https://github.com/Mamie/bcrembedder/issues"
-changelog = "https://github.com/Mamie/bcrembedder/blob/master/changelog.md"
-homepage = "https://github.com/Mamie/bcrembedder"
+[tool.ruff.lint]
+select = ["I", "E1", "E4", "E7", "E9", "F", "UP", "N"]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.ruff.lint.isort]
+known-first-party = ["bcrembed"]
 
-[tool.setuptools.package-data]
-"*" = ["*.*"]
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
 
-
-
-
-# Mypy
-# ----
-
-[tool.mypy]
-files = "."
-
-# Use strict defaults
-strict = true
-warn_unreachable = true
-warn_no_return = true
-
-[[tool.mypy.overrides]]
-# Don't require test functions to include types
-module = "tests.*"
-allow_untyped_defs = true
-disable_error_code = "attr-defined"
-
+[tool.ruff.lint.pep8-naming]
+extend-ignore-names = ["mocked_*", "*allOf", "*URI*"]

@@ -1,0 +1,9 @@
+coverage:
+  status:
+    project:
+      default:
+        threshold: 5%
+    patch: off
+comment:
+  layout: "condensed_header, condensed_files, condensed_footer"
+  require_changes: true

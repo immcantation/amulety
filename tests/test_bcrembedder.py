@@ -19,6 +19,6 @@ class TestBcrembedder(unittest.TestCase):
 
     def test_antiberty_embedding(self):
         """Test something."""
-        self.airr_repertoire = 
-        
-        
+
+
+
