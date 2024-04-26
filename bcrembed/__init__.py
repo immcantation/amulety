@@ -1,5 +1,5 @@
 """Top-level package for BCRembedder."""
 
-__author__ = """Mamie Wang"""
-__email__ = 'mamie.wang@yale.edu'
-__version__ = '0.1.0'
+import importlib.metadata as importlib_metadata
+
+__version__ = importlib_metadata.version(__name__)

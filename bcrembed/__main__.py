@@ -1,9 +1,6 @@
 """Console script for bcrembedder."""
-import bcrembed
-
 import typer
 from rich.console import Console
-
 from antiberty import AntiBERTyRunner
 import torch
 from transformers import (
@@ -18,14 +15,21 @@ from transformers import (
     TrainingArguments,
     Trainer,
 )
-
 import numpy as np
 import pandas as pd
 import time
 import math
 
+from bcrembed import __version__
+from bcrembed.utils import (
+    pivot_airr,
+    insert_space_every_other_except_cls,
+    batch_loader
+)
+
 app = typer.Typer()
-console = Console()
+stderr = Console(stderr=True)
+stdout = Console()
 
 # TODO: detect CPU or GPU
 
@@ -37,14 +41,15 @@ def antiberty(inpath: str, colname: str, outpath: str):
     bcrembed antiberty /gpfs/gibbs/pi/kleinstein/embeddings/example_data/single_cell/MG-1__clone-pass_translated.tsv HL ~/palmer_scratch/test.pt
     """
 
-    dat = bcrembedder.pivot_airr(inpath) # H, L, HL
-    console.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
+    dat = pivot_airr(inpath) # H, L, HL
+    stdout.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
     max_length = 512-2
+    #max_length = 20
     X = dat.loc[:,colname]
     X = X.dropna()
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
-    X = X.apply(bcrembedder.insert_space_every_other_except_cls)
+    X = X.apply(insert_space_every_other_except_cls)
     sequences = X.str.replace('  ', ' ')
     antiberty = AntiBERTyRunner()
     start_time = time.time()
@@ -56,7 +61,7 @@ def antiberty(inpath: str, colname: str, outpath: str):
     embeddings = torch.empty((n_seqs, dim))
 
     i = 1
-    for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
+    for start, end, batch in batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = antiberty.embed(batch)
         x = [a.mean(axis = 0) for a in x]
@@ -64,10 +69,10 @@ def antiberty(inpath: str, colname: str, outpath: str):
         i += 1
 
     end_time = time.time()
-    console.print(f"Took {end_time - start_time} seconds")
+    stdout.print(f"Took {end_time - start_time} seconds")
 
     torch.save(embeddings, outpath)
-    console.print(f"Saved embedding at {outpath}")
+    stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
 def antiberta2(inpath: str, colname: str, outpath: str):
@@ -77,7 +82,7 @@ def antiberta2(inpath: str, colname: str, outpath: str):
     max_length = 256
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
-    X = X.apply(bcrembedder.insert_space_every_other_except_cls)
+    X = X.apply(insert_space_every_other_except_cls)
     X = X.str.replace('  ', ' ')
     sequences = X.values
 
@@ -85,7 +90,7 @@ def antiberta2(inpath: str, colname: str, outpath: str):
     model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
     model = model.to('cuda')
     model_size = sum(p.numel() for p in model.parameters())
-    console.print(f"Model loaded. Size: {model_size/1e6:.2f}M")
+    stdout.print(f"Model loaded. Size: {model_size/1e6:.2f}M")
 
     start_time = time.time()
     batch_size = 128
@@ -95,7 +100,7 @@ def antiberta2(inpath: str, colname: str, outpath: str):
     embeddings = torch.empty((n_seqs, dim))
 
     i = 1
-    for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
+    for start, end, batch in batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = torch.tensor([
         tokenizer.encode(seq,
@@ -121,10 +126,10 @@ def antiberta2(inpath: str, colname: str, outpath: str):
         i += 1
 
     end_time = time.time()
-    console.print(f"Took {end_time - start_time} seconds")
+    stdout.print(f"Took {end_time - start_time} seconds")
 
     torch.save(embeddings, outpath)
-    console.print(f"Saved embedding at {outpath}")
+    stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
 def esm2(inpath: str, colname: str, outpath: str):
@@ -139,7 +144,7 @@ def esm2(inpath: str, colname: str, outpath: str):
     model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
     model = model.to('cuda')
     model_size = sum(p.numel() for p in model.parameters())
-    console.print(f"Model size: {model_size/1e6:.2f}M")
+    stdout.print(f"Model size: {model_size/1e6:.2f}M")
 
     start_time = time.time()
     batch_size = 50
@@ -149,7 +154,7 @@ def esm2(inpath: str, colname: str, outpath: str):
     embeddings = torch.empty((n_seqs, dim))
 
     i = 1
-    for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
+    for start, end, batch in batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = torch.tensor([
         tokenizer.encode(seq,
@@ -175,10 +180,10 @@ def esm2(inpath: str, colname: str, outpath: str):
         i += 1
 
     end_time = time.time()
-    console.print(f"Took {end_time - start_time} seconds")
+    stdout.print(f"Took {end_time - start_time} seconds")
 
     torch.save(embeddings, outpath)
-    console.print(f"Saved embedding at {outpath}")
+    stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
 def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
@@ -193,7 +198,7 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     model = AutoModelForMaskedLM.from_pretrained(modelpath)
     model = model.to('cuda')
     model_size = sum(p.numel() for p in model.parameters())
-    console.print(f"Model size: {model_size/1e6:.2f}M")
+    stdout.print(f"Model size: {model_size/1e6:.2f}M")
 
     start_time = time.time()
     batch_size = 50
@@ -203,7 +208,7 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     embeddings = torch.empty((n_seqs, dim))
 
     i = 1
-    for start, end, batch in bcrembedder.batch_loader(sequences, batch_size):
+    for start, end, batch in batch_loader(sequences, batch_size):
         print(f'Batch {i}/{n_batches}\n')
         x = torch.tensor([
         tokenizer.encode(seq,
@@ -229,12 +234,16 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
         i += 1
 
     end_time = time.time()
-    console.print(f"Took {end_time - start_time} seconds")
+    stdout.print(f"Took {end_time - start_time} seconds")
 
     torch.save(embeddings, outpath)
-    console.print(f"Saved embedding at {outpath}")
+    stdout.print(f"Saved embedding at {outpath}")
 
 def main():
+    asci_art = "BCR EMBED\n"
+    stderr.print(asci_art)
+    stderr.print(f"BCR EMBED version {__version__}\n")
+
     app()
 
 if __name__ == "__main__":
