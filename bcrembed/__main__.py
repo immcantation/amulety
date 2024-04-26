@@ -241,6 +241,13 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
 
 def main():
     asci_art = "BCR EMBED\n"
+    asci_art = r"""
+ ____   ____ ____                _              _       __   __
+| __ ) / ___|  _ \ ___ _ __ ___ | |__   ___  __| |      \ \ / /
+|  _ \| |   | |_) / _ \ '_ ` _ \| '_ \ / _ \/ _` |       \ V /
+| |_) | |___|  _ <  __/ | | | | | |_) |  __/ (_| |        | |
+|____/ \____|_| \_\___|_| |_| |_|_.__/ \___|\__,_|        |_|
+"""
     stderr.print(asci_art)
     stderr.print(f"BCR EMBED version {__version__}\n")
 
