@@ -1,4 +1,4 @@
-"""Console script for bcrembedder."""
+"""Console script for bcrembed"""
 import typer
 from rich.console import Console
 from antiberty import AntiBERTyRunner
@@ -31,26 +31,34 @@ app = typer.Typer()
 stderr = Console(stderr=True)
 stdout = Console()
 
-# TODO: detect CPU or GPU
-
 @app.command()
 def antiberty(inpath: str, colname: str, outpath: str):
     """
-    AntiBERTy
-    Usage:
-    bcrembed antiberty /gpfs/gibbs/pi/kleinstein/embeddings/example_data/single_cell/MG-1__clone-pass_translated.tsv HL ~/palmer_scratch/test.pt
-    """
+    Embeds sequences using the AntiBERTy model.
 
+    Args:
+        inpath (str): The path to the input file. The file should be in AIRR format.
+        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        outpath (str): The path where the embeddings will be saved.
+
+    Usage:
+        bcrembed antiberty tests/AIRR_rearrangement_translated.tsv HL out.pt
+
+    Note:
+        This function prints the number of sequences being embedded, the batch number during the embedding process, 
+        the time taken for the embedding, and the location where the embeddings are saved.
+    """
+    
     dat = pivot_airr(inpath) # H, L, HL
     stdout.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
     max_length = 512-2
-    #max_length = 20
     X = dat.loc[:,colname]
     X = X.dropna()
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
     X = X.apply(insert_space_every_other_except_cls)
     sequences = X.str.replace('  ', ' ')
+    # detect 
     antiberty = AntiBERTyRunner()
     start_time = time.time()
     batch_size = 500
@@ -76,8 +84,20 @@ def antiberty(inpath: str, colname: str, outpath: str):
 
 @app.command()
 def antiberta2(inpath: str, colname: str, outpath: str):
-    """Console script for bcrembedder."""
-    dat = pd.read_table(inpath)
+    """
+    Embeds sequences using the antiBERTa2 RoFormer model.
+
+    Args:
+        inpath (str): The path to the input file. The file should be in AIRR format.
+        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        outpath (str): The path where the embeddings will be saved.
+
+    Note:
+        This function prints the size of the model used for embedding, the batch number during the embedding process, 
+        and the time taken for the embedding.
+    """
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
     max_length = 256
     X = X.apply(lambda a: a[:max_length])
@@ -88,7 +108,7 @@ def antiberta2(inpath: str, colname: str, outpath: str):
 
     tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2")
     model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
-    model = model.to('cuda')
+    model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     stdout.print(f"Model loaded. Size: {model_size/1e6:.2f}M")
 
@@ -107,8 +127,8 @@ def antiberta2(inpath: str, colname: str, outpath: str):
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
-                         return_special_tokens_mask=True) for seq in batch]).to('cuda')
-        attention_mask = (x != tokenizer.pad_token_id).float().to('cuda')
+                         return_special_tokens_mask=True) for seq in batch]).to(device)
+        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
         with torch.no_grad():
             outputs = model(x, attention_mask = attention_mask,
                            output_hidden_states = True)
@@ -133,8 +153,21 @@ def antiberta2(inpath: str, colname: str, outpath: str):
 
 @app.command()
 def esm2(inpath: str, colname: str, outpath: str):
-    """Console script for bcrembedder."""
-    dat = pd.read_table(inpath)
+    """
+    Embeds sequences using the ESM2 model.
+
+    Args:
+        inpath (str): The path to the input file. The file should be in AIRR rearrangement format.
+        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        outpath (str): The path where the embeddings will be saved.
+
+    Note:
+        This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
+        It prints the size of the model used for embedding, the batch number during the embedding process, 
+        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
+    """
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
@@ -142,7 +175,7 @@ def esm2(inpath: str, colname: str, outpath: str):
 
     tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
     model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
-    model = model.to('cuda')
+    model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     stdout.print(f"Model size: {model_size/1e6:.2f}M")
 
@@ -161,8 +194,8 @@ def esm2(inpath: str, colname: str, outpath: str):
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
-                         return_special_tokens_mask=True) for seq in batch]).to('cuda')
-        attention_mask = (x != tokenizer.pad_token_id).float().to('cuda')
+                         return_special_tokens_mask=True) for seq in batch]).to(device)
+        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
         with torch.no_grad():
             outputs = model(x, attention_mask = attention_mask,
                            output_hidden_states = True)
@@ -187,8 +220,22 @@ def esm2(inpath: str, colname: str, outpath: str):
 
 @app.command()
 def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
-    """Console script for bcrembedder."""
-    dat = pd.read_table(inpath)
+    """
+    This function generates embeddings for a given dataset using a pretrained model.
+
+    Parameters:
+    modelpath (str): The path to the pretrained model.
+    inpath (str): The path to the input data file. The data file should be in AIRR format.
+    colname (str): The name of the column in the data file that contains the sequences for which embeddings are to be generated.
+    outpath (str): The path where the generated embeddings will be saved.
+
+    The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
+    The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.
+
+    Note: This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.
+    """
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
@@ -196,7 +243,7 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
 
     tokenizer = AutoTokenizer.from_pretrained(modelpath)
     model = AutoModelForMaskedLM.from_pretrained(modelpath)
-    model = model.to('cuda')
+    model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     stdout.print(f"Model size: {model_size/1e6:.2f}M")
 
@@ -215,8 +262,8 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
                          padding="max_length",
                          truncation=True,
                          max_length=max_length,
-                         return_special_tokens_mask=True) for seq in batch]).to('cuda')
-        attention_mask = (x != tokenizer.pad_token_id).float().to('cuda')
+                         return_special_tokens_mask=True) for seq in batch]).to(device)
+        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
         with torch.no_grad():
             outputs = model(x, attention_mask = attention_mask,
                            output_hidden_states = True)
