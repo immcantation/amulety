@@ -1,30 +1,31 @@
 # BCRembed
 
-.. image:: https://img.shields.io/pypi/v/bcrembedder.svg
-        :target: https://pypi.python.org/pypi/bcrembedder
+BCRembed is a Python command line tool for generating embeddings for amino acid sequences using pretrained protein or antibody language models.
 
-.. image:: https://img.shields.io/travis/Mamie/bcrembedder.svg
-        :target: https://travis-ci.com/Mamie/bcrembedder
+## Features
 
-.. image:: https://readthedocs.org/projects/bcrembedder/badge/?version=latest
-        :target: https://bcrembedder.readthedocs.io/en/latest/?version=latest
-        :alt: Documentation Status
+- Generate embeddings using the protein / antibody language model (antiBERTy, antiBERTa2, ESM2)
+- Utilities for data preprocessing and batch loading.
+
+## Installation
+
+You can install BCRembed using pip:
+
+```bash
+pip install bcrembed
+```
+
+## Usage
+Here are some examples of how to use BCRembed:
+
+```bash
+bcrembed antiberty <input_file> <column_name> <output_file>
+bcrembed antiberta2 <input_file> <column_name> <output_file>
+bcrembed esm2 <input_file> <column_name> <output_file>
+```
+
+This command will generate embeddings for the sequences in the specified column of the input file using the specified model. The embeddings will be saved to the specified output file.
 
 
-Python package to create embeddings of BCR amino acid sequences..
-
-
-* Free software: GNU GPL
-* Documentation: TODO
-
-
-# Features
-
-* TODO
-
-# Credits
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+## License
+This project is licensed under the terms of the GPL v3 license. See the LICENSE file for details.
