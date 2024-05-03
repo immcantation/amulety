@@ -34,9 +34,19 @@ stdout = Console()
 @app.command()
 def antiberty(inpath: str, colname: str, outpath: str):
     """
-    AntiBERTy
+    Embeds sequences using the AntiBERTy model.
+
+    Args:
+        inpath (str): The path to the input file. The file should be in AIRR format.
+        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        outpath (str): The path where the embeddings will be saved.
+
     Usage:
-    bcrembed antiberty tests/AIRR_rearrangement_translated.tsv HL ~/palmer_scratch/test.pt
+        bcrembed antiberty tests/AIRR_rearrangement_translated.tsv HL out.pt
+
+    Note:
+        This function prints the number of sequences being embedded, the batch number during the embedding process, 
+        the time taken for the embedding, and the location where the embeddings are saved.
     """
     
     dat = pivot_airr(inpath) # H, L, HL
@@ -74,7 +84,18 @@ def antiberty(inpath: str, colname: str, outpath: str):
 
 @app.command()
 def antiberta2(inpath: str, colname: str, outpath: str):
-    """Console script for bcrembedder."""
+    """
+    Embeds sequences using the antiBERTa2 RoFormer model.
+
+    Args:
+        inpath (str): The path to the input file. The file should be in AIRR format.
+        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        outpath (str): The path where the embeddings will be saved.
+
+    Note:
+        This function prints the size of the model used for embedding, the batch number during the embedding process, 
+        and the time taken for the embedding.
+    """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
@@ -132,7 +153,19 @@ def antiberta2(inpath: str, colname: str, outpath: str):
 
 @app.command()
 def esm2(inpath: str, colname: str, outpath: str):
-    """Console script for bcrembedder."""
+    """
+    Embeds sequences using the ESM2 model.
+
+    Args:
+        inpath (str): The path to the input file. The file should be in AIRR rearrangement format.
+        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        outpath (str): The path where the embeddings will be saved.
+
+    Note:
+        This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
+        It prints the size of the model used for embedding, the batch number during the embedding process, 
+        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
+    """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
@@ -187,9 +220,22 @@ def esm2(inpath: str, colname: str, outpath: str):
 
 @app.command()
 def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
-    """Console script for bcrembedder."""
+    """
+    This function generates embeddings for a given dataset using a pretrained model.
+
+    Parameters:
+    modelpath (str): The path to the pretrained model.
+    inpath (str): The path to the input data file. The data file should be in AIRR format.
+    colname (str): The name of the column in the data file that contains the sequences for which embeddings are to be generated.
+    outpath (str): The path where the generated embeddings will be saved.
+
+    The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
+    The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.
+
+    Note: This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.
+    """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pd.read_table(inpath)
+    dat = pivot_airr(inpath)
     X = dat.loc[:,colname]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
