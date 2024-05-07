@@ -22,7 +22,7 @@ import math
 
 from bcrembed import __version__
 from bcrembed.utils import (
-    pivot_airr,
+    process_airr,
     insert_space_every_other_except_cls,
     batch_loader
 )
@@ -32,33 +32,33 @@ stderr = Console(stderr=True)
 stdout = Console()
 
 @app.command()
-def antiberty(inpath: str, colname: str, outpath: str):
+def antiberty(inpath: str, sequence_input: str, outpath: str):
     """
     Embeds sequences using the AntiBERTy model.
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        sequence_input (str): The name of the column in the input file that contains the sequences to be embedded.
         outpath (str): The path where the embeddings will be saved.
 
     Usage:
-        bcrembed antiberty tests/AIRR_rearrangement_translated.tsv HL out.pt
+        bcrembed antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     Note:
         This function prints the number of sequences being embedded, the batch number during the embedding process, 
         the time taken for the embedding, and the location where the embeddings are saved.
     """
     
-    dat = pivot_airr(inpath) # H, L, HL
+    dat = process_airr(inpath, sequence_input)
     stdout.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
     max_length = 512-2
-    X = dat.loc[:,colname]
+    X = dat.loc[:, "sequence_vdj_aa"]
     X = X.dropna()
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
     X = X.apply(insert_space_every_other_except_cls)
     sequences = X.str.replace('  ', ' ')
-    # detect 
+
     antiberty = AntiBERTyRunner()
     start_time = time.time()
     batch_size = 500
@@ -83,13 +83,13 @@ def antiberty(inpath: str, colname: str, outpath: str):
     stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
-def antiberta2(inpath: str, colname: str, outpath: str):
+def antiberta2(inpath: str, sequence_input: str, outpath: str):
     """
     Embeds sequences using the antiBERTa2 RoFormer model.
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        sequence_input (str): The name of the column in the input file that contains the sequences to be embedded.
         outpath (str): The path where the embeddings will be saved.
 
     Note:
@@ -97,8 +97,8 @@ def antiberta2(inpath: str, colname: str, outpath: str):
         and the time taken for the embedding.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pivot_airr(inpath)
-    X = dat.loc[:,colname]
+    dat = process_airr(inpath, sequence_input)
+    X = dat.loc[:, "sequence_vdj_aa"]
     max_length = 256
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
@@ -152,7 +152,7 @@ def antiberta2(inpath: str, colname: str, outpath: str):
     stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
-def esm2(inpath: str, colname: str, outpath: str):
+def esm2(inpath: str, sequence_input: str, outpath: str):
     """
     Embeds sequences using the ESM2 model.
 
@@ -167,8 +167,8 @@ def esm2(inpath: str, colname: str, outpath: str):
         and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pivot_airr(inpath)
-    X = dat.loc[:,colname]
+    dat = process_airr(inpath, sequence_input)
+    X = dat.loc[:, "sequence_vdj_aa"]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
