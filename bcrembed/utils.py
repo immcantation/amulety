@@ -35,6 +35,17 @@ def insert_space_every_other_except_cls(input_string):
 
 def process_airr(inpath, sequence_input):
     """
+    Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
+    
+    Parameters:
+        inpath (str): The file path to the input data.
+        sequence_input (str): The type of sequence input, which can be one of ["H", "L", "HL"].
+        
+    Returns:
+        pandas.DataFrame: Processed AIRR-seq data based on the sequence_input.
+        
+    Raises:
+        ValueError: If sequence_input is not one of ["H", "L", "HL"].
     """
     allowed_sequence_input = ["H", "L", "HL"]
     if sequence_input not in allowed_sequence_input:
@@ -81,18 +92,17 @@ def process_airr(inpath, sequence_input):
 
 def concatenate_HL(data):
     """
-    This function reads a table from a file, selects specific columns, and pivots the table based on 'cell_id' and 'chain'.
-    It also creates a new column 'HL' which is a combination of 'H' and 'L' columns separated by '<cls><cls>'.
-
+    Concatenates heavy and light chain per cell and returns a pandas DataFrame.
+    
     Parameters:
-    inpath (str): The path to the input data file. The data file should be in table format.
-
+        data (pandas.DataFrame): Input data containing information about heavy and light chains.
+        
     Returns:
-    DataFrame: The pivoted DataFrame.
+        pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
     """
     colnames = ['cell_id', 'locus', 'consensus_count', 'sequence_vdj_aa']
+    # if tie in maximum consensus_count, return the first occurrence
     data = data.loc[data.groupby(['cell_id', 'chain'])['consensus_count'].idxmax()] 
-    # TODO: test for ties (?)
     data = data.pivot(index='cell_id', columns='chain', values='sequence_vdj_aa')
     logging.info("Dropping cells with missing heavy or light chain...")
     data = data.dropna(axis = 0)

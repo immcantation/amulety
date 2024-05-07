@@ -38,7 +38,7 @@ def antiberty(inpath: str, sequence_input: str, outpath: str):
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        sequence_input (str): The name of the column in the input file that contains the sequences to be embedded.
+        sequence_input (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated). 
         outpath (str): The path where the embeddings will be saved.
 
     Usage:
@@ -89,7 +89,7 @@ def antiberta2(inpath: str, sequence_input: str, outpath: str):
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        sequence_input (str): The name of the column in the input file that contains the sequences to be embedded.
+        sequence_input (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated). 
         outpath (str): The path where the embeddings will be saved.
 
     Note:
@@ -158,7 +158,7 @@ def esm2(inpath: str, sequence_input: str, outpath: str):
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR rearrangement format.
-        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        sequence_input (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated).
         outpath (str): The path where the embeddings will be saved.
 
     Note:
@@ -219,14 +219,14 @@ def esm2(inpath: str, sequence_input: str, outpath: str):
     stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
-def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
+def custom_model(modelpath: str, inpath: str, sequence_input: str, outpath: str):
     """
     This function generates embeddings for a given dataset using a pretrained model.
 
     Parameters:
     modelpath (str): The path to the pretrained model.
     inpath (str): The path to the input data file. The data file should be in AIRR format.
-    colname (str): The name of the column in the data file that contains the sequences for which embeddings are to be generated.
+    sequence_input (str): sequence_input (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)
     outpath (str): The path where the generated embeddings will be saved.
 
     The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
@@ -235,8 +235,8 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     Note: This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pivot_airr(inpath)
-    X = dat.loc[:,colname]
+    dat = process_airr(inpath)
+    X = dat.loc[:,'sequence_vdj_aa']
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
