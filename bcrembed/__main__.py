@@ -22,7 +22,7 @@ import math
 
 from bcrembed import __version__
 from bcrembed.utils import (
-    pivot_airr,
+    process_airr,
     insert_space_every_other_except_cls,
     batch_loader
 )
@@ -32,33 +32,34 @@ stderr = Console(stderr=True)
 stdout = Console()
 
 @app.command()
-def antiberty(inpath: str, colname: str, outpath: str):
+def antiberty(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     Embeds sequences using the AntiBERTy model.
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated). 
         outpath (str): The path where the embeddings will be saved.
+        sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
     Usage:
-        bcrembed antiberty tests/AIRR_rearrangement_translated.tsv HL out.pt
+        bcrembed antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     Note:
         This function prints the number of sequences being embedded, the batch number during the embedding process, 
         the time taken for the embedding, and the location where the embeddings are saved.
     """
     
-    dat = pivot_airr(inpath) # H, L, HL
+    dat = process_airr(inpath, chain)
     stdout.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
     max_length = 512-2
-    X = dat.loc[:,colname]
+    X = dat.loc[:, sequence_col]
     X = X.dropna()
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
     X = X.apply(insert_space_every_other_except_cls)
     sequences = X.str.replace('  ', ' ')
-    # detect 
+
     antiberty = AntiBERTyRunner()
     start_time = time.time()
     batch_size = 500
@@ -83,22 +84,23 @@ def antiberty(inpath: str, colname: str, outpath: str):
     stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
-def antiberta2(inpath: str, colname: str, outpath: str):
+def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     Embeds sequences using the antiBERTa2 RoFormer model.
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated). 
         outpath (str): The path where the embeddings will be saved.
+        sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
     Note:
         This function prints the size of the model used for embedding, the batch number during the embedding process, 
         and the time taken for the embedding.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pivot_airr(inpath)
-    X = dat.loc[:,colname]
+    dat = process_airr(inpath, chain)
+    X = dat.loc[:, sequence_col]
     max_length = 256
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
@@ -152,14 +154,15 @@ def antiberta2(inpath: str, colname: str, outpath: str):
     stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
-def esm2(inpath: str, colname: str, outpath: str):
+def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     Embeds sequences using the ESM2 model.
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR rearrangement format.
-        colname (str): The name of the column in the input file that contains the sequences to be embedded.
+        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated).
         outpath (str): The path where the embeddings will be saved.
+        sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
     Note:
         This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
@@ -167,8 +170,8 @@ def esm2(inpath: str, colname: str, outpath: str):
         and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pivot_airr(inpath)
-    X = dat.loc[:,colname]
+    dat = process_airr(inpath, chain)
+    X = dat.loc[:, sequence_col]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
@@ -219,15 +222,16 @@ def esm2(inpath: str, colname: str, outpath: str):
     stdout.print(f"Saved embedding at {outpath}")
 
 @app.command()
-def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
+def custom_model(modelpath: str, inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     This function generates embeddings for a given dataset using a pretrained model.
 
     Parameters:
     modelpath (str): The path to the pretrained model.
     inpath (str): The path to the input data file. The data file should be in AIRR format.
-    colname (str): The name of the column in the data file that contains the sequences for which embeddings are to be generated.
+    chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)
     outpath (str): The path where the generated embeddings will be saved.
+    sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
     The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
     The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.
@@ -235,8 +239,8 @@ def custom_model(modelpath: str, inpath: str, colname: str, outpath: str):
     Note: This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = pivot_airr(inpath)
-    X = dat.loc[:,colname]
+    dat = process_airr(inpath)
+    X = dat.loc[:, sequence_col]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
