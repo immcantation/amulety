@@ -1,13 +1,14 @@
 """Main module."""
 import pandas as pd
 import logging
+from typing import Iterable
 
-def batch_loader(data, batch_size):
+def batch_loader(data: Iterable, batch_size: int):
     """
     This function generates batches from the provided data.
 
     Parameters:
-    data (iterable): The data to be batched.
+    data (Iterable): The data to be batched.
     batch_size (int): The size of each batch.
 
     Yields:
@@ -18,7 +19,7 @@ def batch_loader(data, batch_size):
         end_idx = min(i + batch_size, num_samples)
         yield i, end_idx, data[i:end_idx]
 
-def insert_space_every_other_except_cls(input_string):
+def insert_space_every_other_except_cls(input_string: str):
     """
     This function inserts a space after every character in the input string, except for the '[CLS]' token.
 
@@ -33,22 +34,23 @@ def insert_space_every_other_except_cls(input_string):
     result = ' [CLS] '.join(modified_parts)
     return result
 
-def process_airr(inpath, sequence_input):
+def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
     
     Parameters:
         inpath (str): The file path to the input data.
-        sequence_input (str): The type of sequence input, which can be one of ["H", "L", "HL"].
+        chain (str): The input chain, which can be one of ["H", "L", "HL"].
+        sequence_col (str): The name of the column containing the amino acid sequences to embed. 
         
     Returns:
-        pandas.DataFrame: Processed AIRR-seq data based on the sequence_input.
+        pandas.DataFrame: Dataframe with formatted sequences.
         
     Raises:
-        ValueError: If sequence_input is not one of ["H", "L", "HL"].
+        ValueError: If chain is not one of ["H", "L", "HL"].
     """
     allowed_sequence_input = ["H", "L", "HL"]
-    if sequence_input not in allowed_sequence_input:
+    if chain not in allowed_sequence_input:
         raise ValueError("Input x must be one of {}".format(allowed_sequence_input))
         
     data = pd.read_table(inpath)
@@ -63,49 +65,53 @@ def process_airr(inpath, sequence_input):
 
     if data_type == 'bulk-only':
         logging.info("No cell_id column detected. Processsing as bulk data.")
-        if sequence_input == 'HL':
-            raise ValueError('sequence_input invalid for bulk mode.')
+        if chain == 'HL':
+            raise ValueError('chain = "HL" invalid for bulk mode.')
         else: 
-            colnames = ['sequence_id', 'sequence_vdj_aa']
-            data = data.loc[data.chain == sequence_input, colnames]      
+            colnames = ['sequence_id', sequence_col]
+            data = data.loc[data.chain == chain, colnames]      
             
     elif data_type == 'single-cell-only':
         logging.info("Processing single-cell BCR data...")
-        if sequence_input == "HL":
+        if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell...")
-            data = concatenate_HL(data)
+            data = concatenate_HL(data, sequence_col)
         else:
-            colnames = ['cell_id', 'sequence_vdj_aa']
-            data = data.loc[data.chain == sequence_input, colnames]
+            colnames = ['cell_id', sequence_col]
+            data = data.loc[data.chain == chain, colnames]
         
     else:
         logging.info("Missing values in cell_id column. Processing as mixed bulk and single-cell BCR data...")
-        if sequence_input == "HL":
+        if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell...")
             data = data.loc[data.cell_id.notna(),]
-            data = concatenate_HL(data)
+            data = concatenate_HL(data, sequence_col)
         else:
-            colnames = ['sequence_id', 'cell_id', 'sequence_vdj_aa']
-            data = data.loc[data.chain == sequence_input, colnames]
+            colnames = ['sequence_id', 'cell_id', sequence_col]
+            data = data.loc[data.chain == chain, colnames]
         
     return data
 
-def concatenate_HL(data):
+def concatenate_HL(data: pd.DataFrame, sequence_col: str):
     """
     Concatenates heavy and light chain per cell and returns a pandas DataFrame.
     
     Parameters:
         data (pandas.DataFrame): Input data containing information about heavy and light chains.
+        sequence_col (str): The name of the column containing the amino acid sequences to embed. 
         
     Returns:
         pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
     """
-    colnames = ['cell_id', 'locus', 'consensus_count', 'sequence_vdj_aa']
+    colnames = ['cell_id', 'locus', 'consensus_count', sequence_col]
+    missing_cols = [col for col in colnames if col not in data.columns]
+    if missing_cols:
+        raise ValueError(f"Column(s) {missing_cols} is/are not present in the input data.")
     # if tie in maximum consensus_count, return the first occurrence
     data = data.loc[data.groupby(['cell_id', 'chain'])['consensus_count'].idxmax()] 
-    data = data.pivot(index='cell_id', columns='chain', values='sequence_vdj_aa')
+    data = data.pivot(index='cell_id', columns='chain', values=sequence_col)
     logging.info("Dropping cells with missing heavy or light chain...")
     data = data.dropna(axis = 0)
-    data.loc[:,'sequence_vdj_aa'] = data.H + '<cls><cls>' + data.L
+    data.loc[:,sequence_col] = data.H + '<cls><cls>' + data.L
     return data
     
