@@ -149,16 +149,20 @@ def translate_igblast(inpath: str, outdir: str, reference_dir: str):
             f.write(row["sequence"] + "\n")
 
     # Run IgBlast on FASTA
-    command_igblastn = ["igblastn", "-germline_db_V", f"{reference_dir}/imgt_human_ig_v",
-           "-germline_db_D", f"{reference_dir}/imgt_human_ig_d",
-           "-germline_db_J", f"{reference_dir}/imgt_human_ig_j",
+    command_igblastn = ["igblastn", "-germline_db_V", f"{reference_dir}/database/imgt_human_ig_v",
+           "-germline_db_D", f"{reference_dir}/database/imgt_human_ig_d",
+           "-germline_db_J", f"{reference_dir}/database/imgt_human_ig_j",
            "-query", out_fasta,
            "-organism", "human",
-           "-auxiliary_data", f"{reference_dir}/human_gl.aux",
+           "-auxiliary_data", f"{reference_dir}/optional_file/human_gl.aux",
            "-show_translation",
            "-outfmt", "19",
            "-out", out_igblast]
-    subprocess.run(command_igblastn)
+    pipes = subprocess.Popen(command_igblastn, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = pipes.communicate()
+
+    if pipes.returncode != 0:
+        raise Exception(f"IgBlast failed with error code {pipes.returncode}. {stderr.decode('utf-8')}")
 
     # Read IgBlast output
     igblast_transl = pd.read_csv(out_igblast, sep="\t", usecols=["sequence_id","sequence_aa", "sequence_alignment_aa"])
@@ -170,6 +174,10 @@ def translate_igblast(inpath: str, outdir: str, reference_dir: str):
     # Merge and save the translated data with original data
     data_transl = pd.merge(data, igblast_transl, on="sequence_id", how="left")
     data_transl.to_csv(out_translated, sep="\t", index=False)
+
+    # Clean up
+    os.remove(out_fasta)
+    os.remove(out_igblast)
 
 # test case:
 # dat = pivot_airr("/gpfs/gibbs/pi/kleinstein/embeddings/example_data/single_cell/MG-1__clone-pass_translated.tsv")
