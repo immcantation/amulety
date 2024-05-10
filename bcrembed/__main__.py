@@ -91,8 +91,7 @@ def antiberty(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequen
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    out_format = os.path.splitext(outpath)[-1][1:]
-    save_embedding(dat, embeddings, outpath, out_format)
+    save_embedding(dat, embeddings, outpath)
     logger.info("Saved embedding at %s", outpath)
 
 @app.command()
@@ -106,10 +105,9 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
         chains concatenated). 
         outpath (str): The path where the embeddings will be saved.
         sequence_col (str): The name of the column containing the amino acid sequences to embed. 
-
-    Note:
-        This function prints the size of the model used for embedding, the batch number during 
-        the embedding process, and the time taken for the embedding.
+    
+    Usage:
+        bcrembed antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = process_airr(inpath, chain)
@@ -170,8 +168,7 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    out_format = os.path.splitext(outpath)[-1][1:]
-    save_embedding(dat, embeddings, outpath, out_format)
+    save_embedding(dat, embeddings, outpath)
     logger.info("Saved embedding at %s", outpath)
 
 @app.command()
@@ -185,6 +182,9 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
         chains concatenated).
         outpath (str): The path where the embeddings will be saved.
         sequence_col (str): The name of the column containing the amino acid sequences to embed. 
+
+    Usage:
+        bcrembed esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     Note:
         This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
@@ -247,12 +247,14 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    out_format = os.path.splitext(outpath)[-1][1:]
-    save_embedding(dat, embeddings, outpath, out_format)
+    save_embedding(dat, embeddings, outpath)
     logger.info("Saved embedding at %s", outpath)
 
 @app.command()
-def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
+def custommodel(modelpath: str, inpath: str, chain: str, outpath: str, 
+                embedding_dimension: int, max_length: int, 
+                batch_size: int,
+                sequence_col: str = 'sequence_vdj_aa'):
     """
     This function generates embeddings for a given dataset using a pretrained model.
 
@@ -261,17 +263,23 @@ def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence
     chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)
     inpath (str): The path to the input data file. The data file should be in AIRR format.
     outpath (str): The path where the generated embeddings will be saved.
+    embedding_dimension (int): The dimension of the embedding layer. 
+    max_length (int): The maximum length that the model can take.
+    batch_size (int): The batch size of sequences to embed.
+    
     sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
     The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
     The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.
+
+    Usage:
+        bcrembed custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     Note: This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = process_airr(inpath, chain)
     X = dat.loc[:, sequence_col]
-    max_length = 512
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
 
@@ -282,11 +290,9 @@ def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence
     logger.info("Model size: %sM", round(model_size/1e6, 2))
 
     start_time = time.time()
-    batch_size = 50
     n_seqs = len(sequences)
-    dim = 1280
     n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
+    embeddings = torch.empty((n_seqs, embedding_dimension))
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
@@ -317,7 +323,7 @@ def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    torch.save(embeddings, outpath)
+    save_embedding(dat, embeddings, outpath)
     logger.info("Saved embedding at %s", outpath)
 
 def main():

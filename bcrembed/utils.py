@@ -40,7 +40,7 @@ def insert_space_every_other_except_cls(input_string: str):
     result = ' [CLS] '.join(modified_parts)
     return result
 
-def save_embedding(dat, embedding, outpath, out_format = 'pt'):
+def save_embedding(dat, embedding, outpath):
     """
     Saves the embedding data to a specified file path in the desired format.
 
@@ -48,25 +48,24 @@ def save_embedding(dat, embedding, outpath, out_format = 'pt'):
         dat (DataFrame): The original DataFrame containing index columns and possibly other data.
         embedding (Tensor): The embedding data to be saved.
         outpath (str): The file path where the embedding data will be saved.
-        out_format (str, optional): The output format for the embedding data. Default is 'pt'.
-
-    Raises:
-        ValueError: If the output format is not supported.
-
-    Supported output formats:
+        The output suffix should be one of the following:
         - 'pt': PyTorch binary format
         - 'tsv': Tab-separated values format
         - 'csv': Comma-separated values format
+
+    Raises:
+        ValueError: If the output format is not supported.
 
     Note:
         Index columns from the original DataFrame 'dat' will be included in the saved output.
 
     Example:
-        save_embedding(dat, embeddings, "embedding.tsv", out_format='tsv')
+        save_embedding(dat, embeddings, "embedding.tsv")
     """
+    out_format = os.path.splitext(outpath)[-1][1:]
     allowed_outputs = ["tsv", "csv", "pt"]
     if out_format not in allowed_outputs:
-        raise ValueError(f"Input x must be one of {allowed_outputs}")
+        raise ValueError(f"Output suffix must be one of {allowed_outputs}")
 
     allowed_index_cols = ["sequence_id", "cell_id"]
     index_cols = [col for col in dat.columns if col in allowed_index_cols]
