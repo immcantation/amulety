@@ -25,6 +25,7 @@ jobs:
           conda install -c conda-forge -c bioconda -c defaults igblast=1.22.0
           wget -c https://github.com/nf-core/test-datasets/raw/airrflow/database-cache/igblast_base.zip
           unzip igblast_base.zip
+          igblastn -version
       # Install pip and pytest
       - name: Install dependencies
         run: |
