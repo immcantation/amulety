@@ -53,7 +53,7 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 513
         assert embeddings.shape[0] == 1
         os.remove("HL_test.tsv")
-        
+
     def test_antiberty_bulk_HL_embedding(self):
         """Test antiberty (bulk HL)."""
         with self.assertRaises(ValueError):
@@ -76,7 +76,7 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 514
         assert embeddings.shape[0] == 2
         os.remove("H_test.tsv")
-  
+
     def test_antiberty_bulk_H_embedding(self):
         """Test antiberty (bulk H)."""
         antiberty(self.test_airr_bulk_path, "H", "H_test.pt")
@@ -104,7 +104,7 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 514
         assert embeddings.shape[0] == 2
         os.remove("L_test.tsv")
-            
+
 
     def test_antiberty_bulk_L_embedding(self):
         """Test antiberty (bulk L)."""
@@ -248,7 +248,7 @@ class TestBcrembedder(unittest.TestCase):
         translate_igblast(self.test_airr_translation_path,
                                  self.this_dir,
                                  # ugly hack to get to the igblast_base directory in GitHub actions
-                                 os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir),os.pardir,os.pardir)),"igblast_base"))
+                                 os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir),os.pardir)),"igblast_base"))
         igblast_outfile = os.path.join(self.this_dir, "AIRR_rearrangement_single-cell_testtranslation_translated.tsv")
         data_out = pd.read_table(igblast_outfile, delimiter="\t")
         assert (data_out["sequence_vdj_aa"]==data_out["sequence_vdj_aa_original"]).all()
