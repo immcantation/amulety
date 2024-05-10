@@ -1,7 +1,11 @@
 """Main module."""
-import pandas as pd
 import logging
 from typing import Iterable
+import pandas as pd
+import torch
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def batch_loader(data: Iterable, batch_size: int):
     """
@@ -34,6 +38,44 @@ def insert_space_every_other_except_cls(input_string: str):
     result = ' [CLS] '.join(modified_parts)
     return result
 
+def save_embedding(dat, embedding, outpath, out_format = 'pt'):
+    """
+    Saves the embedding data to a specified file path in the desired format.
+
+    Args:
+        dat (DataFrame): The original DataFrame containing index columns and possibly other data.
+        embedding (Tensor): The embedding data to be saved.
+        outpath (str): The file path where the embedding data will be saved.
+        out_format (str, optional): The output format for the embedding data. Default is 'pt'.
+
+    Raises:
+        ValueError: If the output format is not supported.
+
+    Supported output formats:
+        - 'pt': PyTorch binary format
+        - 'tsv': Tab-separated values format
+        - 'csv': Comma-separated values format
+
+    Note:
+        Index columns from the original DataFrame 'dat' will be included in the saved output.
+
+    Example:
+        save_embedding(dat, embeddings, "embedding.tsv", out_format='tsv')
+    """
+    allowed_outputs = ["tsv", "csv", "pt"]
+    if out_format not in allowed_outputs:
+        raise ValueError(f"Input x must be one of {allowed_outputs}")
+
+    allowed_index_cols = ["sequence_id", "cell_id"]
+    index_cols = [col for col in dat.columns if col in allowed_index_cols]
+    if out_format == 'pt':
+        torch.save(embedding, outpath)
+    elif out_format in ['tsv', 'csv']:
+        embedding_df = pd.DataFrame(embedding.numpy())
+        result_df = pd.concat([dat.loc[:,index_cols].reset_index(drop=True), embedding_df], axis=1)
+        sep = '\t' if out_format == 'tsv' else ','
+        result_df.to_csv(outpath, sep=sep, index=False)
+
 def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
@@ -51,8 +93,8 @@ def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa')
     """
     allowed_sequence_input = ["H", "L", "HL"]
     if chain not in allowed_sequence_input:
-        raise ValueError("Input x must be one of {}".format(allowed_sequence_input))
-        
+        raise ValueError(f"Input x must be one of {allowed_sequence_input}")
+   
     data = pd.read_table(inpath)
     data.loc[:,'chain'] = data.loc[:,'locus'].apply(lambda x: 'H' if x == 'IGH' else 'L')
     
@@ -64,7 +106,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa')
         data_type = 'mixed'
 
     if data_type == 'bulk-only':
-        logging.info("No cell_id column detected. Processsing as bulk data.")
+        logger.info("No cell_id column detected. Processsing as bulk data.")
         if chain == 'HL':
             raise ValueError('chain = "HL" invalid for bulk mode.')
         else: 
@@ -72,7 +114,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa')
             data = data.loc[data.chain == chain, colnames]      
             
     elif data_type == 'single-cell-only':
-        logging.info("Processing single-cell BCR data...")
+        logger.info("Processing single-cell BCR data...")
         if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell...")
             data = concatenate_HL(data, sequence_col)
@@ -80,10 +122,10 @@ def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa')
             colnames = ['cell_id', sequence_col]
             data = data.loc[data.chain == chain, colnames]
         
-    else:
-        logging.info("Missing values in cell_id column. Processing as mixed bulk and single-cell BCR data...")
+    elif data_type == 'mixed':
+        logger.info("Missing values in cell_id column. Processing as mixed bulk and single-cell BCR data...")
         if chain == "HL":
-            logging.info("Concatenating heavy and light chain per cell...")
+            logger.info("Concatenating heavy and light chain per cell...")
             data = data.loc[data.cell_id.notna(),]
             data = concatenate_HL(data, sequence_col)
         else:
@@ -110,8 +152,12 @@ def concatenate_HL(data: pd.DataFrame, sequence_col: str):
     # if tie in maximum consensus_count, return the first occurrence
     data = data.loc[data.groupby(['cell_id', 'chain'])['consensus_count'].idxmax()] 
     data = data.pivot(index='cell_id', columns='chain', values=sequence_col)
-    logging.info("Dropping cells with missing heavy or light chain...")
+    data = data.reset_index(level = 'cell_id')
+    n_cells = data.shape[0]
     data = data.dropna(axis = 0)
+    n_dropped = n_cells - data.shape[0]
+    if n_dropped > 0:
+        logging.info("Dropping %s cells with missing heavy or light chain...", n_dropped)
     data.loc[:,sequence_col] = data.H + '<cls><cls>' + data.L
     return data
     

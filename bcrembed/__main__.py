@@ -1,31 +1,31 @@
 """Console script for bcrembed"""
+import os
+import logging
+import time
+import math
+
 import typer
 from rich.console import Console
 from antiberty import AntiBERTyRunner
 import torch
 from transformers import (
-    RoFormerModel,
     RoFormerForMaskedLM,
     RoFormerTokenizer,
-    pipeline,
-    RoFormerForSequenceClassification,
     AutoTokenizer,
     AutoModelForMaskedLM,
-    DataCollatorForLanguageModeling,
-    TrainingArguments,
-    Trainer,
 )
-import numpy as np
-import pandas as pd
-import time
-import math
+
 
 from bcrembed import __version__
 from bcrembed.utils import (
     process_airr,
     insert_space_every_other_except_cls,
-    batch_loader
+    batch_loader,
+    save_embedding
 )
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = typer.Typer()
 stderr = Console(stderr=True)
@@ -38,29 +38,38 @@ def antiberty(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequen
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated). 
+        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light 
+        chains concatenated). 
         outpath (str): The path where the embeddings will be saved.
         sequence_col (str): The name of the column containing the amino acid sequences to embed. 
+        output_format (str): The output format of the embedding
 
     Usage:
         bcrembed antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     Note:
-        This function prints the number of sequences being embedded, the batch number during the embedding process, 
-        the time taken for the embedding, and the location where the embeddings are saved.
+        This function prints the number of sequences being embedded, the batch number during the 
+        embedding process, the time taken for the embedding, and the location where the embeddings 
+        are saved.
     """
-    
+
     dat = process_airr(inpath, chain)
-    stdout.print(f"Embedding {dat.shape[0]} sequences using antiberty...")
+    logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512-2
-    X = dat.loc[:, sequence_col]
-    X = X.dropna()
+    n_dat = dat.shape[0]
+
+    dat = dat.dropna(subset = [sequence_col])
+    n_dropped = n_dat - dat.shape[0]
+    if n_dropped > 0:
+        logger.info("Removed %s rows with missing values in %s", n_dropped, sequence_col)
+
+    X = dat.loc[:,sequence_col]
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
     X = X.apply(insert_space_every_other_except_cls)
     sequences = X.str.replace('  ', ' ')
 
-    antiberty = AntiBERTyRunner()
+    antiberty_runner = AntiBERTyRunner()
     start_time = time.time()
     batch_size = 500
     n_seqs = len(sequences)
@@ -71,17 +80,18 @@ def antiberty(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequen
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
-        print(f'Batch {i}/{n_batches}\n')
-        x = antiberty.embed(batch)
+        logger.info('Batch %s/%s', i, n_batches)
+        x = antiberty_runner.embed(batch)
         x = [a.mean(axis = 0) for a in x]
         embeddings[start:end] = torch.stack(x)
         i += 1
 
     end_time = time.time()
-    stdout.print(f"Took {end_time - start_time} seconds")
+    logger.info("Took %s seconds", end_time - start_time)
 
-    torch.save(embeddings, outpath)
-    stdout.print(f"Saved embedding at {outpath}")
+    out_format = os.path.splitext(outpath)[-1][1:]
+    save_embedding(dat, embeddings, outpath, out_format)
+    logger.info("Saved embedding at %s", outpath)
 
 @app.command()
 def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
@@ -90,18 +100,26 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR format.
-        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated). 
+        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light 
+        chains concatenated). 
         outpath (str): The path where the embeddings will be saved.
         sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
     Note:
-        This function prints the size of the model used for embedding, the batch number during the embedding process, 
-        and the time taken for the embedding.
+        This function prints the size of the model used for embedding, the batch number during 
+        the embedding process, and the time taken for the embedding.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = process_airr(inpath, chain)
-    X = dat.loc[:, sequence_col]
     max_length = 256
+    n_dat = dat.shape[0]
+
+    dat = dat.dropna(subset = [sequence_col])
+    n_dropped = n_dat - dat.shape[0]
+    if n_dropped > 0:
+        logger.info("Removed %s rows with missing values in %s", n_dropped, sequence_col)
+
+    X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     X = X.str.replace('<cls><cls>', '[CLS][CLS]')
     X = X.apply(insert_space_every_other_except_cls)
@@ -112,7 +130,7 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
     model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
-    stdout.print(f"Model loaded. Size: {model_size/1e6:.2f}M")
+    logger.info("Model loaded. Size: %s:.2f M", model_size/1e6)
 
     start_time = time.time()
     batch_size = 128
@@ -123,7 +141,7 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
-        print(f'Batch {i}/{n_batches}\n')
+        logger.info('Batch %s/%s.', i, n_batches)
         x = torch.tensor([
         tokenizer.encode(seq,
                          padding="max_length",
@@ -148,10 +166,11 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
         i += 1
 
     end_time = time.time()
-    stdout.print(f"Took {end_time - start_time} seconds")
+    logger.info("Took %s seconds", end_time - start_time)
 
-    torch.save(embeddings, outpath)
-    stdout.print(f"Saved embedding at {outpath}")
+    out_format = os.path.splitext(outpath)[-1][1:]
+    save_embedding(dat, embeddings, outpath, out_format)
+    logger.info("Saved embedding at %s", outpath)
 
 @app.command()
 def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
@@ -160,7 +179,8 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
 
     Args:
         inpath (str): The path to the input file. The file should be in AIRR rearrangement format.
-        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated).
+        chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light 
+        chains concatenated).
         outpath (str): The path where the embeddings will be saved.
         sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
@@ -171,8 +191,15 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     dat = process_airr(inpath, chain)
-    X = dat.loc[:, sequence_col]
     max_length = 512
+    n_dat = dat.shape[0]
+
+    dat = dat.dropna(subset = [sequence_col])
+    n_dropped = n_dat - dat.shape[0]
+    if n_dropped > 0:
+        logger.info("Removed %s rows with missing values in %s", n_dropped, sequence_col)
+    
+    X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
 
@@ -180,7 +207,7 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
     model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
-    stdout.print(f"Model size: {model_size/1e6:.2f}M")
+    logger.info("Model size: %s:.2f M", model_size/1e6)
 
     start_time = time.time()
     batch_size = 50
@@ -191,7 +218,7 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
-        print(f'Batch {i}/{n_batches}\n')
+        logger.info('Batch %s/%s.', i, n_batches)
         x = torch.tensor([
         tokenizer.encode(seq,
                          padding="max_length",
@@ -216,20 +243,21 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
         i += 1
 
     end_time = time.time()
-    stdout.print(f"Took {end_time - start_time} seconds")
+    logger.info("Took %s seconds", end_time - start_time)
 
-    torch.save(embeddings, outpath)
-    stdout.print(f"Saved embedding at {outpath}")
+    out_format = os.path.splitext(outpath)[-1][1:]
+    save_embedding(dat, embeddings, outpath, out_format)
+    logger.info("Saved embedding at %s", outpath)
 
 @app.command()
-def custom_model(modelpath: str, inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
+def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence_col: str = 'sequence_vdj_aa'):
     """
     This function generates embeddings for a given dataset using a pretrained model.
 
     Parameters:
     modelpath (str): The path to the pretrained model.
-    inpath (str): The path to the input data file. The data file should be in AIRR format.
     chain (str): Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)
+    inpath (str): The path to the input data file. The data file should be in AIRR format.
     outpath (str): The path where the generated embeddings will be saved.
     sequence_col (str): The name of the column containing the amino acid sequences to embed. 
 
@@ -239,7 +267,7 @@ def custom_model(modelpath: str, inpath: str, chain: str, outpath: str, sequence
     Note: This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = process_airr(inpath)
+    dat = process_airr(inpath, chain)
     X = dat.loc[:, sequence_col]
     max_length = 512
     X = X.apply(lambda a: a[:max_length])

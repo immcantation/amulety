@@ -8,8 +8,8 @@ python -m unittest test_bcrembedder.py
 import unittest
 import os
 import torch
+import pandas as pd
 from bcrembed.__main__ import antiberty, antiberta2, esm2
-import bcrembed.utils
 
 class TestBcrembedder(unittest.TestCase):
     """Function that runs at start of tests for common resources.
@@ -40,6 +40,15 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 512
         assert embeddings.shape[0] == 2
         os.remove("HL_test.pt")
+
+    def test_antiberty_mixed_HL_embedding_tsv(self):
+        """Test antiberty (single-cell and bulk HL)."""
+        antiberty(self.test_airr_mixed_path, "HL", "HL_test.tsv")
+        assert os.path.exists("HL_test.tsv")
+        embeddings = pd.read_table("HL_test.tsv", delimiter = '\t')
+        assert embeddings.shape[1] == 513
+        assert embeddings.shape[0] == 1
+        os.remove("HL_test.tsv")
         
     def test_antiberty_bulk_HL_embedding(self):
         """Test antiberty (bulk HL)."""
@@ -54,6 +63,15 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 512
         assert embeddings.shape[0] == 2
         os.remove("H_test.pt")
+
+    def test_antiberty_mixed_H_embedding_tsv(self):
+        """Test antiberty (single-cell and bulk H)."""
+        antiberty(self.test_airr_mixed_path, "H", "H_test.tsv")
+        assert os.path.exists("H_test.tsv")
+        embeddings = pd.read_table("H_test.tsv", delimiter = '\t')
+        assert embeddings.shape[1] == 514
+        assert embeddings.shape[0] == 2
+        os.remove("H_test.tsv")
             
     def test_antiberty_bulk_H_embedding(self):
         """Test antiberty (bulk H)."""
@@ -72,6 +90,15 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 512
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
+
+    def test_antiberty_mixed_L_embedding_tsv(self):
+        """Test antiberty (single-cell and bulk L)."""
+        antiberty(self.test_airr_mixed_path, "L", "L_test.tsv")
+        assert os.path.exists("L_test.tsv")
+        embeddings = pd.read_table("L_test.tsv", delimiter = '\t')
+        assert embeddings.shape[1] == 514
+        assert embeddings.shape[0] == 2
+        os.remove("L_test.tsv")
             
     def test_antiberty_bulk_L_embedding(self):
         """Test antiberty (bulk L)."""
@@ -81,8 +108,6 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 512
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
-    
-
     
     def test_esm2_sc_HL_embedding(self):
         """Test esm2 (single-cell HL)."""
@@ -134,8 +159,6 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
         
-    
-
     def test_antiBERTa2_sc_HL_embedding(self):
         """Test antiBERTa2 (single-cell HL)."""
         antiberta2(self.test_airr_sc_path, "HL", "HL_test.pt")
@@ -144,6 +167,15 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 1024
         assert embeddings.shape[0] == 2
         os.remove("HL_test.pt")
+
+    def test_antiberta2_mixed_HL_embedding_tsv(self):
+        """Test antiberta2 (single-cell and bulk HL)."""
+        antiberta2(self.test_airr_mixed_path, "HL", "HL_test.tsv")
+        assert os.path.exists("HL_test.tsv")
+        embeddings = pd.read_table("HL_test.tsv", delimiter = '\t')
+        assert embeddings.shape[1] == 1025
+        assert embeddings.shape[0] == 1
+        os.remove("HL_test.tsv")
         
     def test_antiBERTa2_bulk_HL_embedding(self):
         """Test antiBERTa2 (bulk HL)."""
@@ -158,6 +190,15 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 1024
         assert embeddings.shape[0] == 2
         os.remove("H_test.pt")
+
+    def test_antiberta2_mixed_H_embedding_tsv(self):
+        """Test antiberta2 (single-cell and bulk H)."""
+        antiberta2(self.test_airr_mixed_path, "H", "H_test.tsv")
+        assert os.path.exists("H_test.tsv")
+        embeddings = pd.read_table("H_test.tsv", delimiter = '\t')
+        assert embeddings.shape[1] == 1026
+        assert embeddings.shape[0] == 2
+        os.remove("H_test.tsv")
             
     def test_antiBERTa2_bulk_H_embedding(self):
         """Test antiBERTa2 (bulk H)."""
@@ -185,3 +226,12 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[1] == 1024
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
+
+    def test_antiberta2_mixed_L_embedding_tsv(self):
+        """Test antiberta2 (single-cell and bulk L)."""
+        antiberta2(self.test_airr_mixed_path, "L", "L_test.tsv")
+        assert os.path.exists("L_test.tsv")
+        embeddings = pd.read_table("L_test.tsv", delimiter = '\t')
+        assert embeddings.shape[1] == 1026
+        assert embeddings.shape[0] == 2
+        os.remove("L_test.tsv")
