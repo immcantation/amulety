@@ -30,7 +30,6 @@ jobs:
         shell: bash -el {0}
         run: |
           conda install -y -c conda-forge -c bioconda -c defaults igblast=1.22.0
-          unzip igblast_base.zip
           igblastn -version
       # Install pip and pytest
       - name: Install dependencies
