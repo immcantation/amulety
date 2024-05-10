@@ -192,7 +192,8 @@ class TestBcrembedder(unittest.TestCase):
     def test_translation(self):
         """Test translation for IgBLAST works."""
         translate_igblast(self.test_airr_translation_path,
-                                 self.this_dir, "../igblast_base")
+                                 self.this_dir,
+                                 os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir),os.pardir)),"igblast_base"))
         igblast_outfile = os.path.join(self.this_dir, "AIRR_rearrangement_single-cell_testtranslation_translated.tsv")
         data_out = pd.read_table(igblast_outfile, delimiter="\t")
         assert (data_out["sequence_vdj_aa"]==data_out["sequence_vdj_aa_original"]).all()
