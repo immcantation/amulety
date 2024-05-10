@@ -11,6 +11,7 @@ import torch
 from bcrembed.__main__ import antiberty, antiberta2, esm2
 from bcrembed.utils import translate_igblast
 import pandas as pd
+import pytest
 
 class TestBcrembedder(unittest.TestCase):
     """Function that runs at start of tests for common resources.
@@ -189,10 +190,12 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
 
+    @pytest.mark.needsigblast # mark test as needing igblast installation and databases, run with pytest --needsigblast
     def test_translation(self):
         """Test translation for IgBLAST works."""
         translate_igblast(self.test_airr_translation_path,
                                  self.this_dir,
+                                 # ugly hack to get to the igblast_base directory in GitHub actions
                                  os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir),os.pardir,os.pardir)),"igblast_base"))
         igblast_outfile = os.path.join(self.this_dir, "AIRR_rearrangement_single-cell_testtranslation_translated.tsv")
         data_out = pd.read_table(igblast_outfile, delimiter="\t")
