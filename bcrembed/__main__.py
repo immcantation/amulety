@@ -70,6 +70,8 @@ def antiberty(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequen
     sequences = X.str.replace('  ', ' ')
 
     antiberty_runner = AntiBERTyRunner()
+    model_size = sum(p.numel() for p in antiberty_runner.model.parameters())
+    logger.info("AntiBERTy loaded. Size: %s M", round(model_size/1e6, 2))
     start_time = time.time()
     batch_size = 500
     n_seqs = len(sequences)
@@ -87,7 +89,7 @@ def antiberty(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequen
         i += 1
 
     end_time = time.time()
-    logger.info("Took %s seconds", end_time - start_time)
+    logger.info("Took %s seconds", round(end_time - start_time, 2))
 
     out_format = os.path.splitext(outpath)[-1][1:]
     save_embedding(dat, embeddings, outpath, out_format)
@@ -130,7 +132,7 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
     model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
-    logger.info("Model loaded. Size: %s:.2f M", model_size/1e6)
+    logger.info("AntiBERTa2 loaded. Size: %s M", model_size/1e6)
 
     start_time = time.time()
     batch_size = 128
@@ -166,7 +168,7 @@ def antiberta2(inpath: str, chain: str, outpath: str, sequence_col: str = 'seque
         i += 1
 
     end_time = time.time()
-    logger.info("Took %s seconds", end_time - start_time)
+    logger.info("Took %s seconds", round(end_time - start_time, 2))
 
     out_format = os.path.splitext(outpath)[-1][1:]
     save_embedding(dat, embeddings, outpath, out_format)
@@ -207,7 +209,7 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
     model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
-    logger.info("Model size: %s:.2f M", model_size/1e6)
+    logger.info("ESM2 650M model size: %s M", round(model_size/1e6, 2))
 
     start_time = time.time()
     batch_size = 50
@@ -243,7 +245,7 @@ def esm2(inpath: str, chain: str, outpath: str, sequence_col: str = 'sequence_vd
         i += 1
 
     end_time = time.time()
-    logger.info("Took %s seconds", end_time - start_time)
+    logger.info("Took %s seconds", round(end_time - start_time, 2))
 
     out_format = os.path.splitext(outpath)[-1][1:]
     save_embedding(dat, embeddings, outpath, out_format)
@@ -277,7 +279,7 @@ def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence
     model = AutoModelForMaskedLM.from_pretrained(modelpath)
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
-    stdout.print(f"Model size: {model_size/1e6:.2f}M")
+    logger.info("Model size: %sM", round(model_size/1e6, 2))
 
     start_time = time.time()
     batch_size = 50
@@ -313,10 +315,10 @@ def custom_model(modelpath: str, chain: str, inpath: str, outpath: str, sequence
         i += 1
 
     end_time = time.time()
-    stdout.print(f"Took {end_time - start_time} seconds")
+    logger.info("Took %s seconds", round(end_time - start_time, 2))
 
     torch.save(embeddings, outpath)
-    stdout.print(f"Saved embedding at {outpath}")
+    logger.info("Saved embedding at %s", outpath)
 
 def main():
     asci_art = "BCR EMBED\n"
