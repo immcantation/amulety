@@ -49,7 +49,7 @@ def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the 
 
     """
 
-    dat = process_airr(inpath, chain)
+    dat = process_airr(inpath, chain, sequence_col=sequence_col)
     logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512-2
     n_dat = dat.shape[0]
@@ -107,7 +107,7 @@ def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the
         bcrembed antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = process_airr(inpath, chain)
+    dat = process_airr(inpath, chain, sequence_col=sequence_col)
     max_length = 256
     n_dat = dat.shape[0]
 
@@ -185,7 +185,7 @@ def esm2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input
         and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = process_airr(inpath, chain)
+    dat = process_airr(inpath, chain, sequence_col=sequence_col)
     max_length = 512
     n_dat = dat.shape[0]
 
@@ -264,7 +264,7 @@ def custommodel(modelpath: Annotated[str, typer.Argument(..., help= 'The path to
 
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    dat = process_airr(inpath, chain)
+    dat = process_airr(inpath, chain, sequence_col=sequence_col)
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
