@@ -35,7 +35,7 @@ stdout = Console()
 def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
               chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
               outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-              sequence_col: Annotated[str, typer.Option(default= 'sequence_vdj_aa', help= 'The name of the column containing the amino acid sequences to embed.')]):
+              sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
     """
     Embeds sequences using the AntiBERTy model.\n
 
@@ -94,7 +94,7 @@ def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the 
 def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
                chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
                outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-               sequence_col: Annotated[str, typer.Option(default= 'sequence_vdj_aa', help= 'The name of the column containing the amino acid sequences to embed.')]):
+               sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
     """
     Embeds sequences using the antiBERTa2 RoFormer model.\n
 
@@ -172,7 +172,7 @@ def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the
 def esm2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
          chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
          outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-         sequence_col: Annotated[str, typer.Option(default= 'sequence_vdj_aa', help= 'The name of the column containing the amino acid sequences to embed.')]):
+         sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
     """
     Embeds sequences using the ESM2 model.
 
@@ -248,10 +248,10 @@ def custommodel(modelpath: Annotated[str, typer.Argument(..., help= 'The path to
                 inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
                 chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
                 outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-                embedding_dimension: Annotated[int, typer.Option(default= 100, help= 'The dimension of the embedding layer.')],
-                max_length: Annotated[int, typer.Option(default= 512, help= 'The maximum length that the model can take.')],
-                batch_size: Annotated[int, typer.Option(default= 50, help= 'The batch size of sequences to embed.')],
-                sequence_col: Annotated[str, typer.Option(default= 'sequence_vdj_aa', help= 'The name of the column containing the amino acid sequences to embed.')]):
+                embedding_dimension: Annotated[int, typer.Option(help= 'The dimension of the embedding layer.')] = 100,
+                max_length: Annotated[int, typer.Option(help= 'The maximum length that the model can take.')] = 512,
+                batch_size: Annotated[int, typer.Option(help= 'The batch size of sequences to embed.')] = 50,
+                sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
     """
     This function generates embeddings for a given dataset using a pretrained model. The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
     The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.\n
