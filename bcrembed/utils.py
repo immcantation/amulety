@@ -97,6 +97,8 @@ def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa')
         raise ValueError(f"Input x must be one of {allowed_sequence_input}")
     
     data = pd.read_table(inpath)
+    if 'locus' not in data.columns:
+        data.loc[:,'locus'] = data.loc[:,'v_call'].apply(lambda x: x[:3])
     data.loc[:,'chain'] = data.loc[:,'locus'].apply(lambda x: 'H' if x == 'IGH' else 'L')
 
     if not 'cell_id' in data.columns:
