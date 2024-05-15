@@ -35,7 +35,8 @@ stdout = Console()
 def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
               chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
               outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-              sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
+              sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa",
+              batch_size: Annotated[int, typer.Option(help= 'The batch size of sequences to embed.')] = 500):
     """
     Embeds sequences using the AntiBERTy model.\n
 
@@ -69,7 +70,6 @@ def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the 
     model_size = sum(p.numel() for p in antiberty_runner.model.parameters())
     logger.info("AntiBERTy loaded. Size: %s M", round(model_size/1e6, 2))
     start_time = time.time()
-    batch_size = 500
     n_seqs = len(sequences)
     dim = 512
 
@@ -94,7 +94,8 @@ def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the 
 def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
                chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
                outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-               sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
+               sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa",
+               batch_size: Annotated[int, typer.Option(help= 'The batch size of sequences to embed.')] = 128):
     """
     Embeds sequences using the antiBERTa2 RoFormer model.\n
 
@@ -130,7 +131,6 @@ def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the
     logger.info("AntiBERTa2 loaded. Size: %s M", model_size/1e6)
 
     start_time = time.time()
-    batch_size = 128
     n_seqs = len(sequences)
     dim = 1024
     n_batches = math.ceil(n_seqs / batch_size)
@@ -172,7 +172,8 @@ def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the
 def esm2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input data file. The data file should be in AIRR format.')],
          chain: Annotated[str, typer.Argument(..., help= 'Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)')],
          outpath: Annotated[str, typer.Argument(..., help= 'The path where the generated embeddings will be saved.')],
-         sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
+         sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa",
+         batch_size: Annotated[int, typer.Option(help= 'The batch size of sequences to embed.')] = 50):
     """
     Embeds sequences using the ESM2 model.
 
@@ -205,7 +206,6 @@ def esm2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input
     logger.info("ESM2 650M model size: %s M", round(model_size/1e6, 2))
 
     start_time = time.time()
-    batch_size = 50
     n_seqs = len(sequences)
     dim = 1280
     n_batches = math.ceil(n_seqs / batch_size)
