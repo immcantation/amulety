@@ -1,6 +1,6 @@
-* BCRembedder version:
-* Python version:
-* Operating System:
+- BCRembedder version:
+- Python version:
+- Operating System:
 
 ### Description
 

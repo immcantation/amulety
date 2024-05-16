@@ -1,0 +1,27 @@
+/* override table width restrictions */
+@media screen and (min-width: 767px) {
+  .wy-table-responsive table td {
+    /* !important prevents the common CSS stylesheets from overriding
+        this as on RTD they are loaded after this stylesheet */
+    white-space: normal !important;
+  }
+
+  .wy-table-responsive {
+    overflow: visible !important;
+  }
+}
+
+.rst-content .admonition-new .admonition-title .fa-info-circle:before {
+  content: "";
+}
+
+.rst-content .admonition-new .admonition-title {
+  background: #83c8a6;
+}
+.rst-content .admonition-new {
+  clear: both;
+  border-style: none;
+  border-width: medium;
+  border-color: #83c8a6;
+  background: #e3fff1;
+}

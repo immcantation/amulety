@@ -1,12 +1,12 @@
 name: bcrembed
 channels:
- - pytorch
- - nvidia
- - bioconda
- - conda-forge
+  - pytorch
+  - nvidia
+  - bioconda
+  - conda-forge
 dependencies:
- - pytorch
- - pytorch-cuda
- - transformers
- - typer
- - antiberty
+  - pytorch
+  - pytorch-cuda
+  - transformers
+  - typer
+  - antiberty

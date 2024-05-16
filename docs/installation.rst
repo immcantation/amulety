@@ -8,11 +8,11 @@ Installation
 Stable release
 --------------
 
-To install BCRembedder, run this command in your terminal:
+To install BCRembed, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install bcrembedder
+    $ pip install bcrembed
 
 This is the preferred method to install BCRembedder, as it will always install the most recent stable release.
 
@@ -26,19 +26,19 @@ you through the process.
 From sources
 ------------
 
-The sources for BCRembedder can be downloaded from the `Github repo`_.
+The sources for BCRembed can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/Mamie/bcrembedder
+    $ git clone https://github.com/immcantation/bcrembed
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/Mamie/bcrembedder/tarball/master
+    $ curl -OJL https://github.com/immcantation/bcrembed/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/Mamie/bcrembedder
-.. _tarball: https://github.com/Mamie/bcrembedder/tarball/master
+.. _Github repo: https://github.com/immcantation/bcrembed
+.. _tarball: https://github.com/immcantation/bcrembed/tarball/master

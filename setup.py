@@ -33,7 +33,7 @@ setup(
     url="https://github.com/immcantation/bcrembed",
     license="MIT",
     entry_points={
-        "console_scripts": ["bcrembed=bcrembed.__main__:main"],
+        "console_scripts": ["bcrembed=bcrembed.bcrembed:main"],
     },
     python_requires=">=3.8, <4",
     install_requires=required,

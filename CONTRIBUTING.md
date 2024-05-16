@@ -6,7 +6,7 @@ Contributions are welcome, and they are greatly appreciated! Every little bit he
 
 ### Report Bugs
 
-Report bugs at [https://github.com/immcantation/bcrembedder/issues](https://github.com/immcantation/bcrembedder/issues).
+Report bugs at [https://github.com/immcantation/bcrembed/issues](https://github.com/immcantation/bcrembed/issues).
 
 If you are reporting a bug, please include:
 
@@ -28,7 +28,7 @@ BCRembedder could always use more documentation, whether as part of the official
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at [https://github.com/immcantation/bcrembedder/issues](https://github.com/immcantation/bcrembedder/issues).
+The best way to send feedback is to file an issue at [https://github.com/immcantation/bcrembed/issues](https://github.com/immcantation/bcrembed/issues).
 
 If you are proposing a feature:
 
@@ -38,67 +38,69 @@ If you are proposing a feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `bcrembedder` for local development.
+Ready to contribute? Here's how to set up `bcrembed` for local development.
 
-1. Fork the `bcrembedder` repo on GitHub.
+1. Fork the `bcrembed` repo on GitHub.
 2. Clone your fork locally:
 
-    ```
-    $ git clone git@github.com:your_name_here/bcrembedder.git
-    ```
+```
+$ git clone git@github.com:<your_name_here>/bcrembedder.git
+```
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development:
+3. Install your local copy into a virtualenv or conda. Assuming you have conda installed, this is how you set up your fork for local development:
 
-    ```
-    $ mkvirtualenv bcrembedder
-    $ cd bcrembedder/
-    $ python setup.py develop
-    ```
+```
+$ conda create -n bcrembed python=3.11
+$ cd bcrembed/
+$ pip install -e .
+```
 
 4. Create a branch for local development:
 
-    ```
-    $ git checkout -b name-of-your-bugfix-or-feature
-    ```
+```
+$ git checkout -b name-of-your-bugfix-or-feature
+```
 
-   Now you can make your changes locally.
+Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8 and the tests, including testing other Python versions with tox:
+5. When you're done making changes, check that the linting tests pass:
 
-    ```
-    $ make lint
-    $ make test
-    ```
+```
+$ pre-commit install
+pre-commit installed at .git/hooks/pre-commit
+```
 
-    Or
+Now pre-commit will run automatically on `git commit`!.
+If you want to run it manually run
 
-    ```
-    $ make test-all
-    ```
+```
+$ pre-commit .
+```
 
-   To get flake8 and tox, just pip install them into your virtualenv.
-6. Commit your changes and push your branch to GitHub:
-    ```
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
-    ```
-7. Submit a pull request through the GitHub website.
+6. Check that the tests pass locally, and add tests if necessary.
+
+```
+pytest .
+```
+
+7. Commit your changes and push your branch to GitHub:
+
+```
+$ git add .
+$ git commit -m "Your detailed description of your changes."
+$ git push origin name-of-your-bugfix-or-feature
+```
+
+8. Submit a pull request through the GitHub website.
 
 ## Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
+
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the list in README.rst.
-3. The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check [https://travis-ci.com/Mamie/bcrembedder/pull_requests](https://travis-ci.com/Mamie/bcrembedder/pull_requests) and make sure that the tests pass for all supported Python versions.
-
-## Tips
-
-To run a subset of tests:
-
-```
-$ python -m unittest tests.test_bcrembedder
-```
+3. The pull request should work for Python 3.8, 3.9, 3.10 and 3.11, and for PyPy. Check [https://github.com/immcantation/bcrembed/actions](https://github.com/immcantation/bcrembed/actions) and make sure that the tests pass for all supported Python versions.
+4. Automatic GitHub actions CI tests will also run the tests, all the tests must pass before merging the PR.
 
 ## Deploying
 
