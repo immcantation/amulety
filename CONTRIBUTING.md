@@ -6,7 +6,7 @@ Contributions are welcome, and they are greatly appreciated! Every little bit he
 
 ### Report Bugs
 
-Report bugs at [https://github.com/immcantation/bcrembedder/issues](https://github.com/immcantation/bcrembedder/issues).
+Report bugs at [https://github.com/immcantation/bcrembed/issues](https://github.com/immcantation/bcrembed/issues).
 
 If you are reporting a bug, please include:
 
@@ -28,7 +28,7 @@ BCRembedder could always use more documentation, whether as part of the official
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at [https://github.com/immcantation/bcrembedder/issues](https://github.com/immcantation/bcrembedder/issues).
+The best way to send feedback is to file an issue at [https://github.com/immcantation/bcrembed/issues](https://github.com/immcantation/bcrembed/issues).
 
 If you are proposing a feature:
 
@@ -38,9 +38,9 @@ If you are proposing a feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `bcrembedder` for local development.
+Ready to contribute? Here's how to set up `bcrembed` for local development.
 
-1. Fork the `bcrembedder` repo on GitHub.
+1. Fork the `bcrembed` repo on GitHub.
 2. Clone your fork locally:
 
     ```
@@ -50,8 +50,8 @@ Ready to contribute? Here's how to set up `bcrembedder` for local development.
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development:
 
     ```
-    $ mkvirtualenv bcrembedder
-    $ cd bcrembedder/
+    $ mkvirtualenv bcrembed
+    $ cd bcrembed/
     $ python setup.py develop
     ```
 
@@ -90,14 +90,14 @@ Ready to contribute? Here's how to set up `bcrembedder` for local development.
 Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the list in README.rst.
-3. The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check [https://travis-ci.com/Mamie/bcrembedder/pull_requests](https://travis-ci.com/Mamie/bcrembedder/pull_requests) and make sure that the tests pass for all supported Python versions.
+3. The pull request should work for Python 3.8, 3.9, 3.10 and 3.11, and for PyPy. Check [https://github.com/immcantation/bcrembed/actions](https://github.com/immcantation/bcrembed/actions) and make sure that the tests pass for all supported Python versions.
 
 ## Tips
 
 To run a subset of tests:
 
 ```
-$ python -m unittest tests.test_bcrembedder
+$ python -m unittest tests.test_bcrembed
 ```
 
 ## Deploying
