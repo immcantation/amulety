@@ -1,6 +1,5 @@
 """Main module."""
 import os
-import subprocess
 import logging
 from typing import Iterable
 import torch
@@ -95,7 +94,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = 'sequence_vdj_aa')
     allowed_sequence_input = ["H", "L", "HL"]
     if chain not in allowed_sequence_input:
         raise ValueError(f"Input x must be one of {allowed_sequence_input}")
-    
+
     data = pd.read_table(inpath)
     if 'locus' not in data.columns:
         data.loc[:,'locus'] = data.loc[:,'v_call'].apply(lambda x: x[:3])

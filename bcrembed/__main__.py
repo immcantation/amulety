@@ -5,6 +5,7 @@ import os
 import time
 
 import pandas as pd
+import subprocess
 import torch
 import typer
 from antiberty import AntiBERTyRunner
