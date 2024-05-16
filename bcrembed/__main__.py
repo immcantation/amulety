@@ -337,6 +337,8 @@ def translate_igblast(inpath: Annotated[str, typer.Argument(..., help= 'The path
     out_igblast = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0]+"_igblast.tsv")
     out_translated = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0]+"_translated.tsv")
 
+    start_time = time.time()
+    logger.info("Converting AIRR table to FastA for IgBlast translation...")
     # Write out FASTA file
     with open(out_fasta, "w") as f:
         for _, row in data.iterrows():
@@ -353,6 +355,8 @@ def translate_igblast(inpath: Annotated[str, typer.Argument(..., help= 'The path
            "-show_translation",
            "-outfmt", "19",
            "-out", out_igblast]
+
+    logger.info("Calling IgBlast for running translation...")
     pipes = subprocess.Popen(command_igblastn, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = pipes.communicate()
 
@@ -366,13 +370,19 @@ def translate_igblast(inpath: Annotated[str, typer.Argument(..., help= 'The path
     sequence_vdj_aa = [ sa.replace("-","") for sa in igblast_transl["sequence_alignment_aa"]]
     igblast_transl["sequence_vdj_aa"] = sequence_vdj_aa
 
+    logger.info("Saved the translations in the dataframe (sequence_aa contains the full translation and sequence_vdj_aa contains the VDJ translation).")
     # Merge and save the translated data with original data
     data_transl = pd.merge(data, igblast_transl, on="sequence_id", how="left")
+
+    logger.info(f"Saved the translations in {out_translated} file.")
     data_transl.to_csv(out_translated, sep="\t", index=False)
 
     # Clean up
     os.remove(out_fasta)
     os.remove(out_igblast)
+
+    end_time = time.time()
+    logger.info("Took %s seconds", round(end_time - start_time, 2))
 
 def main():
     asci_art = "BCR EMBED\n"
