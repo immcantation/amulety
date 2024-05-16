@@ -16,6 +16,7 @@ pip install bcrembed
 ```
 
 ## Usage
+
 To print the usage help for the bcrembed package then type:
 
 ```bash
@@ -24,6 +25,6 @@ bcrembed --help
 
 The full documentation can also be found on the readthedocs page.
 
-
 ## License
+
 This project is licensed under the terms of the GPL v3 license. See the LICENSE file for details.

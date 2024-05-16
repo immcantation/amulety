@@ -1,10 +1,13 @@
 import pytest
 
+
 def pytest_addoption(parser):
     parser.addoption("--needsigblast", action="store_true", help="run igblast tests")
 
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "needsigblast: mark test as needing igblast installation and databases")
+
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--needsigblast"):

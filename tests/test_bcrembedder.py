@@ -5,16 +5,18 @@ Tests can be run with the command:
 python -m unittest test_bcrembedder.py
 """
 
-import unittest
 import os
-import torch
+import unittest
+
 import pandas as pd
-from bcrembed.bcrembed import antiberty, antiberta2, esm2, translate_igblast
 import pytest
+import torch
+
+from bcrembed.bcrembed import antiberta2, antiberty, esm2, translate_igblast
+
 
 class TestBcrembedder(unittest.TestCase):
-    """Function that runs at start of tests for common resources.
-    """
+    """Function that runs at start of tests for common resources."""
 
     def setUp(self):
         """Set up test fixtures, if any."""
@@ -48,7 +50,7 @@ class TestBcrembedder(unittest.TestCase):
         """Test antiberty (single-cell and bulk HL)."""
         antiberty(self.test_airr_mixed_path, "HL", "HL_test.tsv")
         assert os.path.exists("HL_test.tsv")
-        embeddings = pd.read_table("HL_test.tsv", delimiter = '\t')
+        embeddings = pd.read_table("HL_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 513
         assert embeddings.shape[0] == 1
         os.remove("HL_test.tsv")
@@ -71,7 +73,7 @@ class TestBcrembedder(unittest.TestCase):
         """Test antiberty (single-cell and bulk H)."""
         antiberty(self.test_airr_mixed_path, "H", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
-        embeddings = pd.read_table("H_test.tsv", delimiter = '\t')
+        embeddings = pd.read_table("H_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 514
         assert embeddings.shape[0] == 2
         os.remove("H_test.tsv")
@@ -94,16 +96,14 @@ class TestBcrembedder(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
 
-
     def test_antiberty_mixed_L_embedding_tsv(self):
         """Test antiberty (single-cell and bulk L)."""
         antiberty(self.test_airr_mixed_path, "L", "L_test.tsv")
         assert os.path.exists("L_test.tsv")
-        embeddings = pd.read_table("L_test.tsv", delimiter = '\t')
+        embeddings = pd.read_table("L_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 514
         assert embeddings.shape[0] == 2
         os.remove("L_test.tsv")
-
 
     def test_antiberty_bulk_L_embedding(self):
         """Test antiberty (bulk L)."""
@@ -177,7 +177,7 @@ class TestBcrembedder(unittest.TestCase):
         """Test antiberta2 (single-cell and bulk HL)."""
         antiberta2(self.test_airr_mixed_path, "HL", "HL_test.tsv")
         assert os.path.exists("HL_test.tsv")
-        embeddings = pd.read_table("HL_test.tsv", delimiter = '\t')
+        embeddings = pd.read_table("HL_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1025
         assert embeddings.shape[0] == 1
         os.remove("HL_test.tsv")
@@ -200,7 +200,7 @@ class TestBcrembedder(unittest.TestCase):
         """Test antiberta2 (single-cell and bulk H)."""
         antiberta2(self.test_airr_mixed_path, "H", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
-        embeddings = pd.read_table("H_test.tsv", delimiter = '\t')
+        embeddings = pd.read_table("H_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1026
         assert embeddings.shape[0] == 2
         os.remove("H_test.tsv")
@@ -236,21 +236,23 @@ class TestBcrembedder(unittest.TestCase):
         """Test antiberta2 (single-cell and bulk L)."""
         antiberta2(self.test_airr_mixed_path, "L", "L_test.tsv")
         assert os.path.exists("L_test.tsv")
-        embeddings = pd.read_table("L_test.tsv", delimiter = '\t')
+        embeddings = pd.read_table("L_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1026
         assert embeddings.shape[0] == 2
         os.remove("L_test.tsv")
 
-    @pytest.mark.needsigblast # mark test as needing igblast installation and databases, run with pytest --needsigblast
+    @pytest.mark.needsigblast  # mark test as needing igblast installation and databases, run with pytest --needsigblast
     def test_translation(self):
         """Test translation for IgBLAST works."""
-        translate_igblast(self.test_airr_translation_path,
-                                 self.this_dir,
-                                 # ugly hack to get to the igblast_base directory in GitHub actions
-                                 os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir),os.pardir)),"igblast_base"))
+        translate_igblast(
+            self.test_airr_translation_path,
+            self.this_dir,
+            # ugly hack to get to the igblast_base directory in GitHub actions
+            os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir), os.pardir)), "igblast_base"),
+        )
         igblast_outfile = os.path.join(self.this_dir, "AIRR_rearrangement_single-cell_testtranslation_translated.tsv")
         data_out = pd.read_table(igblast_outfile, delimiter="\t")
-        assert (data_out["sequence_vdj_aa"]==data_out["sequence_vdj_aa_original"]).all()
-        assert (data_out["sequence_alignment_aa"]==data_out["sequence_alignment_aa_original"]).all()
-        assert (data_out["sequence_aa"]==data_out["sequence_aa_original"]).all()
+        assert (data_out["sequence_vdj_aa"] == data_out["sequence_vdj_aa_original"]).all()
+        assert (data_out["sequence_alignment_aa"] == data_out["sequence_alignment_aa_original"]).all()
+        assert (data_out["sequence_aa"] == data_out["sequence_aa_original"]).all()
         os.remove(igblast_outfile)
