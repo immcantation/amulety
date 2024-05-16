@@ -1,20 +1,15 @@
-Welcome to BCRembedder's documentation!
-======================================
+.. mdinclude:: ../README.md
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
-   readme
    installation
    usage
-   modules
    contributing
-   authors
    history
 
 Indices and tables
 ==================
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`

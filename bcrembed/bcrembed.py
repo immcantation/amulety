@@ -18,8 +18,14 @@ from transformers import (
 )
 from typing_extensions import Annotated
 
+
 from bcrembed import __version__
-from bcrembed.utils import batch_loader, insert_space_every_other_except_cls, process_airr, save_embedding
+from bcrembed.utils import (
+    process_airr,
+    insert_space_every_other_except_cls,
+    batch_loader,
+    save_embedding
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -40,7 +46,7 @@ def antiberty(inpath: Annotated[str, typer.Argument(..., help= 'The path to the 
     Note:\n
         This function prints the number of sequences being embedded, the batch number during the
         embedding process, the time taken for the embedding, and the location where the embeddings
-        are saved.\n
+        are saved.\n\n
 
     Example usage:\n
         bcrembed antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
@@ -99,7 +105,7 @@ def antiberta2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the
     Note:\n
         This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
         It prints the size of the model used for embedding, the batch number during the embedding process,
-        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
+        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.\n\n
 
     Example Usage:\n
         bcrembed antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
@@ -174,10 +180,10 @@ def esm2(inpath: Annotated[str, typer.Argument(..., help= 'The path to the input
     """
     Embeds sequences using the ESM2 model.
 
-    Example usage:
-        bcrembed esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
+    Example usage:\n
+        bcrembed esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
 
-    Note:
+    Note:\n
         This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
         It prints the size of the model used for embedding, the batch number during the embedding process,
         and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
@@ -251,10 +257,10 @@ def custommodel(modelpath: Annotated[str, typer.Argument(..., help= 'The path to
                 sequence_col: Annotated[str, typer.Option(help= 'The name of the column containing the amino acid sequences to embed.')] = "sequence_vdj_aa"):
     """
     This function generates embeddings for a given dataset using a pretrained model. The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
-    The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.\n
+    The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.\n\n
 
     Note:\n
-        This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n
+        This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
 
     Example Usage:\n
         bcrembed custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
@@ -318,19 +324,14 @@ def translate_igblast(inpath: Annotated[str, typer.Argument(..., help= 'The path
 
     This function takes a AIRR file containing nucleotide sequences
     and translates them into amino acid sequences using IgBlast, a tool for analyzing
-    immunoglobulin and T cell receptor sequences. It performs the following steps:
+    immunoglobulin and T cell receptor sequences. It performs the following steps:\n
 
-    1. Reads the input TSV file containing nucleotide sequences.
-    2. Writes the nucleotide sequences into a FASTA file, required as input for IgBlast.
-    3. Runs IgBlast on the FASTA file to perform sequence alignment and translation.
-    4. Reads the IgBlast output, which includes the translated amino acid sequences.
-    5. Removes gaps introduced by IgBlast from the sequence alignment.
-    6. Saves the translated data into a new TSV file in the specified output directory.
-
-    Args:
-        inpath (str): Path to the input TSV file containing nucleotide sequences.
-        outdir (str): Directory to save the translated output files.
-        reference_dir (str): Directory with reference for igblast
+    1. Reads the input TSV file containing nucleotide sequences.\n
+    2. Writes the nucleotide sequences into a FASTA file, required as input for IgBlast.\n
+    3. Runs IgBlast on the FASTA file to perform sequence alignment and translation.\n
+    4. Reads the IgBlast output, which includes the translated amino acid sequences.\n
+    5. Removes gaps introduced by IgBlast from the sequence alignment.\n
+    6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
     data = pd.read_csv(inpath, sep="\t")
     out_fasta = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0]+".fasta")
@@ -398,5 +399,5 @@ def main():
 
     app()
 
-if __name__ == "__main__":
+if __name__ == "bcrembed":
     main()
