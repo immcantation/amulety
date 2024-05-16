@@ -2,10 +2,18 @@
 Usage
 =====
 
+Translate sequence to amino acids
+=================================
+.. typer:: bcrembed.bcrembed.app:translate-igblast
+    :width: 65
+    :show-nested:
+    :make-sections:
+
+
 AntiBERTy
 =========
 
-.. typer:: bcrembed.__main__:app:antiberty
+.. typer:: bcrembed.bcrembed:app:antiberty
     :width: 65
     :show-nested:
     :make-sections:
@@ -13,7 +21,7 @@ AntiBERTy
 AntiBERTa2
 ==========
 
-.. typer:: bcrembed.__main__:app:antiberta2
+.. typer:: bcrembed.bcrembed:app:antiberta2
     :width: 65
     :show-nested:
     :make-sections:
@@ -21,7 +29,7 @@ AntiBERTa2
 ESM2
 ====
 
-.. typer:: bcrembed.__main__:app:esm2
+.. typer:: bcrembed.bcrembed:app:esm2
     :width: 65
     :show-nested:
     :make-sections:
@@ -29,14 +37,7 @@ ESM2
 Custom pre-trained model
 ========================
 
-.. typer:: bcrembed.__main__:app:custommodel
-    :width: 65
-    :show-nested:
-    :make-sections:
-
-Translate sequence to amino acids
-=================================
-.. typer:: bcrembed.__main__.app:translate-igblast
+.. typer:: bcrembed.bcrembed:app:custommodel
     :width: 65
     :show-nested:
     :make-sections:

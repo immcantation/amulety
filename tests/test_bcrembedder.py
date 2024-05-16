@@ -9,7 +9,7 @@ import unittest
 import os
 import torch
 import pandas as pd
-from bcrembed.__main__ import antiberty, antiberta2, esm2, translate_igblast
+from bcrembed.bcrembed import antiberty, antiberta2, esm2, translate_igblast
 import pytest
 
 class TestBcrembedder(unittest.TestCase):

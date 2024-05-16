@@ -16,15 +16,13 @@ pip install bcrembed
 ```
 
 ## Usage
-Here are some examples of how to use BCRembed:
+To print the usage help for the bcrembed package then type:
 
 ```bash
-bcrembed antiberty <input_file> <column_name> <output_file>
-bcrembed antiberta2 <input_file> <column_name> <output_file>
-bcrembed esm2 <input_file> <column_name> <output_file>
+bcrembed --help
 ```
 
-This command will generate embeddings for the sequences in the specified column of the input file using the specified model. The embeddings will be saved to the specified output file.
+The full documentation can also be found on the readthedocs page.
 
 
 ## License

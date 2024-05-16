@@ -48,3 +48,10 @@ jobs:
           path: junit/test-results-${{ matrix.python-version }}.xml
         # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
+      - name: Test IgBlast translation
+        shell: bash -el {0}
+        run: |
+          conda install igblast=1.22.0
+          wget -c https://github.com/nf-core/test-datasets/raw/airrflow/database-cache/igblast_base.zip
+          unzip igblast_base.zip
+          bcrembed translate-igblast tests/AIRR_rearrangement_single-cell_testtranslation.tsv . igblast_base
