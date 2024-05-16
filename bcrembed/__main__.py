@@ -1,28 +1,24 @@
 """Console script for bcrembed"""
-import os
 import logging
-import time
 import math
-import typer
-from typing_extensions import Annotated
-from rich.console import Console
-from antiberty import AntiBERTyRunner
+import os
+import time
+
+import pandas as pd
 import torch
+import typer
+from antiberty import AntiBERTyRunner
+from rich.console import Console
 from transformers import (
+    AutoModelForMaskedLM,
+    AutoTokenizer,
     RoFormerForMaskedLM,
     RoFormerTokenizer,
-    AutoTokenizer,
-    AutoModelForMaskedLM,
 )
-
+from typing_extensions import Annotated
 
 from bcrembed import __version__
-from bcrembed.utils import (
-    process_airr,
-    insert_space_every_other_except_cls,
-    batch_loader,
-    save_embedding
-)
+from bcrembed.utils import batch_loader, insert_space_every_other_except_cls, process_airr, save_embedding
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
