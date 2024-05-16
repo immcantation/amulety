@@ -32,6 +32,8 @@ known-first-party = ["bcrembed"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
+"tests/*" = ["N802"]
+"bcrembed.py" = ["N806"]
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = ["mocked_*", "*allOf", "*URI*"]
