@@ -1,13 +1,13 @@
 .. mdinclude:: ../README.md
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Contents:
+  :maxdepth: 1
+  :caption: Contents:
 
-   installation
-   usage
-   contributing
-   history
+  installation
+  usage
+  contributing
+  history
 
 Indices and tables
 ==================
