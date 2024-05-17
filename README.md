@@ -1,6 +1,7 @@
 # AMULET
 
-Amulet is a Python command line tool for generating embeddings for Adaptive imMUne receptor Language model Embedding Tool to embed amino acid sequences using pretrained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids to make sure that they are in-frame using IgBlast.
+Amulet stands for Adaptive imMUne receptor Language model Embedding Tool.
+It is a Python command line tool to embed B-cell receptor (antibody) and T-cell Receptor amino acid sequences using pre-trained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids wiht IgBlast to make sure that they are in-frame.
 
 Integrated embedding models are:
 
