@@ -1,4 +1,6 @@
-- BCRembedder version:
+### Package versions
+
+- AMULET version:
 - Python version:
 - Operating System:
 

@@ -11,7 +11,7 @@ with open("requirements.txt") as f:
     required = f.read().splitlines()
 
 setup(
-    name="bcrembed",
+    name="amulet",
     version=version,
     description="Python package to create embeddings of BCR amino acid sequences.",
     long_description=readme,
@@ -28,12 +28,12 @@ setup(
         "NGS",
         "next generation sequencing",
     ],
-    author="Mamie Wang",
-    author_email="mamie.wang@yale.edu",
-    url="https://github.com/immcantation/bcrembed",
+    author="Mamie Wang, Gisela Gabernet, Steven Kleinstein",
+    author_email="mamie.wang@yale.edu, gisela.gabernet@yale.edu, steven.kleinstein@yale.edu",
+    url="https://github.com/immcantation/amulet",
     license="MIT",
     entry_points={
-        "console_scripts": ["bcrembed=bcrembed.bcrembed:main"],
+        "console_scripts": ["amulet=amulet.amulet:main"],
     },
     python_requires=">=3.8, <4",
     install_requires=required,

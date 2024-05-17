@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-"""Tests for `bcrembed` package.
+"""Tests for `amulet` package.
 Tests can be run with the command:
-python -m unittest test_bcrembedder.py
+python -m unittest test_amulet.py
 """
 
 import os
@@ -12,10 +12,10 @@ import pandas as pd
 import pytest
 import torch
 
-from bcrembed.bcrembed import antiberta2, antiberty, esm2, translate_igblast
+from amulet.amulet import antiberta2, antiberty, esm2, translate_igblast
 
 
-class TestBcrembedder(unittest.TestCase):
+class TestAmulet(unittest.TestCase):
     """Function that runs at start of tests for common resources."""
 
     def setUp(self):
@@ -34,7 +34,7 @@ class TestBcrembedder(unittest.TestCase):
         """Tear down test fixtures, if any."""
 
     ##################
-    # BCRembed tests #
+    # amulet tests #
     ##################
 
     def test_antiberty_sc_HL_embedding(self):

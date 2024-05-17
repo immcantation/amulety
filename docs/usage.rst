@@ -4,8 +4,9 @@ Usage
 
 Translate sequence to amino acids
 =================================
-.. typer:: bcrembed.bcrembed.app:translate-igblast
-    :width: 65
+
+.. typer:: amulet.amulet.app:translate-igblast
+    :width: 100
     :show-nested:
     :make-sections:
 
@@ -13,31 +14,31 @@ Translate sequence to amino acids
 AntiBERTy
 =========
 
-.. typer:: bcrembed.bcrembed:app:antiberty
-    :width: 65
+.. typer:: amulet.amulet:app:antiberty
+    :width: 100
     :show-nested:
     :make-sections:
 
 AntiBERTa2
 ==========
 
-.. typer:: bcrembed.bcrembed:app:antiberta2
-    :width: 65
+.. typer:: amulet.amulet:app:antiberta2
+    :width: 100
     :show-nested:
     :make-sections:
 
 ESM2
 ====
 
-.. typer:: bcrembed.bcrembed:app:esm2
-    :width: 65
+.. typer:: amulet.amulet:app:esm2
+    :width: 100
     :show-nested:
     :make-sections:
 
 Custom pre-trained model
 ========================
 
-.. typer:: bcrembed.bcrembed:app:custommodel
-    :width: 65
+.. typer:: amulet.amulet:app:custommodel
+    :width: 100
     :show-nested:
     :make-sections:

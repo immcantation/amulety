@@ -1,4 +1,4 @@
-"""Top-level package for BCRembedder."""
+"""Top-level package for AMULET."""
 
 import importlib.metadata as importlib_metadata
 

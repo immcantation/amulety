@@ -1,4 +1,4 @@
-"""Console script for bcrembed"""
+"""Console script for amulet"""
 import logging
 import math
 import os
@@ -18,8 +18,8 @@ from transformers import (
 )
 from typing_extensions import Annotated
 
-from bcrembed import __version__
-from bcrembed.utils import batch_loader, insert_space_every_other_except_cls, process_airr, save_embedding
+from amulet import __version__
+from amulet.utils import batch_loader, insert_space_every_other_except_cls, process_airr, save_embedding
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def antiberty(
         are saved.\n\n
 
     Example usage:\n
-        bcrembed antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
+        amulet antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     """
 
@@ -126,7 +126,7 @@ def antiberta2(
         and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.\n\n
 
     Example Usage:\n
-        bcrembed antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
+        amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dat = process_airr(inpath, chain, sequence_col=sequence_col)
@@ -212,7 +212,7 @@ def esm2(
     Embeds sequences using the ESM2 model.
 
     Example usage:\n
-        bcrembed esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
+        amulet esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
 
     Note:\n
         This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
@@ -307,7 +307,7 @@ def custommodel(
         This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
 
     Example Usage:\n
-        bcrembed custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
+        amulet custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
 
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -450,19 +450,18 @@ def translate_igblast(
 
 
 def main():
-    asci_art = "BCR EMBED\n"
     asci_art = r"""
- ____   ____ ____                _              _       __   __
-| __ ) / ___|  _ \ ___ _ __ ___ | |__   ___  __| |      \ \ / /
-|  _ \| |   | |_) / _ \ '_ ` _ \| '_ \ / _ \/ _` |       \ V /
-| |_) | |___|  _ <  __/ | | | | | |_) |  __/ (_| |        | |
-|____/ \____|_| \_\___|_| |_| |_|_.__/ \___|\__,_|        |_|
+ █████  ███    ███ ██    ██ ██      ███████ ████████     ██    ██
+██   ██ ████  ████ ██    ██ ██      ██         ██         ██  ██
+███████ ██ ████ ██ ██    ██ ██      █████      ██          ████
+██   ██ ██  ██  ██ ██    ██ ██      ██         ██           ██
+██   ██ ██      ██  ██████  ███████ ███████    ██           ██
 """
     stderr.print(asci_art)
-    stderr.print(f"BCR EMBED version {__version__}\n")
+    stderr.print(f"AMULET: Adaptive imMUne receptor Language model Embedding Tool\n version {__version__}\n")
 
     app()
 
 
-if __name__ == "bcrembed":
+if __name__ == "amulet":
     main()
