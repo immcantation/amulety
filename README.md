@@ -44,7 +44,7 @@ This package is not yet published.
 To cite the paper comparing the embedding methods on BCR sequences, please cite:
 
 > Supervised fine-tuning of pre-trained antibody language models improves antigen specificity prediction.
-> Meng Wang, Jonathan Patsenker, Henry Li,  Yuval Kluger,  Steven H. Kleinstein.
+> Meng Wang, Jonathan Patsenker, Henry Li, Yuval Kluger, Steven H. Kleinstein.
 > BioRXiv 2024. DOI: [https://doi.org/10.1101/2024.05.13.593807](https://doi.org/10.1101/2024.05.13.593807).
 
 ## License
