@@ -5,3 +5,4 @@ Sphinx
 sphinx-mdinclude
 sphinx-rtd-theme
 sphinxcontrib-typer
+-e .
