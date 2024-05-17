@@ -50,9 +50,8 @@ def antiberty(
     Embeds sequences using the AntiBERTy model.\n
 
     Note:\n
-        This function prints the number of sequences being embedded, the batch number during the
-        embedding process, the time taken for the embedding, and the location where the embeddings
-        are saved.\n\n
+    This function prints the number of sequences being embedded, the batch number during the
+    embedding process, the time taken for the embedding, and the location where the embeddings are saved.\n\n
 
     Example usage:\n
         amulet antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
@@ -121,9 +120,9 @@ def antiberta2(
     Embeds sequences using the antiBERTa2 RoFormer model.\n
 
     Note:\n
-        This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
-        It prints the size of the model used for embedding, the batch number during the embedding process,
-        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.\n\n
+    This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.\n\n
 
     Example Usage:\n
         amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
@@ -215,9 +214,9 @@ def esm2(
         amulet esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
 
     Note:\n
-        This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
-        It prints the size of the model used for embedding, the batch number during the embedding process,
-        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
+    This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dat = process_airr(inpath, chain, sequence_col=sequence_col)
@@ -304,7 +303,7 @@ def custommodel(
     The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.\n\n
 
     Note:\n
-        This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
+    This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
 
     Example Usage:\n
         amulet custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
