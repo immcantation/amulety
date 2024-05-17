@@ -1,4 +1,4 @@
-name: bcrembed
+name: amulet
 channels:
   - pytorch
   - nvidia

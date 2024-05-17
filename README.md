@@ -1,6 +1,6 @@
-# BCRembed
+# Amulet
 
-BCRembed is a Python command line tool for generating embeddings for amino acid sequences using pretrained protein or antibody language models.
+Amulet is a Python command line tool for generating embeddings for Adaptive imMUne receptor Language model Embedding Tool to embed amino acid sequences using pretrained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases.
 
 ## Features
 
@@ -9,18 +9,18 @@ BCRembed is a Python command line tool for generating embeddings for amino acid 
 
 ## Installation
 
-You can install BCRembed using pip:
+You can install AMULET using pip:
 
 ```bash
-pip install bcrembed
+pip install amulet
 ```
 
 ## Usage
 
-To print the usage help for the bcrembed package then type:
+To print the usage help for the AMULET package then type:
 
 ```bash
-bcrembed --help
+amulet --help
 ```
 
 The full documentation can also be found on the readthedocs page.
