@@ -1,1 +1,1 @@
-"""Unit test package for bcrembedder."""
+"""Unit test package for AMULET."""
