@@ -43,7 +43,7 @@ def insert_space_every_other_except_cls(input_string: str):
     return result
 
 
-def save_embedding(dat, embedding, outpath):
+def save_embedding(dat, embedding, outpath, cell_id_col):
     """
     Saves the embedding data to a specified file path in the desired format.
 
@@ -55,6 +55,7 @@ def save_embedding(dat, embedding, outpath):
         - 'pt': PyTorch binary format
         - 'tsv': Tab-separated values format
         - 'csv': Comma-separated values format
+        cell_id_col (str): The name of the column containing the single-cell barcode.
 
     Raises:
         ValueError: If the output format is not supported.
@@ -63,14 +64,14 @@ def save_embedding(dat, embedding, outpath):
         Index columns from the original DataFrame 'dat' will be included in the saved output.
 
     Example:
-        save_embedding(dat, embeddings, "embedding.tsv")
+        save_embedding(dat, embeddings, "embedding.tsv", "cell_id")
     """
     out_format = os.path.splitext(outpath)[-1][1:]
     allowed_outputs = ["tsv", "csv", "pt"]
     if out_format not in allowed_outputs:
         raise ValueError(f"Output suffix must be one of {allowed_outputs}")
 
-    allowed_index_cols = ["sequence_id", "cell_id"]
+    allowed_index_cols = ["sequence_id", cell_id_col]
     index_cols = [col for col in dat.columns if col in allowed_index_cols]
     if out_format == "pt":
         torch.save(embedding, outpath)
@@ -81,7 +82,7 @@ def save_embedding(dat, embedding, outpath):
         result_df.to_csv(outpath, sep=sep, index=False)
 
 
-def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa"):
+def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
 
@@ -89,6 +90,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa")
         inpath (str): The file path to the input data.
         chain (str): The input chain, which can be one of ["H", "L", "HL"].
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
+        cell_id_col (str): The name of the column containing the single-cell barcode.
 
     Returns:
         pandas.DataFrame: Dataframe with formatted sequences.
@@ -105,15 +107,18 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa")
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
     data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x == "IGH" else "L")
 
-    if "cell_id" not in data.columns:
+    if cell_id_col not in data.columns:
         data_type = "bulk-only"
-    elif data["cell_id"].notna().all():
+    elif data[cell_id_col].notna().all():
         data_type = "single-cell-only"
     else:
         data_type = "mixed"
 
     if data_type == "bulk-only":
-        logger.info("No cell_id column detected. Processsing as bulk data.")
+        logger.info(
+            "No %s column detected. Processsing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
+            cell_id_col,
+        )
         if chain == "HL":
             raise ValueError('chain = "HL" invalid for bulk mode.')
         else:
@@ -124,43 +129,44 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa")
         logger.info("Processing single-cell BCR data...")
         if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell...")
-            data = concatenate_heavylight(data, sequence_col)
+            data = concatenate_heavylight(data, sequence_col, cell_id_col)
         else:
-            colnames = ["cell_id", sequence_col]
+            colnames = [cell_id_col, sequence_col]
             data = data.loc[data.chain == chain, colnames]
 
     elif data_type == "mixed":
-        logger.info("Missing values in cell_id column. Processing as mixed bulk and single-cell BCR data...")
+        logger.info("Missing values in %s column. Processing as mixed bulk and single-cell BCR data...", cell_id_col)
         if chain == "HL":
             logger.info("Concatenating heavy and light chain per cell...")
-            data = data.loc[data.cell_id.notna(),]
-            data = concatenate_heavylight(data, sequence_col)
+            data = data.loc[data[cell_id_col].notna(),]
+            data = concatenate_heavylight(data, sequence_col, cell_id_col)
         else:
-            colnames = ["sequence_id", "cell_id", sequence_col]
+            colnames = ["sequence_id", cell_id_col, sequence_col]
             data = data.loc[data.chain == chain, colnames]
 
     return data
 
 
-def concatenate_heavylight(data: pd.DataFrame, sequence_col: str):
+def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: str):
     """
     Concatenates heavy and light chain per cell and returns a pandas DataFrame.
 
     Parameters:
         data (pandas.DataFrame): Input data containing information about heavy and light chains.
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
+        cell_id_col (str): The name of the column containing the single-cell barcode.
 
     Returns:
         pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
     """
-    colnames = ["cell_id", "locus", "consensus_count", sequence_col]
+    colnames = [cell_id_col, "locus", "consensus_count", sequence_col]
     missing_cols = [col for col in colnames if col not in data.columns]
     if missing_cols:
         raise ValueError(f"Column(s) {missing_cols} is/are not present in the input data.")
     # if tie in maximum consensus_count, return the first occurrence
-    data = data.loc[data.groupby(["cell_id", "chain"])["consensus_count"].idxmax()]
-    data = data.pivot(index="cell_id", columns="chain", values=sequence_col)
-    data = data.reset_index(level="cell_id")
+    data = data.loc[data.groupby([cell_id_col, "chain"])["consensus_count"].idxmax()]
+    data = data.pivot(index=cell_id_col, columns="chain", values=sequence_col)
+    data = data.reset_index(level=cell_id_col)
     n_cells = data.shape[0]
     data = data.dropna(axis=0)
     n_dropped = n_cells - data.shape[0]

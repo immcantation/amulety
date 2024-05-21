@@ -50,6 +50,9 @@ def antiberty(
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 500,
 ):
     """
@@ -64,7 +67,7 @@ def antiberty(
 
     """
 
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512 - 2
     n_dat = dat.shape[0]
@@ -101,7 +104,7 @@ def antiberty(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path)
+    save_embedding(dat, embeddings, output_file_path, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
@@ -126,6 +129,9 @@ def antiberta2(
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 128,
 ):
     """
@@ -140,7 +146,7 @@ def antiberta2(
         amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     max_length = 256
     n_dat = dat.shape[0]
 
@@ -198,7 +204,7 @@ def antiberta2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path)
+    save_embedding(dat, embeddings, output_file_path, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
@@ -223,6 +229,9 @@ def esm2(
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
 ):
     """
@@ -237,7 +246,7 @@ def esm2(
     and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     max_length = 512
     n_dat = dat.shape[0]
 
@@ -292,7 +301,7 @@ def esm2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path)
+    save_embedding(dat, embeddings, output_file_path, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
@@ -321,6 +330,9 @@ def custommodel(
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
 ):
     """
     This function generates embeddings for a given dataset using a pretrained model. The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
@@ -334,7 +346,7 @@ def custommodel(
 
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
@@ -380,7 +392,7 @@ def custommodel(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path)
+    save_embedding(dat, embeddings, output_file_path, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
