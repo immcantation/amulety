@@ -31,7 +31,7 @@ stdout = Console()
 
 @app.command()
 def antiberty(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -40,7 +40,9 @@ def antiberty(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+    ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
@@ -58,7 +60,7 @@ def antiberty(
 
     """
 
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
     logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512 - 2
     n_dat = dat.shape[0]
@@ -95,13 +97,13 @@ def antiberty(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def antiberta2(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -110,7 +112,9 @@ def antiberta2(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+    ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
@@ -122,13 +126,13 @@ def antiberta2(
     Note:\n
     This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
     It prints the size of the model used for embedding, the batch number during the embedding process,
-    and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.\n\n
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.\n\n
 
     Example Usage:\n
         amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
     max_length = 256
     n_dat = dat.shape[0]
 
@@ -186,13 +190,13 @@ def antiberta2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def esm2(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -201,7 +205,9 @@ def esm2(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+    ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
@@ -216,10 +222,10 @@ def esm2(
     Note:\n
     This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
     It prints the size of the model used for embedding, the batch number during the embedding process,
-    and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
     max_length = 512
     n_dat = dat.shape[0]
 
@@ -274,14 +280,14 @@ def esm2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def custommodel(
     modelpath: Annotated[str, typer.Argument(..., help="The path to the pretrained model.")],
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -290,7 +296,9 @@ def custommodel(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+    ],
     embedding_dimension: Annotated[int, typer.Option(help="The dimension of the embedding layer.")] = 100,
     max_length: Annotated[int, typer.Option(help="The maximum length that the model can take.")] = 512,
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
@@ -310,7 +318,7 @@ def custommodel(
 
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col)
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
@@ -356,16 +364,16 @@ def custommodel(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def translate_igblast(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
-    outdir: Annotated[str, typer.Argument(..., help="The directory where the generated embeddings will be saved.")],
+    output_dir: Annotated[str, typer.Argument(..., help="The directory where the generated embeddings will be saved.")],
     reference_dir: Annotated[str, typer.Argument(..., help="The directory to the igblast references.")],
 ):
     """
@@ -382,10 +390,12 @@ def translate_igblast(
     5. Removes gaps introduced by IgBlast from the sequence alignment.\n
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
-    data = pd.read_csv(inpath, sep="\t")
-    out_fasta = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0] + ".fasta")
-    out_igblast = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0] + "_igblast.tsv")
-    out_translated = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0] + "_translated.tsv")
+    data = pd.read_csv(input_file_path, sep="\t")
+    out_fasta = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + ".fasta")
+    out_igblast = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + "_igblast.tsv")
+    out_translated = os.path.join(
+        output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + "_translated.tsv"
+    )
 
     start_time = time.time()
     logger.info("Converting AIRR table to FastA for IgBlast translation...")
