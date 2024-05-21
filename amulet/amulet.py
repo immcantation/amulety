@@ -126,6 +126,12 @@ def antiberta2(
             help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
         ),
     ],
+    cache_dir: Annotated[
+        str,
+        typer.Argument(
+            ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
+        ),
+    ] = None,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
@@ -162,8 +168,8 @@ def antiberta2(
     X = X.str.replace("  ", " ")
     sequences = X.values
 
-    tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2")
-    model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
+    tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
+    model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     logger.info("AntiBERTa2 loaded. Size: %s M", model_size / 1e6)
@@ -226,6 +232,12 @@ def esm2(
             help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
         ),
     ],
+    cache_dir: Annotated[
+        str,
+        typer.Argument(
+            ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
+        ),
+    ] = None,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
@@ -259,8 +271,8 @@ def esm2(
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
 
-    tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
+    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     logger.info("ESM2 650M model size: %s M", round(model_size / 1e6, 2))
