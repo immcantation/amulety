@@ -128,9 +128,7 @@ def antiberta2(
     ],
     cache_dir: Annotated[
         str,
-        typer.Argument(
-            ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
-        ),
+        typer.Option(help="Cache dir for storing the pre-trained model weights."),
     ] = None,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
@@ -234,9 +232,7 @@ def esm2(
     ],
     cache_dir: Annotated[
         str,
-        typer.Argument(
-            ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
-        ),
+        typer.Option(help="Cache dir for storing the pre-trained model weights."),
     ] = None,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
