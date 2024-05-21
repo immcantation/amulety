@@ -19,7 +19,13 @@ from transformers import (
 from typing_extensions import Annotated
 
 from amulet import __version__
-from amulet.utils import batch_loader, insert_space_every_other_except_cls, process_airr, save_embedding
+from amulet.utils import (
+    batch_loader,
+    check_output_file_type,
+    insert_space_every_other_except_cls,
+    process_airr,
+    save_embedding,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -31,7 +37,7 @@ stdout = Console()
 
 @app.command()
 def antiberty(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -40,26 +46,34 @@ def antiberty(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
+    ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 500,
 ):
     """
     Embeds sequences using the AntiBERTy model.\n
 
     Note:\n
-        This function prints the number of sequences being embedded, the batch number during the
-        embedding process, the time taken for the embedding, and the location where the embeddings
-        are saved.\n\n
+    This function prints the number of sequences being embedded, the batch number during the
+    embedding process, the time taken for the embedding, and the location where the embeddings are saved.\n\n
 
     Example usage:\n
         amulet antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     """
-
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    out_format = check_output_file_type(output_file_path)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512 - 2
     n_dat = dat.shape[0]
@@ -96,13 +110,13 @@ def antiberty(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def antiberta2(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -111,25 +125,39 @@ def antiberta2(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
+    ],
+    cache_dir: Annotated[
+        str,
+        typer.Option(help="Cache dir for storing the pre-trained model weights."),
+    ] = None,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 128,
 ):
     """
     Embeds sequences using the antiBERTa2 RoFormer model.\n
 
     Note:\n
-        This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
-        It prints the size of the model used for embedding, the batch number during the embedding process,
-        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.\n\n
+    This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.\n\n
 
     Example Usage:\n
         amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
+    out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     max_length = 256
     n_dat = dat.shape[0]
 
@@ -145,8 +173,8 @@ def antiberta2(
     X = X.str.replace("  ", " ")
     sequences = X.values
 
-    tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2")
-    model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2")
+    tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
+    model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     logger.info("AntiBERTa2 loaded. Size: %s M", model_size / 1e6)
@@ -187,13 +215,13 @@ def antiberta2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def esm2(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -202,10 +230,23 @@ def esm2(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
+    ],
+    cache_dir: Annotated[
+        str,
+        typer.Option(help="Cache dir for storing the pre-trained model weights."),
+    ] = None,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
 ):
     """
@@ -215,12 +256,13 @@ def esm2(
         amulet esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
 
     Note:\n
-        This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
-        It prints the size of the model used for embedding, the batch number during the embedding process,
-        and the time taken for the embedding. The embeddings are saved at the location specified by `outpath`.
+    This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
+    out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     max_length = 512
     n_dat = dat.shape[0]
 
@@ -233,8 +275,8 @@ def esm2(
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
 
-    tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D")
+    tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
+    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     logger.info("ESM2 650M model size: %s M", round(model_size / 1e6, 2))
@@ -275,14 +317,14 @@ def esm2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def custommodel(
     modelpath: Annotated[str, typer.Argument(..., help="The path to the pretrained model.")],
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
     chain: Annotated[
@@ -291,27 +333,37 @@ def custommodel(
             ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
         ),
     ],
-    outpath: Annotated[str, typer.Argument(..., help="The path where the generated embeddings will be saved.")],
+    output_file_path: Annotated[
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
+    ],
     embedding_dimension: Annotated[int, typer.Option(help="The dimension of the embedding layer.")] = 100,
     max_length: Annotated[int, typer.Option(help="The maximum length that the model can take.")] = 512,
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
 ):
     """
     This function generates embeddings for a given dataset using a pretrained model. The function first checks if a CUDA device is available for PyTorch to use. It then loads the data from the input file and preprocesses it.
     The sequences are tokenized and fed into the pretrained model to generate embeddings. The embeddings are then saved to the specified output path.\n\n
 
     Note:\n
-        This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
+    This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
 
     Example Usage:\n
         amulet custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
 
     """
+    out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(inpath, chain, sequence_col=sequence_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
@@ -357,16 +409,16 @@ def custommodel(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, outpath)
-    logger.info("Saved embedding at %s", outpath)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
+    logger.info("Saved embedding at %s", output_file_path)
 
 
 @app.command()
 def translate_igblast(
-    inpath: Annotated[
+    input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
     ],
-    outdir: Annotated[str, typer.Argument(..., help="The directory where the generated embeddings will be saved.")],
+    output_dir: Annotated[str, typer.Argument(..., help="The directory where the generated embeddings will be saved.")],
     reference_dir: Annotated[str, typer.Argument(..., help="The directory to the igblast references.")],
 ):
     """
@@ -383,10 +435,19 @@ def translate_igblast(
     5. Removes gaps introduced by IgBlast from the sequence alignment.\n
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
-    data = pd.read_csv(inpath, sep="\t")
-    out_fasta = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0] + ".fasta")
-    out_igblast = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0] + "_igblast.tsv")
-    out_translated = os.path.join(outdir, os.path.splitext(os.path.basename(inpath))[0] + "_translated.tsv")
+    data = pd.read_csv(input_file_path, sep="\t")
+
+    columns_reserved = ["sequence_aa", "sequence_alignment_aa", "sequence_vdj_aa"]
+    overlap = [col for col in data.columns if col in columns_reserved]
+    if len(overlap) > 0:
+        logger.warn("Existing amino acid columns (%s) will be overwritten.", ", ".join(overlap))
+        data = data.drop(overlap, axis=1)
+
+    out_fasta = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + ".fasta")
+    out_igblast = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + "_igblast.tsv")
+    out_translated = os.path.join(
+        output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + "_translated.tsv"
+    )
 
     start_time = time.time()
     logger.info("Converting AIRR table to FastA for IgBlast translation...")
