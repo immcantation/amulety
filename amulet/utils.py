@@ -43,7 +43,31 @@ def insert_space_every_other_except_cls(input_string: str):
     return result
 
 
-def save_embedding(dat, embedding, outpath, cell_id_col):
+def check_output_file_type(outpath: str):
+    """
+    Checks if the output file type specified in the given file path is one of the allowed types.
+
+    Parameters:
+    outpath (str): The file path of the output file whose type needs to be checked.
+    The output suffix should be one of the following:
+    - 'pt': PyTorch binary format
+    - 'tsv': Tab-separated values format
+    - 'csv': Comma-separated values format
+
+    Returns:
+    str: The file extension of the output file if it is one of the allowed types.
+
+    Raises:
+    ValueError: If the file extension is not one of the allowed types ('tsv', 'csv', 'pt').
+    """
+    out_format = os.path.splitext(outpath)[-1][1:]
+    allowed_outputs = ["tsv", "csv", "pt"]
+    if out_format not in allowed_outputs:
+        raise ValueError(f"Output suffix must be one of {allowed_outputs}")
+    return out_format
+
+
+def save_embedding(dat, embedding, outpath, outformat, cell_id_col):
     """
     Saves the embedding data to a specified file path in the desired format.
 
@@ -51,10 +75,6 @@ def save_embedding(dat, embedding, outpath, cell_id_col):
         dat (DataFrame): The original DataFrame containing index columns and possibly other data.
         embedding (Tensor): The embedding data to be saved.
         outpath (str): The file path where the embedding data will be saved.
-        The output suffix should be one of the following:
-        - 'pt': PyTorch binary format
-        - 'tsv': Tab-separated values format
-        - 'csv': Comma-separated values format
         cell_id_col (str): The name of the column containing the single-cell barcode.
 
     Raises:
@@ -66,19 +86,14 @@ def save_embedding(dat, embedding, outpath, cell_id_col):
     Example:
         save_embedding(dat, embeddings, "embedding.tsv", "cell_id")
     """
-    out_format = os.path.splitext(outpath)[-1][1:]
-    allowed_outputs = ["tsv", "csv", "pt"]
-    if out_format not in allowed_outputs:
-        raise ValueError(f"Output suffix must be one of {allowed_outputs}")
-
     allowed_index_cols = ["sequence_id", cell_id_col]
     index_cols = [col for col in dat.columns if col in allowed_index_cols]
-    if out_format == "pt":
+    if outformat == "pt":
         torch.save(embedding, outpath)
-    elif out_format in ["tsv", "csv"]:
+    elif outformat in ["tsv", "csv"]:
         embedding_df = pd.DataFrame(embedding.numpy())
         result_df = pd.concat([dat.loc[:, index_cols].reset_index(drop=True), embedding_df], axis=1)
-        sep = "\t" if out_format == "tsv" else ","
+        sep = "\t" if outformat == "tsv" else ","
         result_df.to_csv(outpath, sep=sep, index=False)
 
 

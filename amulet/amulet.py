@@ -19,7 +19,13 @@ from transformers import (
 from typing_extensions import Annotated
 
 from amulet import __version__
-from amulet.utils import batch_loader, insert_space_every_other_except_cls, process_airr, save_embedding
+from amulet.utils import (
+    batch_loader,
+    check_output_file_type,
+    insert_space_every_other_except_cls,
+    process_airr,
+    save_embedding,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -66,7 +72,7 @@ def antiberty(
         amulet antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     """
-
+    out_format = check_output_file_type(output_file_path)
     dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512 - 2
@@ -104,7 +110,7 @@ def antiberty(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path, cell_id_col)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
@@ -149,6 +155,7 @@ def antiberta2(
     Example Usage:\n
         amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
+    out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     max_length = 256
@@ -208,7 +215,7 @@ def antiberta2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path, cell_id_col)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
@@ -253,6 +260,7 @@ def esm2(
     It prints the size of the model used for embedding, the batch number during the embedding process,
     and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
+    out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     max_length = 512
@@ -309,7 +317,7 @@ def esm2(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path, cell_id_col)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
@@ -353,6 +361,7 @@ def custommodel(
         amulet custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
 
     """
+    out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     X = dat.loc[:, sequence_col]
@@ -400,7 +409,7 @@ def custommodel(
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
-    save_embedding(dat, embeddings, output_file_path, cell_id_col)
+    save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
     logger.info("Saved embedding at %s", output_file_path)
 
 
