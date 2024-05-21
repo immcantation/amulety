@@ -41,7 +41,11 @@ def antiberty(
         ),
     ],
     output_file_path: Annotated[
-        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
     ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
@@ -113,7 +117,11 @@ def antiberta2(
         ),
     ],
     output_file_path: Annotated[
-        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
     ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
@@ -206,7 +214,11 @@ def esm2(
         ),
     ],
     output_file_path: Annotated[
-        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
     ],
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
@@ -297,7 +309,11 @@ def custommodel(
         ),
     ],
     output_file_path: Annotated[
-        str, typer.Argument(..., help="The path where the generated embeddings will be saved.")
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
     ],
     embedding_dimension: Annotated[int, typer.Option(help="The dimension of the embedding layer.")] = 100,
     max_length: Annotated[int, typer.Option(help="The maximum length that the model can take.")] = 512,
