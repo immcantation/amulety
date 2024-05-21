@@ -391,6 +391,13 @@ def translate_igblast(
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
     data = pd.read_csv(input_file_path, sep="\t")
+
+    columns_reserved = ["sequence_aa", "sequence_alignment_aa", "sequence_vdj_aa"]
+    overlap = [col for col in data.columns if col in columns_reserved]
+    if len(overlap) > 0:
+        logger.warn("Existing amino acid columns (%s) will be overwritten.", ", ".join(overlap))
+        data = data.drop(overlap, axis=1)
+
     out_fasta = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + ".fasta")
     out_igblast = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + "_igblast.tsv")
     out_translated = os.path.join(
