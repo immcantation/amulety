@@ -1,4 +1,4 @@
-"""Top-level package for AMULET."""
+"""Top-level package for AMULETY."""
 
 import importlib.metadata as importlib_metadata
 

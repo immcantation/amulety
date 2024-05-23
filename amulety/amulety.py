@@ -1,4 +1,4 @@
-"""Console script for amulet"""
+"""Console script for amulety"""
 import logging
 import math
 import os
@@ -18,8 +18,8 @@ from transformers import (
 )
 from typing_extensions import Annotated
 
-from amulet import __version__
-from amulet.utils import (
+from amulety import __version__
+from amulety.utils import (
     batch_loader,
     check_output_file_type,
     insert_space_every_other_except_cls,
@@ -69,7 +69,7 @@ def antiberty(
     embedding process, the time taken for the embedding, and the location where the embeddings are saved.\n\n
 
     Example usage:\n
-        amulet antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
+        amulety antiberty tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt
 
     """
     out_format = check_output_file_type(output_file_path)
@@ -153,7 +153,7 @@ def antiberta2(
     and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.\n\n
 
     Example Usage:\n
-        amulet antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
+        amulety antiberta2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
     """
     out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -253,7 +253,7 @@ def esm2(
     Embeds sequences using the ESM2 model.
 
     Example usage:\n
-        amulet esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
+        amulety esm2 tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
 
     Note:\n
     This function uses the ESM2 model for embedding. The maximum length of the sequences to be embedded is 512.
@@ -358,7 +358,7 @@ def custommodel(
     This function uses the transformers library's AutoTokenizer and AutoModelForMaskedLM classes to handle the tokenization and model loading.\n\n
 
     Example Usage:\n
-        amulet custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
+        amulety custom_model <custom_model_path> tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n
 
     """
     out_format = check_output_file_type(output_file_path)
@@ -519,10 +519,10 @@ def main():
 ██   ██ ██      ██  ██████  ███████ ███████    ██           ██
 """
     stderr.print(asci_art)
-    stderr.print(f"AMULET: Adaptive imMUne receptor Language model Embedding Tool\n version {__version__}\n")
+    stderr.print(f"AMULETY: Adaptive imMUne receptor Language model Embedding Tool\n version {__version__}\n")
 
     app()
 
 
-if __name__ == "amulet":
+if __name__ == "amulety":
     main()
