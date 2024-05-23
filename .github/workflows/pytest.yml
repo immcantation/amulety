@@ -53,4 +53,4 @@ jobs:
           conda install -y -c conda-forge -c bioconda -c defaults igblast=1.22.0
           wget -c https://github.com/nf-core/test-datasets/raw/airrflow/database-cache/igblast_base.zip
           unzip igblast_base.zip
-          amulet translate-igblast tests/AIRR_rearrangement_single-cell_testtranslation.tsv . igblast_base
+          amulety translate-igblast tests/AIRR_rearrangement_single-cell_testtranslation.tsv . igblast_base

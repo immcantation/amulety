@@ -1,6 +1,6 @@
-# AMULET
+# AMULETY
 
-Amulet stands for Adaptive imMUne receptor Language model Embedding Tool.
+Amulety stands for Adaptive imMUne receptor Language model Embedding Tool.
 It is a Python command line tool to embed B-cell receptor (antibody) and T-cell Receptor amino acid sequences using pre-trained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids wiht IgBlast to make sure that they are in-frame.
 
 Integrated embedding models are:
@@ -12,18 +12,18 @@ Integrated embedding models are:
 
 ## Installation
 
-You can install AMULET using pip:
+You can install AMULETY using pip:
 
 ```bash
-pip install amulet
+pip install amulety
 ```
 
 ## Usage
 
-To print the usage help for the AMULET package then type:
+To print the usage help for the AMULETY package then type:
 
 ```bash
-amulet --help
+amulety --help
 ```
 
 The full documentation can also be found on the readthedocs page.

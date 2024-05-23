@@ -5,7 +5,7 @@ Usage
 Translate sequence to amino acids
 =================================
 
-.. typer:: amulet.amulet.app:translate-igblast
+.. typer:: amulety.amulety.app:translate-igblast
     :width: 100
     :show-nested:
     :make-sections:
@@ -14,7 +14,7 @@ Translate sequence to amino acids
 AntiBERTy
 =========
 
-.. typer:: amulet.amulet:app:antiberty
+.. typer:: amulety.amulety:app:antiberty
     :width: 100
     :show-nested:
     :make-sections:
@@ -22,7 +22,7 @@ AntiBERTy
 AntiBERTa2
 ==========
 
-.. typer:: amulet.amulet:app:antiberta2
+.. typer:: amulety.amulety:app:antiberta2
     :width: 100
     :show-nested:
     :make-sections:
@@ -30,7 +30,7 @@ AntiBERTa2
 ESM2
 ====
 
-.. typer:: amulet.amulet:app:esm2
+.. typer:: amulety.amulety:app:esm2
     :width: 100
     :show-nested:
     :make-sections:
@@ -38,7 +38,7 @@ ESM2
 Custom pre-trained model
 ========================
 
-.. typer:: amulet.amulet:app:custommodel
+.. typer:: amulety.amulety:app:custommodel
     :width: 100
     :show-nested:
     :make-sections:

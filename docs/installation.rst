@@ -8,13 +8,13 @@ Installation
 Stable release
 --------------
 
-To install AMULET, run this command in your terminal:
+To install AMULETY, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install amulet
+    $ pip install amulety
 
-This is the preferred method to install AMULET, as it will always install the most recent stable release.
+This is the preferred method to install AMULETY, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -26,19 +26,19 @@ you through the process.
 From sources
 ------------
 
-The sources for AMULET can be downloaded from the `Github repo`_.
+The sources for AMULETY can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone https://github.com/immcantation/amulet
+    $ git clone https://github.com/immcantation/amulety
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/immcantation/amulet/tarball/master
+    $ curl -OJL https://github.com/immcantation/amulety/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/immcantation/amulet
-.. _tarball: https://github.com/immcantation/amulet/tarball/master
+.. _Github repo: https://github.com/immcantation/amulety
+.. _tarball: https://github.com/immcantation/amulety/tarball/master

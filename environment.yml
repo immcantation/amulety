@@ -1,4 +1,4 @@
-name: amulet
+name: amulety
 channels:
   - pytorch
   - nvidia
