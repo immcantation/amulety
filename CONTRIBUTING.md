@@ -6,7 +6,7 @@ Contributions are welcome, and they are greatly appreciated! Every little bit he
 
 ### Report Bugs
 
-Report bugs at [https://github.com/immcantation/amulet/issues](https://github.com/immcantation/amulet/issues).
+Report bugs at [https://github.com/immcantation/amulety/issues](https://github.com/immcantation/amulety/issues).
 
 If you are reporting a bug, please include:
 
@@ -24,11 +24,11 @@ Look through the GitHub issues for features. Anything tagged with "enhancement" 
 
 ### Write Documentation
 
-AMULET could always use more documentation, whether as part of the official AMULET docs, in docstrings, or even on the web in blog posts, articles, and such.
+AMULETY could always use more documentation, whether as part of the official AMULETY docs, in docstrings, or even on the web in blog posts, articles, and such.
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at [https://github.com/immcantation/amulet/issues](https://github.com/immcantation/amulet/issues).
+The best way to send feedback is to file an issue at [https://github.com/immcantation/amulety/issues](https://github.com/immcantation/amulety/issues).
 
 If you are proposing a feature:
 
@@ -38,20 +38,20 @@ If you are proposing a feature:
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `AMULET` for local development.
+Ready to contribute? Here's how to set up `AMULETY` for local development.
 
-1. Fork the `AMULET` repo on GitHub.
+1. Fork the `AMULETY` repo on GitHub.
 2. Clone your fork locally:
 
 ```
-$ git clone git@github.com:<your_name_here>/amulet.git
+$ git clone git@github.com:<your_name_here>/amulety.git
 ```
 
 3. Install your local copy into a virtualenv or conda. Assuming you have conda installed, this is how you set up your fork for local development:
 
 ```
-$ conda create -n amulet python=3.11
-$ cd amulet/
+$ conda create -n amulety python=3.11
+$ cd amulety/
 $ pip install -e .
 ```
 
@@ -99,7 +99,7 @@ Before you submit a pull request, check that it meets these guidelines:
 
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the list in README.rst.
-3. The pull request should work for Python 3.8, 3.9, 3.10 and 3.11, and for PyPy. Check [https://github.com/immcantation/amulet/actions](https://github.com/immcantation/amulet/actions) and make sure that the tests pass for all supported Python versions.
+3. The pull request should work for Python 3.8, 3.9, 3.10 and 3.11, and for PyPy. Check [https://github.com/immcantation/amulety/actions](https://github.com/immcantation/amulety/actions) and make sure that the tests pass for all supported Python versions.
 4. Automatic GitHub actions CI tests will also run the tests, all the tests must pass before merging the PR.
 
 ## Deploying

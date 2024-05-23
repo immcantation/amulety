@@ -11,7 +11,7 @@ with open("requirements.txt") as f:
     required = f.read().splitlines()
 
 setup(
-    name="amulet",
+    name="amulety",
     version=version,
     description="Python package to create embeddings of BCR amino acid sequences.",
     long_description=readme,
@@ -30,10 +30,10 @@ setup(
     ],
     author="Mamie Wang, Gisela Gabernet, Steven Kleinstein",
     author_email="mamie.wang@yale.edu, gisela.gabernet@yale.edu, steven.kleinstein@yale.edu",
-    url="https://github.com/immcantation/amulet",
+    url="https://github.com/immcantation/amulety",
     license="MIT",
     entry_points={
-        "console_scripts": ["amulet=amulet.amulet:main"],
+        "console_scripts": ["amulety=amulety.amulety:main"],
     },
     python_requires=">=3.8, <4",
     install_requires=required,

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-"""Tests for `amulet` package.
+"""Tests for `amulety` package.
 Tests can be run with the command:
-python -m unittest test_amulet.py
+python -m unittest test_amulety.py
 """
 
 import os
@@ -12,10 +12,10 @@ import pandas as pd
 import pytest
 import torch
 
-from amulet.amulet import antiberta2, antiberty, esm2, translate_igblast
+from amulety.amulety import antiberta2, antiberty, esm2, translate_igblast
 
 
-class TestAmulet(unittest.TestCase):
+class TestAmulety(unittest.TestCase):
     """Function that runs at start of tests for common resources."""
 
     def setUp(self):
@@ -34,7 +34,7 @@ class TestAmulet(unittest.TestCase):
         """Tear down test fixtures, if any."""
 
     ##################
-    # amulet tests #
+    # amulety tests #
     ##################
 
     def test_antiberty_sc_HL_embedding(self):
