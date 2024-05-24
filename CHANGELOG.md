@@ -1,5 +1,5 @@
 # Changelog
 
-## 0.1.0 (2024-04-16)
+## 1.0 - Green kea
 
-- First release on PyPI.
+- First release on PyPI of amulety
