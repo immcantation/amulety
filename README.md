@@ -1,7 +1,7 @@
 # AMULETY
 
 Amulety stands for Adaptive imMUne receptor Language model Embedding Tool.
-It is a Python command line tool to embed B-cell receptor (antibody) and T-cell Receptor amino acid sequences using pre-trained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids wiht IgBlast to make sure that they are in-frame.
+It is a Python command line tool to embed B-cell receptor (antibody) and T-cell Receptor amino acid sequences using pre-trained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids with IgBlast to make sure that they are in-frame.
 
 Integrated embedding models are:
 
