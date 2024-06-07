@@ -17,6 +17,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements_dev.txt
+          conda install -c conda-forge pypandoc
       - name: check docs
         run: |
           cd ${GITHUB_WORKSPACE}/docs

@@ -6,5 +6,4 @@ sphinx-mdinclude
 sphinx-rtd-theme
 sphinxcontrib-typer
 nbsphinx
-py-pandoc
 -e .
