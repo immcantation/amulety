@@ -241,6 +241,15 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("L_test.tsv")
 
+    def test_balm_paired_sc_HL_embedding(self):
+        """Test antiBERTa2 (single-cell HL)."""
+        balm_paired(self.test_airr_sc_path, "HL", "HL_test.pt")
+        assert os.path.exists("HL_test.pt")
+        embeddings = torch.load("HL_test.pt")
+        assert embeddings.shape[1] == 1024
+        assert embeddings.shape[0] == 2
+        os.remove("HL_test.pt")
+
     @pytest.mark.needsigblast  # mark test as needing igblast installation and databases, run with pytest --needsigblast
     def test_translation(self):
         """Test translation for IgBLAST works."""
