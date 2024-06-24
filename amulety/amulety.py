@@ -456,20 +456,21 @@ def balm_paired(
     tar -xzf BALM-paired.tar.gz
     rm BALM-paired.tar.gz
     """
-    try:
-        result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
-        # Print the output
-        print("Output:", result.stdout)
-    except subprocess.CalledProcessError as e:
-        # Print the error output
-        print("Error:", e.stderr)
-        # Print the command that caused the error
-        print("Failed Command:", e.cmd)
-        # Print the return code
-        print("Return Code:", e.returncode)
-        # Additional diagnostics
-        print("Output:", e.stdout)
-        print("Error Output:", e.stderr)
+    if not os.path.exists("BALM-paired_LC-coherence_90-5-5-split_122222"):
+        try:
+            result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+            # Print the output
+            print("Output:", result.stdout)
+        except subprocess.CalledProcessError as e:
+            # Print the error output
+            print("Error:", e.stderr)
+            # Print the command that caused the error
+            print("Failed Command:", e.cmd)
+            # Print the return code
+            print("Return Code:", e.returncode)
+            # Additional diagnostics
+            print("Output:", e.stdout)
+            print("Error Output:", e.stderr)
 
     custommodel(
         "BALM-paired_LC-coherence_90-5-5-split_122222",
