@@ -431,6 +431,10 @@ def balm_paired(
             help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
         ),
     ],
+    cache_dir: Annotated[
+        str,
+        typer.Option(help="Cache dir for storing the pre-trained model weights."),
+    ] = "/tmp/amulety/",
     sequence_col: Annotated[
         str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
@@ -450,30 +454,28 @@ def balm_paired(
     It prints the size of the model used for embedding, the batch number during the embedding process,
     and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
+    # Ensure cache directory exists
+    os.makedirs(cache_dir, exist_ok=True)
 
-    command = """
-    wget https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
-    tar -xzf BALM-paired.tar.gz
-    rm BALM-paired.tar.gz
-    """
-    if not os.path.exists("BALM-paired_LC-coherence_90-5-5-split_122222"):
+    # Download BALM-paired model if not already cached
+    model_name = "BALM-paired_LC-coherence_90-5-5-split_122222"
+    model_path = os.path.join(cache_dir, model_name)
+
+    if not os.path.exists(model_path):
         try:
-            result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
-            # Print the output
-            print("Output:", result.stdout)
+            # Download and extract model
+            command = f"""
+                wget -O {os.path.join(cache_dir, "BALM-paired.tar.gz")} https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
+                tar -xzf {os.path.join(cache_dir, "BALM-paired.tar.gz")} -C {cache_dir}
+                rm {os.path.join(cache_dir, "BALM-paired.tar.gz")}
+            """
+            subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
         except subprocess.CalledProcessError as e:
-            # Print the error output
-            print("Error:", e.stderr)
-            # Print the command that caused the error
-            print("Failed Command:", e.cmd)
-            # Print the return code
-            print("Return Code:", e.returncode)
-            # Additional diagnostics
-            print("Output:", e.stdout)
-            print("Error Output:", e.stderr)
+            print(f"Error downloading or extracting model: {e}")
+            return
 
     custommodel(
-        "BALM-paired_LC-coherence_90-5-5-split_122222",
+        model_path,
         input_file_path,
         chain,
         output_file_path,
