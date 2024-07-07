@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import torch
 
-from amulety.amulety import antiberta2, antiberty, esm2, translate_igblast
+from amulety.amulety import antiberta2, antiberty, balm_paired, esm2, translate_igblast
 
 
 class TestAmulety(unittest.TestCase):
