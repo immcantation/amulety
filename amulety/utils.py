@@ -168,7 +168,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
 def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: str):
     """
     Concatenates heavy and light chain per cell and returns a pandas DataFrame.\n
-    If a cell contains several light chains, it will take the one with highest duplicate count.\n
+    If a cell contains several light or heavy chains, it will take the one with highest duplicate count.\n
 
 
 
