@@ -171,7 +171,6 @@ def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: s
     If a cell contains several light or heavy chains, it will take the one with highest duplicate count.\n
 
 
-
     Parameters:
         data (pandas.DataFrame): Input data containing information about heavy and light chains.
         sequence_col (str): The name of the column containing the amino acid sequences to embed.

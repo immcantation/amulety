@@ -4,7 +4,6 @@ torch
 transformers
 typer
 antiberty
-rjieba
 pre-commit
 pytest-workflow>=1.6.0
 pytest>=7.0.0
