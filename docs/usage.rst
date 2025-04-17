@@ -35,6 +35,14 @@ ESM2
     :show-nested:
     :make-sections:
 
+BALM-paired
+===========
+
+.. typer:: amulety.amulety:app:balm_paired
+    :width: 100
+    :show-nested:
+    :make-sections:
+
 Custom pre-trained model
 ========================
 

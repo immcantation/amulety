@@ -4,11 +4,13 @@
 
 - First release on PyPI of amulety
 
-## 1.1 -
+## 1.1 - Blue Tui
 
 ### Added
 
-- Added BALM-paired embedding
+- Added explicit command for BALM-paired embedding
+- Added Tutorial
+- Added better docs on included embeddings
 
 ### Fixed
 
