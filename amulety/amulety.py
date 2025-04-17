@@ -480,7 +480,7 @@ def balm_paired(
         chain,
         output_file_path,
         embedding_dimension=1024,
-        batch_size=25,
+        batch_size=batch_size,
         max_length=510,
         sequence_col=sequence_col,
         cell_id_col=cell_id_col,
