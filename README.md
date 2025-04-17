@@ -8,6 +8,7 @@ Integrated embedding models are:
 - antiBERTy
 - antiBERTa2
 - ESM2
+- BALM-Paired
 - Custom models
 
 ## Installation
@@ -26,11 +27,11 @@ To print the usage help for the AMULETY package then type:
 amulety --help
 ```
 
-The full documentation can also be found on the readthedocs page.
+The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
 
 ## Contact
 
-For help and questions please contact the Immcantation Group.
+For help and questions please contact the [Immcantation Group](mailto:immcantation@googlegroups.com).
 
 ## Authors
 
@@ -40,7 +41,11 @@ For help and questions please contact the Immcantation Group.
 
 ## Citing
 
-This package is not yet published.
+If you use this package, please cite the pre-print:
+
+> AMULETY: A Python package to embed adaptive immune receptor sequences.
+> Meng Wang, Yuval Kluger, Steven H. Kleinstein, Gisela Gabernet.
+> BioRXiv 2025. DOI: [https://doi.org/10.1101/2025.03.21.644583](https://doi.org/10.1101/2025.03.21.644583)
 
 To cite the paper comparing the embedding methods on BCR sequences, please cite:
 
