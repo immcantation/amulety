@@ -100,6 +100,9 @@ def save_embedding(dat, embedding, outpath, outformat, cell_id_col):
 def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
+    It will drop cells with missing heavy or light chain if operating in single-cell only mode (no cell IDs missing) and log the number of missing chains.\n
+    If the data is bulk only, it will raise an error if chain = "HL".\n
+    If the data is mixed bulk and single-cell, and the mode is HL it will concatenate heavy and light chains per cell and drop cells with missing chains.\n
 
     Parameters:
         inpath (str): The file path to the input data.
@@ -120,7 +123,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
     data = pd.read_table(inpath)
     if "locus" not in data.columns:
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
-    data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x == "IGH" else "L")
+    data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x in ["IGH", "TRB", "TRD"] else "L")
 
     if cell_id_col not in data.columns:
         data_type = "bulk-only"
@@ -131,7 +134,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
 
     if data_type == "bulk-only":
         logger.info(
-            "No %s column detected. Processsing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
+            "No %s column detected. Processing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
             cell_id_col,
         )
         if chain == "HL":
@@ -164,7 +167,9 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
 
 def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: str):
     """
-    Concatenates heavy and light chain per cell and returns a pandas DataFrame.
+    Concatenates heavy and light chain per cell and returns a pandas DataFrame.\n
+    If a cell contains several light or heavy chains, it will take the one with highest duplicate count.\n
+
 
     Parameters:
         data (pandas.DataFrame): Input data containing information about heavy and light chains.
@@ -174,12 +179,15 @@ def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: s
     Returns:
         pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
     """
-    colnames = [cell_id_col, "locus", "consensus_count", sequence_col]
+    colnames = [cell_id_col, "locus", "duplicate_count", sequence_col]
     missing_cols = [col for col in colnames if col not in data.columns]
     if missing_cols:
-        raise ValueError(f"Column(s) {missing_cols} is/are not present in the input data.")
-    # if tie in maximum consensus_count, return the first occurrence
-    data = data.loc[data.groupby([cell_id_col, "chain"])["consensus_count"].idxmax()]
+        raise ValueError(
+            f"Column(s) {missing_cols} is/are not present in the input data and are needed to concatenate heavy and light chains."
+        )
+
+    # if tie in maximum duplicate_count, return the first occurrence
+    data = data.loc[data.groupby([cell_id_col, "chain"])["duplicate_count"].idxmax()]
     data = data.pivot(index=cell_id_col, columns="chain", values=sequence_col)
     data = data.reset_index(level=cell_id_col)
     n_cells = data.shape[0]

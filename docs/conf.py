@@ -25,24 +25,6 @@ sys.path.insert(0, os.path.abspath(".."))
 # import m2r2
 import amulety
 
-# current_m2r2_setup = m2r2.setup
-
-# # patch for mdinclude
-# # https://github.com/CrossNox/m2r2/issues/15
-# def patched_m2r2_setup(app):
-#     try:
-#         return current_m2r2_setup(app)
-#     except (AttributeError):
-#         app.add_source_suffix(".md", "markdown")
-#         app.add_source_parser(m2r2.M2RParser)
-#         app.add_directive("mdinclude", m2r2.MdInclude)
-#     return dict(
-#         version=m2r2.__version__,
-#         parallel_read_safe=True,
-#         parallel_write_safe=True,
-#     )
-# m2r2.setup = patched_m2r2_setup
-
 # -- General configuration ---------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -51,7 +33,7 @@ import amulety
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinxcontrib.typer", "sphinx_mdinclude"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinxcontrib.typer", "sphinx_mdinclude", "nbsphinx"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

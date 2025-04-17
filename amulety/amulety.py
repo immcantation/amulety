@@ -414,6 +414,80 @@ def custommodel(
 
 
 @app.command()
+def balm_paired(
+    input_file_path: Annotated[
+        str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
+    ],
+    chain: Annotated[
+        str,
+        typer.Argument(
+            ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
+        ),
+    ],
+    output_file_path: Annotated[
+        str,
+        typer.Argument(
+            ...,
+            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+        ),
+    ],
+    cache_dir: Annotated[
+        str,
+        typer.Option(help="Cache dir for storing the pre-trained model weights."),
+    ] = "/tmp/amulety/",
+    sequence_col: Annotated[
+        str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
+    ] = "sequence_vdj_aa",
+    cell_id_col: Annotated[
+        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+    ] = "cell_id",
+    batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
+):
+    """
+    Embeds sequences using the BALM-paired model.
+
+    Example usage:\n
+        amulety balm-paired tests/AIRR_rearrangement_translated_single-cell.tsv HL out.pt\n\n
+
+    Note:\n
+    This function uses the BALM-paired model for embedding. The maximum length of the sequences to be embedded is 1024.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
+    """
+    # Ensure cache directory exists
+    os.makedirs(cache_dir, exist_ok=True)
+
+    # Download BALM-paired model if not already cached
+    model_name = "BALM-paired_LC-coherence_90-5-5-split_122222"
+    model_path = os.path.join(cache_dir, model_name)
+
+    if not os.path.exists(model_path):
+        try:
+            # Download and extract model
+            command = f"""
+                wget -O {os.path.join(cache_dir, "BALM-paired.tar.gz")} https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
+                tar -xzf {os.path.join(cache_dir, "BALM-paired.tar.gz")} -C {cache_dir}
+                rm {os.path.join(cache_dir, "BALM-paired.tar.gz")}
+            """
+            subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error downloading or extracting model: {e}")
+            return
+
+    custommodel(
+        model_path,
+        input_file_path,
+        chain,
+        output_file_path,
+        embedding_dimension=1024,
+        batch_size=batch_size,
+        max_length=510,
+        sequence_col=sequence_col,
+        cell_id_col=cell_id_col,
+    )
+
+
+@app.command()
 def translate_igblast(
     input_file_path: Annotated[
         str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
