@@ -9,6 +9,7 @@ Translate sequence to amino acids
     :width: 100
     :show-nested:
     :make-sections:
+    :preferred: text
 
 
 AntiBERTy
@@ -18,6 +19,7 @@ AntiBERTy
     :width: 100
     :show-nested:
     :make-sections:
+    :preferred: text
 
 AntiBERTa2
 ==========
@@ -26,6 +28,7 @@ AntiBERTa2
     :width: 100
     :show-nested:
     :make-sections:
+    :preferred: text
 
 ESM2
 ====
@@ -34,6 +37,7 @@ ESM2
     :width: 100
     :show-nested:
     :make-sections:
+    :preferred: text
 
 BALM-paired
 ===========
@@ -42,6 +46,7 @@ BALM-paired
     :width: 100
     :show-nested:
     :make-sections:
+    :preferred: text
 
 Custom pre-trained model
 ========================
@@ -50,3 +55,4 @@ Custom pre-trained model
     :width: 100
     :show-nested:
     :make-sections:
+    :preferred: text
