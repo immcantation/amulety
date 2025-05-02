@@ -4,6 +4,7 @@ ruff
 sphinx
 sphinx-mdinclude
 sphinx-rtd-theme
+sphinxcontrib-googleanalytics
 sphinxcontrib-typer
 nbsphinx
 -e .
