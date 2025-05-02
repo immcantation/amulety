@@ -1,0 +1,1 @@
+sphinxcontrib-googleanalytics==0.4

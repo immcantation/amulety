@@ -33,7 +33,12 @@ import amulety
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.viewcode", "sphinxcontrib.typer", "sphinx_mdinclude", "nbsphinx"]
+extensions = ["sphinx.ext.autodoc",
+              "sphinx.ext.viewcode",
+              'sphinxcontrib.googleanalytics',
+              "sphinxcontrib.typer",
+              "sphinx_mdinclude",
+              "nbsphinx"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -96,6 +101,8 @@ html_favicon = "_static/immcantation.ico"
 # documentation.
 #
 # html_theme_options = {}
+
+googleanalytics_id = 'G-52QXMF28BZ'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
