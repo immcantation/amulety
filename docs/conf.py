@@ -113,6 +113,8 @@ html_static_path = ["_static"]
 
 html_css_files = ["overrides.css"]
 
+html_js_files = ["js/custom.js"]
+
 # -- Options for HTMLHelp output ---------------------------------------
 
 # Output file base name for HTML help builder.
