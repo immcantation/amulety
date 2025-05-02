@@ -35,7 +35,7 @@ import amulety
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ["sphinx.ext.autodoc",
               "sphinx.ext.viewcode",
-              'sphinxcontrib.googleanalytics',
+              "sphinxcontrib.googleanalytics",
               "sphinxcontrib.typer",
               "sphinx_mdinclude",
               "nbsphinx"]
