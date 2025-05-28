@@ -205,6 +205,7 @@ def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: s
 # ===== TCR-SPECIFIC FUNCTIONS START =====
 # ========================================
 
+
 def process_tcr_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"):
     """
     Processes AIRR-seq data specifically for TCR (T-Cell Receptor) sequences and returns a pandas DataFrame containing the sequence to embed.
@@ -252,9 +253,7 @@ def process_tcr_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_
     # ===== TCR CHAIN MAPPING =====
     # Map TCR loci to simplified chain types: A for alpha chains, B for beta chains
     data.loc[:, "tcr_chain"] = data.loc[:, "locus"].apply(
-        lambda x: "B" if x in ["TRB", "TRD"] else (
-            "A" if x in ["TRA", "TRG"] else None
-        )
+        lambda x: "B" if x in ["TRB", "TRD"] else ("A" if x in ["TRA", "TRG"] else None)
     )
 
     # Filter for TCR chains only
@@ -355,6 +354,7 @@ def concatenate_alphabeta(data: pd.DataFrame, sequence_col: str, cell_id_col: st
         logger.info("Dropping %s cells with missing alpha or beta chain...", n_dropped)
     data.loc[:, sequence_col] = data.B + "<cls><cls>" + data.A  # Beta first, then alpha (similar to Heavy + Light)
     return data
+
 
 # ======================================
 # ===== TCR-SPECIFIC FUNCTIONS END =====

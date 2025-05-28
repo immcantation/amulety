@@ -24,10 +24,9 @@ from amulety.utils import (
     check_output_file_type,
     insert_space_every_other_except_cls,
     process_airr,
-    save_embedding,
     # ===== TCR-SPECIFIC IMPORTS =====
     process_tcr_airr,
-    concatenate_alphabeta,
+    save_embedding,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -591,6 +590,7 @@ def translate_igblast(
 # ===== TCR-SPECIFIC COMMANDS START =====
 # ========================================
 
+
 @app.command()
 def tcr_prott5(
     input_file_path: Annotated[
@@ -598,9 +598,7 @@ def tcr_prott5(
     ],
     chain: Annotated[
         str,
-        typer.Argument(
-            ..., help="TCR chain type: 'A' (alpha), 'B' (beta), or 'AB' (alpha-beta concatenated pairs)"
-        ),
+        typer.Argument(..., help="TCR chain type: 'A' (alpha), 'B' (beta), or 'AB' (alpha-beta concatenated pairs)"),
     ],
     output_file_path: Annotated[
         str,
@@ -613,12 +611,8 @@ def tcr_prott5(
         str,
         typer.Option(help="Directory to cache ProtT5 model weights (default: system cache)."),
     ] = None,
-    sequence_col: Annotated[
-        str, typer.Option(help="Column name containing amino acid sequences.")
-    ] = "sequence_vdj_aa",
-    cell_id_col: Annotated[
-        str, typer.Option(help="Column name containing single-cell barcodes.")
-    ] = "cell_id",
+    sequence_col: Annotated[str, typer.Option(help="Column name containing amino acid sequences.")] = "sequence_vdj_aa",
+    cell_id_col: Annotated[str, typer.Option(help="Column name containing single-cell barcodes.")] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="Batch size for processing (adjust based on GPU memory).")] = 32,
 ):
     """
@@ -685,7 +679,8 @@ def tcr_prott5(
 
     try:
         # Try the standard ProtT5 XL model first
-        from transformers import T5Tokenizer, T5EncoderModel
+        from transformers import T5EncoderModel, T5Tokenizer
+
         tokenizer = T5Tokenizer.from_pretrained("Rostlab/prot_t5_xl_uniref50", cache_dir=cache_dir, do_lower_case=False)
         model = T5EncoderModel.from_pretrained("Rostlab/prot_t5_xl_uniref50", cache_dir=cache_dir)
         logger.info("Successfully loaded ProtT5 XL encoder model")
@@ -694,7 +689,9 @@ def tcr_prott5(
         logger.warning("ProtT5 XL encoder failed, trying base model: %s", str(e))
         try:
             # Fallback to a smaller, more stable version
-            tokenizer = T5Tokenizer.from_pretrained("Rostlab/prot_t5_base_uniref50", cache_dir=cache_dir, do_lower_case=False)
+            tokenizer = T5Tokenizer.from_pretrained(
+                "Rostlab/prot_t5_base_uniref50", cache_dir=cache_dir, do_lower_case=False
+            )
             model = T5EncoderModel.from_pretrained("Rostlab/prot_t5_base_uniref50", cache_dir=cache_dir)
             logger.info("Successfully loaded ProtT5 base encoder model")
             model_type = "encoder"
@@ -862,6 +859,7 @@ def tcr_esm2(
 
     save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
     logger.info("Saved TCR embedding at %s", output_file_path)
+
 
 # ======================================
 # ===== TCR-SPECIFIC COMMANDS END =====

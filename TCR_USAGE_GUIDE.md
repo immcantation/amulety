@@ -15,17 +15,20 @@ amulety tcr-prott5 input_file.tsv CHAIN output_file.pt [OPTIONS]
 ```
 
 **Parameters:**
+
 - `input_file.tsv`: AIRR format file containing TCR sequences
 - `CHAIN`: Chain type - "A" (alpha), "B" (beta), or "AB" (alpha-beta concatenated)
 - `output_file.pt`: Output file (.pt, .csv, or .tsv)
 
 **Options:**
+
 - `--cache-dir`: Directory to cache model weights
 - `--sequence-col`: Column name for sequences (default: "sequence_vdj_aa")
 - `--cell-id-col`: Column name for cell IDs (default: "cell_id")
 - `--batch-size`: Batch size for processing (default: 32)
 
 **Example:**
+
 ```bash
 amulety tcr-prott5 tcr_data.tsv AB tcr_embeddings.pt --batch-size 16
 ```
@@ -41,6 +44,7 @@ amulety tcr-esm2 input_file.tsv CHAIN output_file.pt [OPTIONS]
 **Parameters and options are the same as tcr-prott5**
 
 **Example:**
+
 ```bash
 amulety tcr-esm2 tcr_data.tsv A tcr_alpha_embeddings.csv
 ```
@@ -50,16 +54,19 @@ amulety tcr-esm2 tcr_data.tsv A tcr_alpha_embeddings.csv
 Your input AIRR file should contain TCR sequences with the following columns:
 
 ### Required Columns:
+
 - `sequence_id`: Unique identifier for each sequence
 - `locus`: TCR locus (TRA, TRB, TRG, TRD)
 - `sequence_vdj_aa`: Amino acid sequence of the TCR
 - `v_call`: V gene call (used to determine locus if missing)
 
 ### Optional Columns:
+
 - `cell_id`: Single-cell barcode (required for AB mode)
 - `duplicate_count`: Count for selecting best chain per cell
 
 ### Example TCR Data:
+
 ```
 sequence_id	cell_id	locus	v_call	sequence_vdj_aa	duplicate_count
 tcr_001	cell_1	TRA	TRAV1*01	QVQLVQSGAEVKKPGASVKVSCKASG...	10
@@ -71,14 +78,17 @@ tcr_004	cell_2	TRB	TRBV2*01	DIQMTQSPSSLSASVGDRVTITCRAS...	12
 ## Chain Types
 
 ### Alpha Chain (A)
+
 - Processes only TRA and TRG loci
 - Suitable for alpha chain-specific analysis
 
 ### Beta Chain (B)
+
 - Processes only TRB and TRD loci
 - Suitable for beta chain-specific analysis
 
 ### Alpha-Beta Concatenated (AB)
+
 - Concatenates alpha and beta chains per cell
 - Format: `BETA_SEQUENCE<cls><cls>ALPHA_SEQUENCE`
 - Requires single-cell data with cell_id column
@@ -87,20 +97,24 @@ tcr_004	cell_2	TRB	TRBV2*01	DIQMTQSPSSLSASVGDRVTITCRAS...	12
 ## Key Differences from BCR Processing
 
 ### 1. Chain Mapping
+
 - **BCR**: H (Heavy), L (Light), HL (Heavy-Light)
 - **TCR**: A (Alpha), B (Beta), AB (Alpha-Beta)
 
 ### 2. Locus Recognition
+
 - **BCR**: IGH, IGL, IGK
 - **TCR**: TRA, TRB, TRG, TRD
 
 ### 3. Concatenation Order
+
 - **BCR**: Heavy + Light (`H<cls><cls>L`)
 - **TCR**: Beta + Alpha (`B<cls><cls>A`)
 
 ## Model Specifications
 
 ### ProtT5 (Recommended for TCR)
+
 - **Model**: `Rostlab/prot_t5_xl_half_uniref50-enc`
 - **Embedding Dimension**: 1024
 - **Max Sequence Length**: 1024
@@ -108,6 +122,7 @@ tcr_004	cell_2	TRB	TRBV2*01	DIQMTQSPSSLSASVGDRVTITCRAS...	12
 - **Best for**: General protein sequences, including TCRs
 
 ### ESM2
+
 - **Model**: `facebook/esm2_t33_650M_UR50D`
 - **Embedding Dimension**: 1280
 - **Max Sequence Length**: 512
@@ -116,7 +131,9 @@ tcr_004	cell_2	TRB	TRBV2*01	DIQMTQSPSSLSASVGDRVTITCRAS...	12
 ## Code Organization
 
 ### Files Modified:
+
 1. **`amulety/utils.py`**: Added TCR-specific functions
+
    - `process_tcr_airr()`: TCR data processing
    - `concatenate_alphabeta()`: Alpha-beta chain concatenation
 
@@ -125,6 +142,7 @@ tcr_004	cell_2	TRB	TRBV2*01	DIQMTQSPSSLSASVGDRVTITCRAS...	12
    - `tcr_esm2()`: ESM2 embedding command
 
 ### Clear Separation:
+
 - All TCR code is clearly marked with comments
 - TCR functions are separate from BCR functions
 - No modification of existing BCR functionality
@@ -139,7 +157,9 @@ tcr_004	cell_2	TRB	TRBV2*01	DIQMTQSPSSLSASVGDRVTITCRAS...	12
 4. **Model download**: Ensure internet connection for first-time model download
 
 ### Debug Mode:
+
 The code includes extensive logging. Check console output for:
+
 - Number of sequences processed
 - Chain type detection
 - Cell pairing information
@@ -148,11 +168,13 @@ The code includes extensive logging. Check console output for:
 ## Testing
 
 Run the included test script to verify functionality:
+
 ```bash
 python simple_tcr_test.py
 ```
 
 This tests:
+
 - TCR chain mapping logic
 - Alpha-beta concatenation
 - File I/O operations
@@ -160,6 +182,7 @@ This tests:
 ## Future Enhancements
 
 Potential additions:
+
 - TCR-specific pre-trained models
 - CDR3-specific embedding options
 - TCR translation functionality
