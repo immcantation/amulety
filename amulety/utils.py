@@ -100,13 +100,19 @@ def save_embedding(dat, embedding, outpath, outformat, cell_id_col):
 def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
-    It will drop cells with missing heavy or light chain if operating in single-cell only mode (no cell IDs missing) and log the number of missing chains.\n
-    If the data is bulk only, it will raise an error if chain = "HL".\n
-    If the data is mixed bulk and single-cell, and the mode is HL it will concatenate heavy and light chains per cell and drop cells with missing chains.\n
+
+    This function supports both BCR and TCR data with automatic chain mapping:
+    - BCR: IGH → H (Heavy), IGL/IGK → L (Light)
+    - TCR: TRB/TRD → H (Heavy), TRA/TRG → L (Light)
+
+    It will drop cells with missing heavy or light chain if operating in single-cell only mode (no cell IDs missing) and log the number of missing chains.
+    If the data is bulk only, it will raise an error if chain = "HL".
+    If the data is mixed bulk and single-cell, and the mode is HL it will concatenate heavy and light chains per cell and drop cells with missing chains.
 
     Parameters:
         inpath (str): The file path to the input data.
         chain (str): The input chain, which can be one of ["H", "L", "HL"].
+                    For TCR data: H=Beta chains, L=Alpha chains, HL=Alpha-Beta pairs
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
 
@@ -123,6 +129,8 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
     data = pd.read_table(inpath)
     if "locus" not in data.columns:
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
+
+    # ===== BCR CHAIN MAPPING (ORIGINAL CODE) =====
     data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x in ["IGH", "TRB", "TRD"] else "L")
 
     if cell_id_col not in data.columns:
@@ -144,7 +152,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
             data = data.loc[data.chain == chain, colnames]
 
     elif data_type == "single-cell-only":
-        logger.info("Processing single-cell BCR data...")
+        logger.info("Processing single-cell data...")
         if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell...")
             data = concatenate_heavylight(data, sequence_col, cell_id_col)
@@ -153,7 +161,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
             data = data.loc[data.chain == chain, colnames]
 
     elif data_type == "mixed":
-        logger.info("Missing values in %s column. Processing as mixed bulk and single-cell BCR data...", cell_id_col)
+        logger.info("Missing values in %s column. Processing as mixed bulk and single-cell data...", cell_id_col)
         if chain == "HL":
             logger.info("Concatenating heavy and light chain per cell...")
             data = data.loc[data[cell_id_col].notna(),]
@@ -167,17 +175,23 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
 
 def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: str):
     """
-    Concatenates heavy and light chain per cell and returns a pandas DataFrame.\n
-    If a cell contains several light or heavy chains, it will take the one with highest duplicate count.\n
+    Concatenates heavy and light chain per cell and returns a pandas DataFrame.
 
+    This function works for both BCR and TCR data:
+    - BCR: Heavy (IGH) + Light (IGL/IGK) chains
+    - TCR: Beta (TRB/TRD) + Alpha (TRA/TRG) chains (mapped as Heavy + Light)
+
+    If a cell contains several light or heavy chains, it will take the one with highest duplicate count.
 
     Parameters:
         data (pandas.DataFrame): Input data containing information about heavy and light chains.
+                                 Must include columns: cell_id_col, "chain", "duplicate_count", sequence_col
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
 
     Returns:
         pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
+                         Format: HEAVY<cls><cls>LIGHT for each cell.
     """
     colnames = [cell_id_col, "locus", "duplicate_count", sequence_col]
     missing_cols = [col for col in colnames if col not in data.columns]
