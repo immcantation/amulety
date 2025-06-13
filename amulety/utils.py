@@ -1,10 +1,8 @@
 """Main module."""
 import logging
-import os
 from typing import Iterable
 
 import pandas as pd
-import torch
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -43,61 +41,9 @@ def insert_space_every_other_except_cls(input_string: str):
     return result
 
 
-def check_output_file_type(outpath: str):
-    """
-    Checks if the output file type specified in the given file path is one of the allowed types.
-
-    Parameters:
-    outpath (str): The file path of the output file whose type needs to be checked.
-    The output suffix should be one of the following:
-    - 'pt': PyTorch binary format
-    - 'tsv': Tab-separated values format
-    - 'csv': Comma-separated values format
-
-    Returns:
-    str: The file extension of the output file if it is one of the allowed types.
-
-    Raises:
-    ValueError: If the file extension is not one of the allowed types ('tsv', 'csv', 'pt').
-    """
-    out_format = os.path.splitext(outpath)[-1][1:]
-    allowed_outputs = ["tsv", "csv", "pt"]
-    if out_format not in allowed_outputs:
-        raise ValueError(f"Output suffix must be one of {allowed_outputs}")
-    return out_format
-
-
-def save_embedding(dat, embedding, outpath, outformat, cell_id_col):
-    """
-    Saves the embedding data to a specified file path in the desired format.
-
-    Args:
-        dat (DataFrame): The original DataFrame containing index columns and possibly other data.
-        embedding (Tensor): The embedding data to be saved.
-        outpath (str): The file path where the embedding data will be saved.
-        cell_id_col (str): The name of the column containing the single-cell barcode.
-
-    Raises:
-        ValueError: If the output format is not supported.
-
-    Note:
-        Index columns from the original DataFrame 'dat' will be included in the saved output.
-
-    Example:
-        save_embedding(dat, embeddings, "embedding.tsv", "cell_id")
-    """
-    allowed_index_cols = ["sequence_id", cell_id_col]
-    index_cols = [col for col in dat.columns if col in allowed_index_cols]
-    if outformat == "pt":
-        torch.save(embedding, outpath)
-    elif outformat in ["tsv", "csv"]:
-        embedding_df = pd.DataFrame(embedding.numpy())
-        result_df = pd.concat([dat.loc[:, index_cols].reset_index(drop=True), embedding_df], axis=1)
-        sep = "\t" if outformat == "tsv" else ","
-        result_df.to_csv(outpath, sep=sep, index=False)
-
-
-def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"):
+def process_airr(
+    airr_df: pd.DataFrame, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"
+):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
     It will drop cells with missing heavy or light chain if operating in single-cell only mode (no cell IDs missing) and log the number of missing chains.\n
@@ -105,7 +51,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
     If the data is mixed bulk and single-cell, and the mode is HL it will concatenate heavy and light chains per cell and drop cells with missing chains.\n
 
     Parameters:
-        inpath (str): The file path to the input data.
+        airr_df (pandas.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
         chain (str): The input chain, which can be one of ["H", "L", "HL"].
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
@@ -120,7 +66,7 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
     if chain not in allowed_sequence_input:
         raise ValueError(f"Input x must be one of {allowed_sequence_input}")
 
-    data = pd.read_table(inpath)
+    data = airr_df.copy()
     if "locus" not in data.columns:
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
     data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x in ["IGH", "TRB", "TRD"] else "L")

@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import torch
 
-from amulety.amulety import antiberta2, antiberty, balm_paired, esm2, translate_igblast
+from amulety.amulety import embed, translate_igblast
 
 
 class TestAmulety(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_sc_HL_embedding(self):
         """Test antiberty (single-cell HL)."""
-        antiberty(self.test_airr_sc_path, "HL", "HL_test.pt")
+        embed(input_airr=self.test_airr_sc_path, chain="HL", model="antiberty", output_file_path="HL_test.pt")
         assert os.path.exists("HL_test.pt")
         embeddings = torch.load("HL_test.pt")
         assert embeddings.shape[1] == 512
@@ -48,7 +48,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_mixed_HL_embedding_tsv(self):
         """Test antiberty (single-cell and bulk HL)."""
-        antiberty(self.test_airr_mixed_path, "HL", "HL_test.tsv")
+        embed(self.test_airr_mixed_path, "HL", "antiberty", "HL_test.tsv")
         assert os.path.exists("HL_test.tsv")
         embeddings = pd.read_table("HL_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 513
@@ -58,11 +58,11 @@ class TestAmulety(unittest.TestCase):
     def test_antiberty_bulk_HL_embedding(self):
         """Test antiberty (bulk HL)."""
         with self.assertRaises(ValueError):
-            antiberty(self.test_airr_bulk_path, "HL", "HL_test.pt")
+            embed(self.test_airr_bulk_path, "HL", "antiberty", "HL_test.pt")
 
     def test_antiberty_sc_H_embedding(self):
         """Test antiberty (single-cell H)."""
-        antiberty(self.test_airr_sc_path, "H", "H_test.pt")
+        embed(self.test_airr_sc_path, "H", "antiberty", "H_test.pt")
         assert os.path.exists("H_test.pt")
         embeddings = torch.load("H_test.pt")
         assert embeddings.shape[1] == 512
@@ -71,7 +71,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_mixed_H_embedding_tsv(self):
         """Test antiberty (single-cell and bulk H)."""
-        antiberty(self.test_airr_mixed_path, "H", "H_test.tsv")
+        embed(self.test_airr_mixed_path, "H", "antiberty", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 514
@@ -80,7 +80,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_bulk_H_embedding(self):
         """Test antiberty (bulk H)."""
-        antiberty(self.test_airr_bulk_path, "H", "H_test.pt")
+        embed(self.test_airr_bulk_path, "H", "antiberty", "H_test.pt")
         assert os.path.exists("H_test.pt")
         embeddings = torch.load("H_test.pt")
         assert embeddings.shape[1] == 512
@@ -89,7 +89,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_sc_L_embedding(self):
         """Test antiberty (single-cell L)."""
-        antiberty(self.test_airr_sc_path, "L", "L_test.pt")
+        embed(self.test_airr_sc_path, "L", "antiberty", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 512
@@ -98,7 +98,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_mixed_L_embedding_tsv(self):
         """Test antiberty (single-cell and bulk L)."""
-        antiberty(self.test_airr_mixed_path, "L", "L_test.tsv")
+        embed(self.test_airr_mixed_path, "L", "antiberty", "L_test.tsv")
         assert os.path.exists("L_test.tsv")
         embeddings = pd.read_table("L_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 514
@@ -107,7 +107,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberty_bulk_L_embedding(self):
         """Test antiberty (bulk L)."""
-        antiberty(self.test_airr_bulk_path, "L", "L_test.pt")
+        embed(self.test_airr_bulk_path, "L", "antiberty", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 512
@@ -116,7 +116,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_esm2_sc_HL_embedding(self):
         """Test esm2 (single-cell HL)."""
-        esm2(self.test_airr_sc_path, "HL", "HL_test.pt")
+        embed(self.test_airr_sc_path, "HL", "esm2", "HL_test.pt")
         assert os.path.exists("HL_test.pt")
         embeddings = torch.load("HL_test.pt")
         assert embeddings.shape[1] == 1280
@@ -126,11 +126,11 @@ class TestAmulety(unittest.TestCase):
     def test_esm2_bulk_HL_embedding(self):
         """Test esm2 (bulk HL)."""
         with self.assertRaises(ValueError):
-            esm2(self.test_airr_bulk_path, "HL", "HL_test.pt")
+            embed(self.test_airr_bulk_path, "HL", "esm2", "HL_test.pt")
 
     def test_esm2_sc_H_embedding(self):
         """Test esm2 (single-cell H)."""
-        esm2(self.test_airr_sc_path, "H", "H_test.pt")
+        embed(self.test_airr_sc_path, "H", "esm2", "H_test.pt")
         assert os.path.exists("H_test.pt")
         embeddings = torch.load("H_test.pt")
         assert embeddings.shape[1] == 1280
@@ -139,7 +139,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_esm2_bulk_H_embedding(self):
         """Test antiberty (bulk H)."""
-        esm2(self.test_airr_bulk_path, "H", "H_test.pt")
+        embed(self.test_airr_bulk_path, "H", "esm2", "H_test.pt")
         assert os.path.exists("H_test.pt")
         embeddings = torch.load("H_test.pt")
         assert embeddings.shape[1] == 1280
@@ -148,7 +148,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_esm2_sc_L_embedding(self):
         """Test esm2 (single-cell L)."""
-        esm2(self.test_airr_sc_path, "L", "L_test.pt")
+        embed(self.test_airr_sc_path, "L", "esm2", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 1280
@@ -157,7 +157,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_esm2_bulk_L_embedding(self):
         """Test esm2 (bulk L)."""
-        esm2(self.test_airr_bulk_path, "L", "L_test.pt")
+        embed(self.test_airr_bulk_path, "L", "esm2", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 1280
@@ -166,7 +166,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiBERTa2_sc_HL_embedding(self):
         """Test antiBERTa2 (single-cell HL)."""
-        antiberta2(self.test_airr_sc_path, "HL", "HL_test.pt")
+        embed(self.test_airr_sc_path, "HL", "antiberta2", "HL_test.pt")
         assert os.path.exists("HL_test.pt")
         embeddings = torch.load("HL_test.pt")
         assert embeddings.shape[1] == 1024
@@ -175,7 +175,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberta2_mixed_HL_embedding_tsv(self):
         """Test antiberta2 (single-cell and bulk HL)."""
-        antiberta2(self.test_airr_mixed_path, "HL", "HL_test.tsv")
+        embed(self.test_airr_mixed_path, "HL", "antiberta2", "HL_test.tsv")
         assert os.path.exists("HL_test.tsv")
         embeddings = pd.read_table("HL_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1025
@@ -185,11 +185,11 @@ class TestAmulety(unittest.TestCase):
     def test_antiBERTa2_bulk_HL_embedding(self):
         """Test antiBERTa2 (bulk HL)."""
         with self.assertRaises(ValueError):
-            antiberta2(self.test_airr_bulk_path, "HL", "HL_test.pt")
+            embed(self.test_airr_bulk_path, "HL", "antiberta2", "HL_test.pt")
 
     def test_antiBERTa2_sc_H_embedding(self):
         """Test antiBERTa2 (single-cell H)."""
-        antiberta2(self.test_airr_sc_path, "H", "H_test.pt")
+        embed(self.test_airr_sc_path, "H", "antiberta2", "H_test.pt")
         assert os.path.exists("H_test.pt")
         embeddings = torch.load("H_test.pt")
         assert embeddings.shape[1] == 1024
@@ -198,7 +198,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberta2_mixed_H_embedding_tsv(self):
         """Test antiberta2 (single-cell and bulk H)."""
-        antiberta2(self.test_airr_mixed_path, "H", "H_test.tsv")
+        embed(self.test_airr_mixed_path, "H", "antiberta2", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1026
@@ -207,7 +207,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiBERTa2_bulk_H_embedding(self):
         """Test antiBERTa2 (bulk H)."""
-        antiberta2(self.test_airr_bulk_path, "H", "H_test.pt")
+        embed(self.test_airr_bulk_path, "H", "antiberta2", "H_test.pt")
         assert os.path.exists("H_test.pt")
         embeddings = torch.load("H_test.pt")
         assert embeddings.shape[1] == 1024
@@ -216,7 +216,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiBERTa2_sc_L_embedding(self):
         """Test antiBERTa2 (single-cell L)."""
-        antiberta2(self.test_airr_sc_path, "L", "L_test.pt")
+        embed(self.test_airr_sc_path, "L", "antiberta2", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 1024
@@ -225,7 +225,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiBERTa2_bulk_L_embedding(self):
         """Test antiBERTa2 (bulk L)."""
-        antiberta2(self.test_airr_bulk_path, "L", "L_test.pt")
+        embed(self.test_airr_bulk_path, "L", "antiberta2", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 1024
@@ -234,7 +234,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_antiberta2_mixed_L_embedding_tsv(self):
         """Test antiberta2 (single-cell and bulk L)."""
-        antiberta2(self.test_airr_mixed_path, "L", "L_test.tsv")
+        embed(self.test_airr_mixed_path, "L", "antiberta2", "L_test.tsv")
         assert os.path.exists("L_test.tsv")
         embeddings = pd.read_table("L_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1026
@@ -242,8 +242,8 @@ class TestAmulety(unittest.TestCase):
         os.remove("L_test.tsv")
 
     def test_balm_paired_sc_HL_embedding(self):
-        """Test antiBERTa2 (single-cell HL)."""
-        balm_paired(self.test_airr_sc_path, "HL", "HL_test.pt")
+        """Test balm-paired (single-cell HL)."""
+        embed(self.test_airr_sc_path, "HL", "balm-paired", "HL_test.pt")
         assert os.path.exists("HL_test.pt")
         embeddings = torch.load("HL_test.pt")
         assert embeddings.shape[1] == 1024

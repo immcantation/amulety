@@ -1,5 +1,8 @@
 """Top-level package for AMULETY."""
 
-import importlib.metadata as importlib_metadata
+from .amulety import embed_airr, translate_airr
 
-__version__ = importlib_metadata.version(__name__)
+__all__ = [
+    "embed_airr",
+    "translate_airr",
+]
