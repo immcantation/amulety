@@ -660,12 +660,22 @@ def prott5(
             logger.info("Successfully loaded ProtT5 base encoder model")
             model_type = "encoder"
         except Exception as e2:
-            logger.warning("ProtT5 encoder models failed, using ESM2 as fallback: %s", str(e2))
+            logger.error("Failed to load ProtT5 models: %s", str(e2))
 
-            tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
-            model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
-            logger.info("Using ESM2 as fallback for ProtT5")
-            model_type = "masked_lm"
+            # Check if it's a SentencePiece issue
+            if "SentencePiece" in str(e2):
+                raise RuntimeError(
+                    "ProtT5 requires the SentencePiece library. Please install it with:\n"
+                    "pip install sentencepiece\n"
+                    "Then restart your environment and try again.\n"
+                    "If you want to use ESM2 instead, please use the 'esm2' command."
+                ) from e2
+            else:
+                raise RuntimeError(
+                    f"Failed to load ProtT5 model: {str(e2)}\n"
+                    "Please check your internet connection and try again.\n"
+                    "If you want to use ESM2 instead, please use the 'esm2' command."
+                ) from e2
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     logger.info("ProtT5 model loaded. Size: %s M", round(model_size / 1e6, 2))
@@ -674,9 +684,10 @@ def prott5(
     n_seqs = len(sequences)
     n_batches = math.ceil(n_seqs / batch_size)
 
-    # Initialize embeddings tensor after processing first batch to get correct dimensions
-    embeddings = None
-    dim = None
+    # ProtT5 always has 1024 dimensions
+    dim = 1024
+    embeddings = torch.empty((n_seqs, dim))
+    logger.info("Initialized embeddings tensor with ProtT5 dimension: %s", dim)
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
@@ -704,15 +715,7 @@ def prott5(
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1, :].mean(0)
 
-        batch_embeddings = torch.stack(outputs)
-
-        # Initialize embeddings tensor with correct dimensions from first batch
-        if embeddings is None:
-            dim = batch_embeddings.shape[1]
-            embeddings = torch.empty((n_seqs, dim))
-            logger.info("Initialized embeddings tensor with dimension: %s", dim)
-
-        embeddings[start:end] = batch_embeddings
+        embeddings[start:end] = torch.stack(outputs)
         del x
         del attention_mask
         del outputs
