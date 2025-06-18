@@ -97,7 +97,13 @@ def save_embedding(dat, embedding, outpath, outformat, cell_id_col):
         result_df.to_csv(outpath, sep=sep, index=False)
 
 
-def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa", cell_id_col: str = "cell_id"):
+def process_airr(
+    inpath: str,
+    chain: str,
+    sequence_col: str = "sequence_vdj_aa",
+    cell_id_col: str = "cell_id",
+    receptor_type: str = "all",
+):
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
 
@@ -115,12 +121,16 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
                     For TCR data: H=Beta chains, L=Alpha chains, HL=Alpha-Beta pairs
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
+        receptor_type (str): The receptor type to validate, one of ["BCR", "TCR", "all"].
+                           - "BCR": validates only BCR chains (IGH, IGL, IGK) are present
+                           - "TCR": validates only TCR chains (TRA, TRB, TRG, TRD) are present
+                           - "all": allows both BCR and TCR chains in the same file
 
     Returns:
         pandas.DataFrame: Dataframe with formatted sequences.
 
     Raises:
-        ValueError: If chain is not one of ["H", "L", "HL"].
+        ValueError: If chain is not one of ["H", "L", "HL"] or receptor_type validation fails.
     """
     allowed_sequence_input = ["H", "L", "HL"]
     if chain not in allowed_sequence_input:
@@ -129,6 +139,43 @@ def process_airr(inpath: str, chain: str, sequence_col: str = "sequence_vdj_aa",
     data = pd.read_table(inpath)
     if "locus" not in data.columns:
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
+
+    # ===== RECEPTOR TYPE VALIDATION =====
+    bcr_loci = {"IGH", "IGL", "IGK"}
+    tcr_loci = {"TRA", "TRB", "TRG", "TRD"}
+    present_loci = set(data["locus"].unique())
+
+    bcr_present = bool(present_loci & bcr_loci)
+    tcr_present = bool(present_loci & tcr_loci)
+
+    if receptor_type.upper() == "BCR":
+        if tcr_present and bcr_present:
+            tcr_chains = present_loci & tcr_loci
+            logger.warning(
+                "TCR chains (%s) detected in BCR-only mode. These will be removed and only BCR chains used.",
+                list(tcr_chains),
+            )
+            data = data[data["locus"].isin(bcr_loci)]
+        elif tcr_present and not bcr_present:
+            raise ValueError(
+                "No BCR chains (IGH, IGL, IGK) found in data. This embedding model is trained for BCR data and should not be used for TCR-only data."
+            )
+    elif receptor_type.upper() == "TCR":
+        if bcr_present and tcr_present:
+            bcr_chains = present_loci & bcr_loci
+            logger.warning(
+                "BCR chains (%s) detected in TCR-only mode. These will be removed and only TCR chains used.",
+                list(bcr_chains),
+            )
+            data = data[data["locus"].isin(tcr_loci)]
+        elif bcr_present and not tcr_present:
+            raise ValueError(
+                "No TCR chains (TRA, TRB, TRG, TRD) found in data. This embedding model is trained for TCR data and should not be used for BCR-only data."
+            )
+    elif receptor_type.upper() == "ALL":
+        logger.info("Processing both BCR and TCR sequences from the file.")
+    else:
+        raise ValueError(f"receptor_type must be one of ['BCR', 'TCR', 'all'], got '{receptor_type}'")
 
     # ===== BCR CHAIN MAPPING (ORIGINAL CODE) =====
     data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x in ["IGH", "TRB", "TRD"] else "L")

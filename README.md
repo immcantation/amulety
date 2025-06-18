@@ -13,7 +13,7 @@ Here is the list of currently supported embeddings:
 | ESM2 (650M parameter) | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
 | ProtT5 (BCR & TCR)    | prott5      | 1024                | [doi:10.1038/s41587-019-0036-z](https://doi.org/10.1038/s41587-019-0036-z)       |
 | ESM2 (BCR & TCR)      | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
-| TCR-BERT              | tcr_bert    | 768                 | Pre-trained on VDJdb and PIRD TCR sequences                                      |
+| TCR-BERT              | tcr_bert    | 768                 | Pre-trained on human TCR sequences from VDJdb and PIRD                           |
 | User-specified model  | custommodel | Configurable        |                                                                                  |
 
 ## Installation

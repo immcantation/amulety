@@ -73,7 +73,7 @@ def antiberty(
 
     """
     out_format = check_output_file_type(output_file_path)
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col, receptor_type="BCR")
     logger.info("Embedding %s sequences using antiberty...", dat.shape[0])
     max_length = 512 - 2
     n_dat = dat.shape[0]
@@ -157,7 +157,7 @@ def antiberta2(
     """
     out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col, receptor_type="BCR")
     max_length = 256
     n_dat = dat.shape[0]
 
@@ -227,7 +227,8 @@ def esm2(
     chain: Annotated[
         str,
         typer.Argument(
-            ..., help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)"
+            ...,
+            help="Chain type: 'H' (heavy), 'L' (light), 'HL' (heavy-light pairs) for BCR; 'A' (alpha), 'B' (beta), 'AB' (alpha-beta pairs) for TCR",
         ),
     ],
     output_file_path: Annotated[
@@ -262,7 +263,7 @@ def esm2(
     """
     out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col, receptor_type="all")
     max_length = 512
     n_dat = dat.shape[0]
 
@@ -304,7 +305,6 @@ def esm2(
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
 
-        # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1, :].mean(0)
 
@@ -363,7 +363,7 @@ def custommodel(
     """
     out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
+    dat = process_airr(input_file_path, chain, sequence_col=sequence_col, cell_id_col=cell_id_col, receptor_type="BCR")
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
     sequences = X.values
@@ -396,7 +396,6 @@ def custommodel(
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
 
-        # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1, :].mean(0)
 
@@ -454,16 +453,14 @@ def balm_paired(
     It prints the size of the model used for embedding, the batch number during the embedding process,
     and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
-    # Ensure cache directory exists
+
     os.makedirs(cache_dir, exist_ok=True)
 
-    # Download BALM-paired model if not already cached
     model_name = "BALM-paired_LC-coherence_90-5-5-split_122222"
     model_path = os.path.join(cache_dir, model_name)
 
     if not os.path.exists(model_path):
         try:
-            # Download and extract model
             command = f"""
                 wget -O {os.path.join(cache_dir, "BALM-paired.tar.gz")} https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
                 tar -xzf {os.path.join(cache_dir, "BALM-paired.tar.gz")} -C {cache_dir}
@@ -525,13 +522,12 @@ def translate_igblast(
 
     start_time = time.time()
     logger.info("Converting AIRR table to FastA for IgBlast translation...")
-    # Write out FASTA file
+
     with open(out_fasta, "w") as f:
         for _, row in data.iterrows():
             f.write(">" + row["sequence_id"] + "\n")
             f.write(row["sequence"] + "\n")
 
-    # Run IgBlast on FASTA
     command_igblastn = [
         "igblastn",
         "-germline_db_V",
@@ -560,23 +556,20 @@ def translate_igblast(
     if pipes.returncode != 0:
         raise Exception(f"IgBlast failed with error code {pipes.returncode}. {stderr.decode('utf-8')}")
 
-    # Read IgBlast output
     igblast_transl = pd.read_csv(out_igblast, sep="\t", usecols=["sequence_id", "sequence_aa", "sequence_alignment_aa"])
 
-    # Remove IMGT gaps
     sequence_vdj_aa = [sa.replace("-", "") for sa in igblast_transl["sequence_alignment_aa"]]
     igblast_transl["sequence_vdj_aa"] = sequence_vdj_aa
 
     logger.info(
         "Saved the translations in the dataframe (sequence_aa contains the full translation and sequence_vdj_aa contains the VDJ translation)."
     )
-    # Merge and save the translated data with original data
+
     data_transl = pd.merge(data, igblast_transl, on="sequence_id", how="left")
 
     logger.info(f"Saved the translations in {out_translated} file.")
     data_transl.to_csv(out_translated, sep="\t", index=False)
 
-    # Clean up
     os.remove(out_fasta)
     os.remove(out_igblast)
 
@@ -584,11 +577,7 @@ def translate_igblast(
     logger.info("Took %s seconds", round(end_time - start_time, 2))
 
 
-# ========================================
-# ===== TCR-SPECIFIC COMMANDS START =====
-# ========================================
-
-
+# TCR-specific commands
 @app.command()
 def prott5(
     input_file_path: Annotated[
@@ -619,55 +608,25 @@ def prott5(
     """
     Embeds BCR or TCR sequences using the ProtT5 protein language model.
 
-    This command processes both BCR and TCR sequences from AIRR format files and generates
-    high-quality embeddings using the ProtT5 model, which is specifically designed for protein sequences.
-
-    SUPPORTED DATA TYPES:
-    - Single-cell BCR/TCR-seq data (10X Genomics, etc.)
-    - Bulk BCR/TCR repertoire sequencing data
-    - Mixed single-cell and bulk datasets
-    - Custom AIRR-formatted BCR/TCR data
-
-    CHAIN TYPES:
-    BCR: H (heavy), L (light), HL (heavy-light pairs)
-    TCR: A (alpha), B (beta), AB (alpha-beta pairs)
-
-    Note: TCR chains are automatically mapped to BCR notation:
-    - A (alpha) → L (light), B (beta) → H (heavy), AB → HL
-
-    MODEL SPECIFICATIONS:
-    - Model: ProtT5-XL (Rostlab/prot_t5_xl_uniref50)
-    - Embedding dimension: 1024
-    - Maximum sequence length: 1024 amino acids
-    - Automatic GPU acceleration when available
-
-    OUTPUT FORMATS:
-    - .pt: PyTorch tensor (compact, fast loading)
-    - .csv/.tsv: Human-readable with sequence metadata
-
     Example usage:\n
-        # BCR heavy-light pairs
-        amulety prott5 bcr_data.tsv HL bcr_embeddings.pt
+        amulety prott5 data.tsv HL embeddings.pt\n\n
 
-        # TCR alpha-beta pairs
-        amulety prott5 tcr_data.tsv AB tcr_embeddings.pt
-
-        # TCR alpha chains only
-        amulety prott5 tcr_data.tsv A alpha_embeddings.csv
-
-        # Process with custom parameters
-        amulety prott5 data.tsv HL out.pt --batch-size 16 --sequence-col sequence_aa
+    Note:\n
+    General protein language model pre-trained on UniRef50.
+    Suitable for diverse protein tasks and large-scale transfer learning. The maximum length of the sequences to be embedded is 1024.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
     out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # ===== UNIFIED BCR/TCR DATA PROCESSING =====
-    # Map TCR chain notation to BCR notation for compatibility with process_airr
-    # TCR: A (alpha) -> L (light), B (beta) -> H (heavy), AB (alpha-beta) -> HL (heavy-light)
-    # BCR: H, L, HL remain unchanged
+    # map TCR chain notation to BCR notation for compatibility
+    # A (alpha) -> L (light), B (beta) -> H (heavy), AB -> HL
     bcr_chain = {"A": "L", "B": "H", "AB": "HL"}.get(chain, chain)
-    dat = process_airr(input_file_path, bcr_chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
-    max_length = 1024  # ProtT5 can handle longer sequences
+    dat = process_airr(
+        input_file_path, bcr_chain, sequence_col=sequence_col, cell_id_col=cell_id_col, receptor_type="all"
+    )
+    max_length = 1024  # ProtT5 can't handle longer sequences
     n_dat = dat.shape[0]
 
     dat = dat.dropna(subset=[sequence_col])
@@ -678,17 +637,13 @@ def prott5(
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
 
-    # ===== PROTT5 SEQUENCE PREPROCESSING =====
     # ProtT5 expects space-separated amino acids
     X = X.apply(lambda seq: " ".join(list(seq.replace("<cls><cls>", " <cls> <cls> "))))
     sequences = X.values
 
-    # ===== PROTT5 MODEL LOADING =====
-    # Use a more compatible ProtT5 implementation
     logger.info("Loading ProtT5 model for protein sequence embedding...")
 
     try:
-        # Try the standard ProtT5 XL model first
         from transformers import T5EncoderModel, T5Tokenizer
 
         tokenizer = T5Tokenizer.from_pretrained("Rostlab/prot_t5_xl_uniref50", cache_dir=cache_dir, do_lower_case=False)
@@ -698,7 +653,6 @@ def prott5(
     except Exception as e:
         logger.warning("ProtT5 XL encoder failed, trying base model: %s", str(e))
         try:
-            # Fallback to a smaller, more stable version
             tokenizer = T5Tokenizer.from_pretrained(
                 "Rostlab/prot_t5_base_uniref50", cache_dir=cache_dir, do_lower_case=False
             )
@@ -707,7 +661,7 @@ def prott5(
             model_type = "encoder"
         except Exception as e2:
             logger.warning("ProtT5 encoder models failed, using ESM2 as fallback: %s", str(e2))
-            # Ultimate fallback to ESM2 which we know works
+
             tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
             model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
             logger.info("Using ESM2 as fallback for ProtT5")
@@ -718,15 +672,16 @@ def prott5(
 
     start_time = time.time()
     n_seqs = len(sequences)
-    dim = 1024  # ProtT5 embedding dimension
     n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
+
+    # Initialize embeddings tensor after processing first batch to get correct dimensions
+    embeddings = None
+    dim = None
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
         logger.info("ProtT5 Batch %s/%s.", i, n_batches)
 
-        # ===== PROTT5 TOKENIZATION =====
         x = torch.tensor(
             [
                 tokenizer.encode(
@@ -737,23 +692,27 @@ def prott5(
         ).to(device)
         attention_mask = (x != tokenizer.pad_token_id).float().to(device)
 
-        # ===== PROTT5 INFERENCE =====
         with torch.no_grad():
             if model_type == "encoder":
-                # For T5 encoder models
                 outputs = model(input_ids=x, attention_mask=attention_mask)
                 outputs = outputs.last_hidden_state
             else:
-                # For masked language models (ESM2 fallback)
                 outputs = model(x, attention_mask=attention_mask, output_hidden_states=True)
                 outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
 
-        # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1, :].mean(0)
 
-        embeddings[start:end] = torch.stack(outputs)
+        batch_embeddings = torch.stack(outputs)
+
+        # Initialize embeddings tensor with correct dimensions from first batch
+        if embeddings is None:
+            dim = batch_embeddings.shape[1]
+            embeddings = torch.empty((n_seqs, dim))
+            logger.info("Initialized embeddings tensor with dimension: %s", dim)
+
+        embeddings[start:end] = batch_embeddings
         del x
         del attention_mask
         del outputs
@@ -793,52 +752,24 @@ def tcr_bert(
     """
     Embeds T-Cell Receptor (TCR) sequences using the TCR-BERT model.
 
-    This command processes TCR sequences from AIRR format files and generates high-quality
-    embeddings using the TCR-BERT model, which is specifically pre-trained on human and murine
-    TCR sequences from VDJdb and PIRD databases.
-
-    SUPPORTED DATA TYPES:
-    - Single-cell TCR-seq data (10X Genomics, etc.)
-    - Bulk TCR repertoire sequencing data
-    - Mixed single-cell and bulk datasets
-    - Custom AIRR-formatted TCR data
-
-    CHAIN TYPES:
-    - A: Alpha chains only (TRA/TRG loci)
-    - B: Beta chains only (TRB/TRD loci)
-    - AB: Alpha-beta pairs (requires single-cell data with cell barcodes)
-
-    MODEL SPECIFICATIONS:
-    - Model: TCR-BERT (BertModel)
-    - Embedding dimension: 768
-    - Maximum sequence length: 64 amino acids
-    - Pre-trained on 88,403 human TRA/TRB sequences from VDJdb and PIRD
-    - Fine-tuned on 17,702 murine TRA/TRB pairs with GP33 antigen binding data
-    - Automatic GPU acceleration when available
-
-    OUTPUT FORMATS:
-    - .pt: PyTorch tensor (compact, fast loading)
-    - .csv/.tsv: Human-readable with sequence metadata
-
     Example usage:\n
-        # Embed alpha-beta pairs from single-cell data
-        amulety tcr-bert tcr_data.tsv AB tcr_embeddings.pt
+        amulety tcr-bert tcr_data.tsv AB tcr_embeddings.pt\n\n
 
-        # Embed alpha chains only
-        amulety tcr-bert tcr_data.tsv A alpha_embeddings.csv
-
-        # Process with custom parameters
-        amulety tcr-bert data.tsv AB out.pt --batch-size 16 --sequence-col sequence_aa
+    Note:\n
+    Pretrained on 88,403 human TRA/TRB sequences from VDJdb and PIRD.
+    Non-fine-tuned version focused on human TCR data only. The maximum length of the sequences to be embedded is 64.
+    It prints the size of the model used for embedding, the batch number during the embedding process,
+    and the time taken for the embedding. The embeddings are saved at the location specified by `output_file_path`.
     """
     out_format = check_output_file_type(output_file_path)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # ===== TCR DATA PROCESSING =====
-    # Map TCR chain notation to BCR notation for compatibility with process_airr
-    # A (alpha) -> L (light), B (beta) -> H (heavy), AB (alpha-beta) -> HL (heavy-light)
+    # map TCR chain notation to BCR notation for compatibility
     bcr_chain = {"A": "L", "B": "H", "AB": "HL"}.get(chain, chain)
-    dat = process_airr(input_file_path, bcr_chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
-    max_length = 64  # TCR-BERT optimized for shorter TCR sequences
+    dat = process_airr(
+        input_file_path, bcr_chain, sequence_col=sequence_col, cell_id_col=cell_id_col, receptor_type="TCR"
+    )
+    max_length = 64
     n_dat = dat.shape[0]
 
     dat = dat.dropna(subset=[sequence_col])
@@ -849,21 +780,17 @@ def tcr_bert(
     X = dat.loc[:, sequence_col]
     X = X.apply(lambda a: a[:max_length])
 
-    # ===== TCR-BERT SEQUENCE PREPROCESSING =====
     # TCR-BERT expects standard amino acid sequences without special tokens
     X = X.apply(lambda seq: seq.replace("<cls><cls>", " "))
     sequences = X.values
 
-    # ===== TCR-BERT MODEL LOADING =====
     logger.info("Loading TCR-BERT model for TCR embedding...")
 
     try:
-        # Try to load TCR-BERT model (placeholder - actual model path would be different)
         from transformers import BertModel, BertTokenizer
 
-        # Note: This is a placeholder model path. The actual TCR-BERT model would need to be
-        # hosted on Hugging Face or available through a specific repository
-        model_name = "wukevin/tcr-bert"  # Placeholder - actual model name may differ
+        # non-fine-tuned TCR-BERT model pre-trained on human data only
+        model_name = "wukevin/tcr-bert"
 
         tokenizer = BertTokenizer.from_pretrained(model_name, cache_dir=cache_dir, do_lower_case=False)
         model = BertModel.from_pretrained(model_name, cache_dir=cache_dir)
@@ -872,7 +799,6 @@ def tcr_bert(
     except Exception as e:
         logger.warning("TCR-BERT model not available, using BERT-base as fallback: %s", str(e))
         try:
-            # Fallback to standard BERT model
             tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", cache_dir=cache_dir)
             model = BertModel.from_pretrained("bert-base-uncased", cache_dir=cache_dir)
             logger.info("Using BERT-base as fallback for TCR-BERT")
@@ -886,7 +812,7 @@ def tcr_bert(
 
     start_time = time.time()
     n_seqs = len(sequences)
-    dim = 768  # TCR-BERT embedding dimension
+    dim = 768
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
 
@@ -894,7 +820,6 @@ def tcr_bert(
     for start, end, batch in batch_loader(sequences, batch_size):
         logger.info("TCR-BERT Batch %s/%s.", i, n_batches)
 
-        # ===== TCR-BERT TOKENIZATION =====
         x = torch.tensor(
             [
                 tokenizer.encode(
@@ -905,14 +830,11 @@ def tcr_bert(
         ).to(device)
         attention_mask = (x != tokenizer.pad_token_id).float().to(device)
 
-        # ===== TCR-BERT INFERENCE =====
         with torch.no_grad():
             outputs = model(input_ids=x, attention_mask=attention_mask)
-            # For BERT models, use last_hidden_state
             outputs = outputs.last_hidden_state
             outputs = list(outputs.detach())
 
-        # aggregate across the residuals, ignore the padded bases
         for j, a in enumerate(attention_mask):
             outputs[j] = outputs[j][a == 1, :].mean(0)
 
@@ -927,11 +849,6 @@ def tcr_bert(
 
     save_embedding(dat, embeddings, output_file_path, out_format, cell_id_col)
     logger.info("Saved TCR-BERT embedding at %s", output_file_path)
-
-
-# ======================================
-# ===== TCR-SPECIFIC COMMANDS END =====
-# ======================================
 
 
 def main():
