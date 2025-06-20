@@ -34,11 +34,13 @@ amulety --help
 
 The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
 
-For TCR-specific usage and examples, see the [TCR Usage Guide](TCR_USAGE_GUIDE.md).
-
 ## Contact
 
-For help and questions please contact the [Immcantation Group](mailto:immcantation@googlegroups.com).
+If you need help or have any questions, please contact the [Immcantation Group](mailto:immcantation@googlegroups.com).
+
+If you have discovered a bug or have a feature request, you can open an issue using the [issue tracker](https://github.com/immcantation/amulety/issues).
+
+To receive alerts about Immcantation releases, news, events, and tutorials, join the [Immcantation News](https://groups.google.com/g/immcantation-news) Google Group. [Membership settings](https://groups.google.com/g/immcantation-news/membership) can be adjusted to change the frequency of email updates.
 
 ## Authors
 
