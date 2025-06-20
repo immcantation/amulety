@@ -211,7 +211,6 @@ def translate_igblast(
     keep_regions: Annotated[
         bool,
         typer.Option(
-            default=False,
             help="If True, keeps the region translations in the output airr file. If False, it removes them.",
         ),
     ] = False,
@@ -237,7 +236,7 @@ def translate_igblast(
     bn = os.path.splitext(os.path.basename(input_file_path))[0]
     out_translated = os.path.join(output_dir, f"{bn}_translated.tsv")
 
-    data_transl = translate_airr(data, tmpdir=None, reference_dir=reference_dir)
+    data_transl = translate_airr(data, tmpdir=None, reference_dir=reference_dir, keep_regions=keep_regions)
 
     logger.info(f"Saved the translations in {out_translated} file.")
     data_transl.to_csv(out_translated, sep="\t", index=False)
