@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0dev
+
+### Added
+
+- Allow calling Python API as well as CLI.
+- Allow choosing sequence column for translation.
+
+### Fixed
+
+- Refactored code to allow scalability to TCR embeddings.
+- Added PROTT5 and TCRbert embeddings.
+
 ## 1.1 - Blue Tui
 
 ### Added

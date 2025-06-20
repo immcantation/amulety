@@ -29,7 +29,9 @@ stderr = Console(stderr=True)
 stdout = Console()
 
 
-def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str, keep_regions: bool = False):
+def translate_airr(
+    airr: pd.DataFrame, tmpdir: str, reference_dir: str, keep_regions: bool = False, sequence_col: str = "sequence"
+):
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
     """
@@ -58,7 +60,7 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str, keep_reg
     with open(out_fasta, "w") as f:
         for _, row in data.iterrows():
             f.write(">" + row["sequence_id"] + "\n")
-            f.write(row["sequence"] + "\n")
+            f.write(row[sequence_col] + "\n")
 
     command_igblastn = [
         "igblastn",
@@ -214,6 +216,13 @@ def translate_igblast(
             help="If True, keeps the region translations in the output airr file. If False, it removes them.",
         ),
     ] = False,
+    sequence_col: Annotated[
+        str,
+        typer.Option(
+            default="sequence",
+            help="The name of the column containing the nucleotide sequences to translate.",
+        ),
+    ] = "sequence",
 ):
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
@@ -236,7 +245,9 @@ def translate_igblast(
     bn = os.path.splitext(os.path.basename(input_file_path))[0]
     out_translated = os.path.join(output_dir, f"{bn}_translated.tsv")
 
-    data_transl = translate_airr(data, tmpdir=None, reference_dir=reference_dir, keep_regions=keep_regions)
+    data_transl = translate_airr(
+        data, tmpdir=None, reference_dir=reference_dir, keep_regions=keep_regions, sequence_col=sequence_col
+    )
 
     logger.info(f"Saved the translations in {out_translated} file.")
     data_transl.to_csv(out_translated, sep="\t", index=False)
