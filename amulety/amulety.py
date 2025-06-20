@@ -44,6 +44,7 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
 
     if tmpdir is None:
         tmpdir = os.path.join(os.getcwd(), "tmp")
+        os.makedirs(tmpdir, exist_ok=True)
     else:
         os.makedirs(tmpdir, exist_ok=True)
 
