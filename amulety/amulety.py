@@ -36,9 +36,6 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
     """
     data = airr.copy()
 
-    if not validate_rearrangement(data):
-        raise ValueError("The input data is not in a valid AIRR rearrangement schema.")
-
     # Warn if translations already exist
     columns_reserved = ["sequence_aa", "sequence_alignment_aa", "sequence_vdj_aa"]
     overlap = [col for col in data.columns if col in columns_reserved]
@@ -139,6 +136,8 @@ def embed_airr(
         raise ValueError("Input x must be one of ['H', 'L', 'HL']")
     if output_type not in ["df", "pickle"]:
         raise ValueError("Output type must be one of ['df', 'pickle']")
+    if sequence_col not in airr.columns:
+        raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
 
     dat = process_airr(airr, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     n_dat = dat.shape[0]
@@ -211,6 +210,9 @@ def translate_igblast(
     5. Removes gaps introduced by IgBlast from the sequence alignment.\n
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
+    if not validate_rearrangement(input_file_path):
+        raise ValueError("The input data is not in a valid AIRR rearrangement schema.")
+
     data = pd.read_csv(input_file_path, sep="\t")
 
     # Output filename
@@ -263,6 +265,9 @@ def embed(
     Example usage:\n
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """
+    if not validate_rearrangement(input_airr):
+        raise ValueError("The input data is not in a valid AIRR rearrangement schema.")
+
     out_extension = os.path.splitext(output_file_path)[-1][1:]
 
     if out_extension not in ["tsv", "csv", "pt"]:
