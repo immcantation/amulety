@@ -99,7 +99,9 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
 
     data_transl = pd.merge(data, igblast_transl, on="sequence_id", how="left")
 
-    os.rmdir(tmpdir, recursive=True)
+    os.remove(out_fasta, ignore_errors=True)
+    os.remove(out_igblast, ignore_errors=True)
+    os.rmdir(tmpdir)
 
     end_time = time.time()
     logger.info("Took %s seconds", round(end_time - start_time, 2))
