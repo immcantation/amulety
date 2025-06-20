@@ -29,7 +29,7 @@ stderr = Console(stderr=True)
 stdout = Console()
 
 
-def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
+def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str, keep_regions: bool = False):
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
     """
@@ -88,7 +88,18 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
     if pipes.returncode != 0:
         raise Exception(f"IgBlast failed with error code {pipes.returncode}. {stderr.decode('utf-8')}")
 
-    igblast_transl = pd.read_csv(out_igblast, sep="\t", usecols=["sequence_id", "sequence_aa", "sequence_alignment_aa"])
+    keep_cols = ["sequence_id", "sequence_aa", "sequence_alignment_aa"]
+    if keep_regions:
+        keep_cols += [
+            "fwr1_aa",
+            "cdr1_aa",
+            "fwr2_aa",
+            "cdr2_aa",
+            "fwr3_aa",
+            "cdr3_aa",
+            "fwr4_aa",
+        ]
+    igblast_transl = pd.read_csv(out_igblast, sep="\t", usecols=keep_cols)
 
     sequence_vdj_aa = [sa.replace("-", "") for sa in igblast_transl["sequence_alignment_aa"]]
     igblast_transl["sequence_vdj_aa"] = sequence_vdj_aa
@@ -99,8 +110,8 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
 
     data_transl = pd.merge(data, igblast_transl, on="sequence_id", how="left")
 
-    os.remove(out_fasta, ignore_errors=True)
-    os.remove(out_igblast, ignore_errors=True)
+    os.remove(out_fasta)
+    os.remove(out_igblast)
     os.rmdir(tmpdir)
 
     end_time = time.time()
@@ -197,6 +208,13 @@ def translate_igblast(
     ],
     output_dir: Annotated[str, typer.Argument(..., help="The directory where the generated embeddings will be saved.")],
     reference_dir: Annotated[str, typer.Argument(..., help="The directory to the igblast references.")],
+    keep_regions: Annotated[
+        bool,
+        typer.Option(
+            default=False,
+            help="If True, keeps the region translations in the output airr file. If False, it removes them.",
+        ),
+    ] = False,
 ):
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
