@@ -8,7 +8,6 @@ from importlib.metadata import version
 import pandas as pd
 import torch
 import typer
-from airr import validate_rearrangement
 from rich.console import Console
 from typing_extensions import Annotated
 
@@ -210,8 +209,6 @@ def translate_igblast(
     5. Removes gaps introduced by IgBlast from the sequence alignment.\n
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
-    if not validate_rearrangement(input_file_path):
-        raise ValueError("The input data is not in a valid AIRR rearrangement schema.")
 
     data = pd.read_csv(input_file_path, sep="\t")
 
@@ -265,9 +262,6 @@ def embed(
     Example usage:\n
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """
-    if not validate_rearrangement(input_airr):
-        raise ValueError("The input data is not in a valid AIRR rearrangement schema.")
-
     out_extension = os.path.splitext(output_file_path)[-1][1:]
 
     if out_extension not in ["tsv", "csv", "pt"]:

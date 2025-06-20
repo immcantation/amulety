@@ -1,4 +1,3 @@
-airr
 numpy
 pandas
 torch
