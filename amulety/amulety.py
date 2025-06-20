@@ -1,29 +1,21 @@
 """Console script for amulety"""
 import logging
-import math
 import os
 import subprocess
 import time
 from importlib.metadata import version
-from typing import Optional
 
 import pandas as pd
 import torch
 import typer
 from airr import validate_rearrangement
-from antiberty import AntiBERTyRunner
 from rich.console import Console
-from transformers import (
-    AutoModelForMaskedLM,
-    AutoTokenizer,
-    RoFormerForMaskedLM,
-    RoFormerTokenizer,
-)
 from typing_extensions import Annotated
 
+from amulety.bcr_embeddings import antiberta2, antiberty, balm_paired
+from amulety.protein_embeddings import custommodel, esm2, prott5
+from amulety.tcr_embeddings import tcr_bert
 from amulety.utils import (
-    batch_loader,
-    insert_space_every_other_except_cls,
     process_airr,
 )
 
@@ -36,284 +28,6 @@ logger = logging.getLogger(__name__)
 app = typer.Typer()
 stderr = Console(stderr=True)
 stdout = Console()
-
-
-def antiberty(
-    sequences: pd.Series,
-    cache_dir: Optional[str] = None,
-    batch_size: int = 50,
-):
-    """
-    Embeds sequences using the AntiBERTy model.\n
-    The maximum length of the sequences to be embedded is 510.
-    """
-    max_seq_length = 510
-
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    X = X.str.replace("<cls><cls>", "[CLS][CLS]")
-    X = X.apply(insert_space_every_other_except_cls)
-    sequences = X.str.replace("  ", " ")
-
-    antiberty_runner = AntiBERTyRunner()
-    model_size = sum(p.numel() for p in antiberty_runner.model.parameters())
-    logger.info("AntiBERTy loaded. Size: %s M", round(model_size / 1e6, 2))
-    start_time = time.time()
-    n_seqs = len(sequences)
-    dim = max_seq_length + 2
-
-    n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
-
-    i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
-        logger.info("Batch %s/%s", i, n_batches)
-        x = antiberty_runner.embed(batch)
-        x = [a.mean(axis=0) for a in x]
-        embeddings[start:end] = torch.stack(x)
-        i += 1
-
-    end_time = time.time()
-    logger.info("Took %s seconds", round(end_time - start_time, 2))
-    return embeddings
-
-
-def antiberta2(
-    sequences: pd.Series,
-    cache_dir: Optional[str] = None,
-    batch_size: int = 50,
-):
-    """
-    Embeds sequences using the antiBERTa2 RoFormer model.\n
-    The maximum length of the sequences to be embedded is 256.
-    """
-    max_seq_length = 256
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    X = X.str.replace("<cls><cls>", "[CLS][CLS]")
-    X = X.apply(insert_space_every_other_except_cls)
-    X = X.str.replace("  ", " ")
-    sequences = X.values
-
-    tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
-    model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
-    model = model.to(device)
-    model_size = sum(p.numel() for p in model.parameters())
-    logger.info("AntiBERTa2 loaded. Size: %s M", model_size / 1e6)
-
-    start_time = time.time()
-    n_seqs = len(sequences)
-    dim = 1024
-    n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
-
-    i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
-        logger.info("Batch %s/%s.", i, n_batches)
-        x = torch.tensor(
-            [
-                tokenizer.encode(
-                    seq,
-                    padding="max_length",
-                    truncation=True,
-                    max_length=max_seq_length,
-                    return_special_tokens_mask=True,
-                )
-                for seq in batch
-            ]
-        ).to(device)
-        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
-        with torch.no_grad():
-            outputs = model(x, attention_mask=attention_mask, output_hidden_states=True)
-            outputs = outputs.hidden_states[-1]
-            outputs = list(outputs.detach())
-
-        # aggregate across the residuals, ignore the padded bases
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
-
-        embeddings[start:end] = torch.stack(outputs)
-        del x
-        del attention_mask
-        del outputs
-        i += 1
-
-    end_time = time.time()
-    logger.info("Took %s seconds", round(end_time - start_time, 2))
-    return embeddings
-
-
-def esm2(
-    sequences: pd.Series,
-    cache_dir: Optional[str] = None,
-    batch_size: int = 50,
-):
-    """
-    Embeds sequences using the ESM2 model. The maximum length of the sequences to be embedded is 512. The embedding dimension is 1280.
-    """
-    max_seq_length = 512
-    dim = 1280
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    sequences = X.values
-
-    tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
-    model = AutoModelForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D", cache_dir=cache_dir)
-    model = model.to(device)
-    model_size = sum(p.numel() for p in model.parameters())
-    logger.info("ESM2 650M model size: %s M", round(model_size / 1e6, 2))
-
-    start_time = time.time()
-    n_seqs = len(sequences)
-    n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
-
-    i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
-        logger.info("Batch %s/%s.", i, n_batches)
-        x = torch.tensor(
-            [
-                tokenizer.encode(
-                    seq,
-                    padding="max_length",
-                    truncation=True,
-                    max_length=max_seq_length,
-                    return_special_tokens_mask=True,
-                )
-                for seq in batch
-            ]
-        ).to(device)
-        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
-        with torch.no_grad():
-            outputs = model(x, attention_mask=attention_mask, output_hidden_states=True)
-            outputs = outputs.hidden_states[-1]
-            outputs = list(outputs.detach())
-
-        # aggregate across the residuals, ignore the padded bases
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
-
-        embeddings[start:end] = torch.stack(outputs)
-        del x
-        del attention_mask
-        del outputs
-        i += 1
-
-    end_time = time.time()
-    logger.info("Took %s seconds", round(end_time - start_time, 2))
-
-    return embeddings
-
-
-def custommodel(
-    sequences: pd.Series,
-    model_path: str,
-    embedding_dimension: int,
-    max_seq_length: int,
-    cache_dir: Optional[str] = "/tmp/amulety",
-    batch_size: Optional[int] = 50,
-):
-    """
-    Embeds sequences using a custom model specified by the user. The maximum length of the sequences to be embedded is specified by the user.
-    """
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    sequences = X.values
-
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModelForMaskedLM.from_pretrained(model_path)
-    model = model.to(device)
-    model_size = sum(p.numel() for p in model.parameters())
-    logger.info("Model size: %sM", round(model_size / 1e6, 2))
-
-    start_time = time.time()
-    n_seqs = len(sequences)
-    n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, embedding_dimension))
-
-    i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
-        print(f"Batch {i}/{n_batches}\n")
-        x = torch.tensor(
-            [
-                tokenizer.encode(
-                    seq,
-                    padding="max_length",
-                    truncation=True,
-                    max_length=max_seq_length,
-                    return_special_tokens_mask=True,
-                )
-                for seq in batch
-            ]
-        ).to(device)
-        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
-        with torch.no_grad():
-            outputs = model(x, attention_mask=attention_mask, output_hidden_states=True)
-            outputs = outputs.hidden_states[-1]
-            outputs = list(outputs.detach())
-
-        # aggregate across the residuals, ignore the padded bases
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
-
-        embeddings[start:end] = torch.stack(outputs)
-        del x
-        del attention_mask
-        del outputs
-        i += 1
-
-    end_time = time.time()
-    logger.info("Took %s seconds", round(end_time - start_time, 2))
-
-    return embeddings
-
-
-def balm_paired(
-    sequences: pd.Series,
-    cache_dir: str = "/tmp/amulety",
-    batch_size: int = 50,
-):
-    """
-    Embeds sequences using the BALM-paired model. The maximum length of the sequences to be embedded is 1024. The embedding dimension is 1024.
-    """
-    # Ensure cache directory exists
-    os.makedirs(cache_dir, exist_ok=True)
-
-    # Download BALM-paired model if not already cached
-    model_name = "BALM-paired_LC-coherence_90-5-5-split_122222"
-    model_path = os.path.join(cache_dir, model_name)
-    embedding_dimension = 1024
-    max_seq_length = 510
-
-    if not os.path.exists(model_path):
-        try:
-            # Download and extract model
-            command = f"""
-                wget -O {os.path.join(cache_dir, "BALM-paired.tar.gz")} https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
-                tar -xzf {os.path.join(cache_dir, "BALM-paired.tar.gz")} -C {cache_dir}
-                rm {os.path.join(cache_dir, "BALM-paired.tar.gz")}
-            """
-            subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error downloading or extracting model: {e}")
-            return
-
-    embeddings = custommodel(
-        sequences=sequences,
-        model_path=model_path,
-        embedding_dimension=embedding_dimension,
-        batch_size=batch_size,
-        max_seq_length=max_seq_length,
-        cache_dir=cache_dir,
-    )
-    return embeddings
 
 
 def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
@@ -349,7 +63,6 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
             f.write(">" + row["sequence_id"] + "\n")
             f.write(row["sequence"] + "\n")
 
-    # Run IgBlast on FASTA
     command_igblastn = [
         "igblastn",
         "-germline_db_V",
@@ -378,20 +91,17 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
     if pipes.returncode != 0:
         raise Exception(f"IgBlast failed with error code {pipes.returncode}. {stderr.decode('utf-8')}")
 
-    # Read IgBlast output
     igblast_transl = pd.read_csv(out_igblast, sep="\t", usecols=["sequence_id", "sequence_aa", "sequence_alignment_aa"])
 
-    # Remove IMGT gaps
     sequence_vdj_aa = [sa.replace("-", "") for sa in igblast_transl["sequence_alignment_aa"]]
     igblast_transl["sequence_vdj_aa"] = sequence_vdj_aa
 
     logger.info(
         "Saved the translations in the dataframe (sequence_aa contains the full translation and sequence_vdj_aa contains the VDJ translation)."
     )
-    # Merge and save the translated data with original data
+
     data_transl = pd.merge(data, igblast_transl, on="sequence_id", how="left")
 
-    # Clean up
     os.rmdir(tmpdir, recursive=True)
 
     end_time = time.time()
@@ -448,9 +158,13 @@ def embed_airr(
     elif model == "balm-paired":
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     # TCR models
+    elif model == "tcr-bert":
+        embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     # Protein models
     elif model == "esm2":
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+    elif model == "prott5":
+        embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     elif model == "custom":
         if model_path is None or embedding_dimension is None or max_length is None:
             raise ValueError("For custom model, modelpath, embedding_dimension, and max_length must be provided.")
