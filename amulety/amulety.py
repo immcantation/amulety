@@ -10,7 +10,7 @@ from typing import Optional
 import pandas as pd
 import torch
 import typer
-from airr import validate_airr
+from airr import validate_rearrangement
 from antiberty import AntiBERTyRunner
 from rich.console import Console
 from transformers import (
@@ -322,7 +322,7 @@ def translate_airr(airr: pd.DataFrame, tmpdir: str, reference_dir: str):
     """
     data = airr.copy()
 
-    if not validate_airr(data):
+    if not validate_rearrangement(data):
         raise ValueError("The input data is not in a valid AIRR rearrangement schema.")
 
     # Warn if translations already exist
@@ -417,7 +417,7 @@ def embed_airr(
     Parameters:
         airr (pd.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
         chain (str): The input chain, which can be one of ["H", "L", "HL"].
-        model (str): The embedding model to use. Currently, only "antiberta2" is supported.
+        model (str): The embedding model to use.
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
         cache_dir (Optional[str]): Cache dir for storing the pre-trained model weights.
