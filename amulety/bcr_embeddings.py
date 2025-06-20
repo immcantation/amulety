@@ -14,7 +14,7 @@ from typing import Optional
 import pandas as pd
 import torch
 
-from amulety.custommodel import custommodel
+from amulety.protein_embeddings import custommodel
 from amulety.utils import batch_loader, insert_space_every_other_except_cls
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
