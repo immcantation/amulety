@@ -12,8 +12,42 @@ Translate sequence to amino acids
     :preferred: text
 
 
-BCR embeddings
-==============
+Unified BCR and TCR embeddings
+==============================
+
+These models support both B-Cell Receptor (BCR) and T-Cell Receptor (TCR) sequences with automatic receptor type detection and validation.
+
+ProtT5
+------
+
+Protein language model pre-trained on UniRef50 sequences. Supports both BCR and TCR data with unified chain mapping (BCR: H/L/HL, TCR: A/B/AB).
+
+Reference:
+Elnaggar A, Heinzinger M, Dallago C, et al. ProtTrans: Towards Cracking the Language of Life's Code Through Self-Supervised Deep Learning and High Performance Computing. bioRxiv. 2020. `doi:10.1101/2020.07.12.199554 <https://doi.org/10.1101/2020.07.12.199554>`_
+
+.. typer:: amulety.amulety:app:prott5
+    :width: 90
+    :show-nested:
+    :make-sections:
+    :preferred: text
+
+ESM2
+----
+
+General protein language model pre-trained on 216 million UniRef50 protein sequences. Supports both BCR and TCR sequences.
+
+Reference:
+Lin Z, Akin H, Rao R, Hie B, Zhu Z, Lu W, et al. Evolutionary-scale prediction of atomic-level protein structure with a language model. Science. 2023;379: 1123–1130. `doi:10.1126/science.ade2574 <https://doi.org/10.1126/science.ade2574>`_
+
+.. typer:: amulety.amulety:app:esm2
+    :width: 90
+    :show-nested:
+    :make-sections:
+    :preferred: text
+
+
+BCR-specific embeddings
+=======================
 
 AntiBERTa2
 ----------
@@ -57,22 +91,24 @@ Burbach SM, Briney B. Improving antibody language models with native pairing. Pa
     :make-sections:
     :preferred: text
 
-Unspecific embeddings
-=====================
 
-ESM2
-----
+TCR-specific embeddings
+=======================
 
-General protein language model pre-trained on 216 million UniRef50 protein sequences.
+TCR-BERT
+--------
+
+BERT model pre-trained on 88,403 human TCR alpha and beta sequences from VDJdb and PIRD databases. Specialized for T-Cell Receptor analysis.
 
 Reference:
-Lin Z, Akin H, Rao R, Hie B, Zhu Z, Lu W, et al. Evolutionary-scale prediction of atomic-level protein structure with a language model. Science. 2023;379: 1123–1130. `doi:10.1126/science.ade2574 <https://doi.org/10.1126/science.ade2574>`_
+Lu T, Zhang Z, Zhu J, et al. Deep learning-based prediction of the T cell receptor–antigen binding specificity. Nature Machine Intelligence. 2021;3: 864–875. `doi:10.1038/s42256-021-00383-2 <https://doi.org/10.1038/s42256-021-00383-2>`_
 
-.. typer:: amulety.amulety:app:esm2
+.. typer:: amulety.amulety:app:tcr-bert
     :width: 90
     :show-nested:
     :make-sections:
     :preferred: text
+
 
 Custom pre-trained model
 ========================
@@ -82,3 +118,5 @@ Custom pre-trained model
     :show-nested:
     :make-sections:
     :preferred: text
+
+

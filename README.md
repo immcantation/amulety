@@ -1,7 +1,7 @@
 # AMULETY
 
 Amulety stands for Adaptive imMUne receptor Language model Embedding Tool.
-It is a Python command line tool to embed B-cell receptor (antibody) and T-cell Receptor amino acid sequences using pre-trained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids with IgBlast.
+It is a Python command line tool to embed B-cell receptor (antibody) and T-cell receptor (TCR) amino acid sequences using pre-trained protein or antibody language models. The package supports both BCR and TCR embeddings, with specialized TCR processing for alpha-beta chain concatenation. The package also has functionality to translate nucleotide sequences to amino acids with IgBlast.
 
 Here is the list of currently supported embeddings:
 
@@ -11,6 +11,9 @@ Here is the list of currently supported embeddings:
 | AntiBERTy             | antiberty   | 512                 | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
 | BALM-paired           | balm_paired | 1024                | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
 | ESM2 (650M parameter) | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
+| ProtT5 (BCR & TCR)    | prott5      | 1024                | [doi:10.1038/s41587-019-0036-z](https://doi.org/10.1038/s41587-019-0036-z)       |
+| ESM2 (BCR & TCR)      | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
+| TCR-BERT              | tcr_bert    | 768                 | Pre-trained on human TCR sequences from VDJdb and PIRD                           |
 | User-specified model  | custommodel | Configurable        |                                                                                  |
 
 ## Installation
@@ -30,6 +33,8 @@ amulety --help
 ```
 
 The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
+
+For TCR-specific usage and examples, see the [TCR Usage Guide](TCR_USAGE_GUIDE.md).
 
 ## Contact
 
