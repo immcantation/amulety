@@ -154,7 +154,7 @@ def prott5(
     batch_size: int = 32,
 ):
     """
-    Embeds BCR or TCR sequences using the ProtT5 protein language model.
+    Embeds BCR or TCR sequences using the ProtT5-XL protein language model (Rostlab/prot_t5_xl_uniref50). The maximum sequence length to embed is 1024 amino acids, and the generated embeddings have a dimension of 1024.
     """
     max_seq_length = 1024  # ProtT5 can't handle longer sequences
     dim = 1024

@@ -2,6 +2,7 @@
 Usage
 =====
 
+
 Translate sequence to amino acids
 =================================
 
@@ -30,7 +31,7 @@ These models support both B-Cell Receptor (BCR) and T-Cell Receptor (TCR) sequen
 ProtT5
 ------
 
-Protein language model pre-trained on UniRef50 sequences. Supports both BCR and TCR data with unified chain mapping (BCR: H/L/HL, TCR: A/B/AB).
+Protein language model pre-trained on UniRef50 sequences. Supports both BCR and TCR data with unified chain mapping (H=Heavy/Beta, L=Light/Alpha, HL=Heavy-Light/Beta-Alpha pairs).
 
 Reference:
 Elnaggar A, Heinzinger M, Dallago C, et al. ProtTrans: Towards Cracking the Language of Life's Code Through Self-Supervised Deep Learning and High Performance Computing. bioRxiv. 2020. `doi:10.1101/2020.07.12.199554 <https://doi.org/10.1101/2020.07.12.199554>`_
@@ -73,12 +74,38 @@ Burbach SM, Briney B. Improving antibody language models with native pairing. Pa
 TCR-specific embeddings
 =======================
 
+**Important Note**: Most TCR embedding models listed below are primarily trained on alpha/beta TCRs (TRA/TRB sequences). While AMULETY's unified interface accepts gamma/delta TCRs (TRG/TRD), results may be less reliable for these sequences due to limited training data.
+
 TCR-BERT
 --------
 
-BERT model pre-trained on 88,403 human TCR alpha and beta sequences from VDJdb and PIRD databases. Specialized for T-Cell Receptor analysis.
+BERT model pre-trained on 88,403 human TCR alpha and beta sequences (TRA/TRB) from VDJdb and PIRD databases. Specialized for alpha/beta T-Cell Receptor analysis.
 
 Reference:
-Lu T, Zhang Z, Zhu J, et al. Deep learning-based prediction of the T cell receptor–antigen binding specificity. Nature Machine Intelligence. 2021;3: 864–875. `doi:10.1038/s42256-021-00383-2 <https://doi.org/10.1038/s42256-021-00383-2>`_
+Lu T, Zhang Z, Zhu J, et al. Deep learning-based prediction of the T cell receptor–antigen binding specificity. bioRxiv. 2021. `doi:10.1101/2021.11.18.469186 <https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1>`_
+
+DeepTCR
+-------
+
+Deep learning framework for analyzing T-cell receptor repertoires. Trained on human and murine datasets, including CDR3 sequences and V/D/J gene usage.
+
+Reference:
+Sidhom JW, Larman HB, Pardoll DM, Baras AS. DeepTCR is a deep learning framework for revealing sequence concepts within T-cell repertoires. Nature Communications. 2021;12: 1605. `doi:10.1038/s41467-021-21879-w <https://www.nature.com/articles/s41467-021-21879-w>`_
+
+Trex
+----
+
+TCR representation learning model trained on 288,043 unique CDR3α and 453,111 unique CDR3β sequences from 15 single-cell datasets and 4 curated TCR databases (McPAS-TCR, VDJdb, IEDB, PIRD).
+
+Reference:
+Deng K, Guan R, Liu Z, et al. Contrastive learning of T cell receptor representations. Cell Reports Methods. 2024;4: 100833. `PMID:39164479 <https://pubmed.ncbi.nlm.nih.gov/39164479/>`_
+
+TCREMP
+------
+
+TCR-specific embedding method trained for T-cell receptor repertoire-based representation learning. Focuses on repertoire-level prediction tasks with specialized TCR sequence understanding.
+
+Reference:
+Zhang H, Zeng T, Zhao Y, et al. TCREMP: T-cell receptor repertoire-based embedding for immunotherapy response prediction. Journal of Molecular Biology. 2025;437: 168712. `doi:10.1016/j.jmb.2025.168712 <https://www.sciencedirect.com/science/article/pii/S0022283625002712>`_
 
 

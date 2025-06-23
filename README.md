@@ -5,16 +5,47 @@ It is a Python command line tool to embed B-cell receptor (antibody) and T-cell 
 
 Here is the list of currently supported embeddings:
 
-| Model                 | Command     | Embedding Dimension | Reference                                                                        |
-| --------------------- | ----------- | ------------------- | -------------------------------------------------------------------------------- |
-| AntiBERTa2            | antiberta2  | 1024                | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
-| AntiBERTy             | antiberty   | 512                 | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
-| BALM-paired           | balm_paired | 1024                | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
-| ESM2 (650M parameter) | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
-| ProtT5 (BCR & TCR)    | prott5      | 1024                | [doi:10.1038/s41587-019-0036-z](https://doi.org/10.1038/s41587-019-0036-z)       |
-| ESM2 (BCR & TCR)      | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
-| TCR-BERT              | tcr_bert    | 768                 | Pre-trained on human TCR sequences from VDJdb and PIRD                           |
-| User-specified model  | custommodel | Configurable        |                                                                                  |
+## BCR (B-Cell Receptor) Models
+
+| Model       | Command     | Embedding Dimension | Reference                                                                        |
+| ----------- | ----------- | ------------------- | -------------------------------------------------------------------------------- |
+| AntiBERTa2  | antiberta2  | 1024                | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
+| AntiBERTy   | antiberty   | 512                 | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
+| BALM-paired | balm-paired | 1024                | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
+
+## TCR (T-Cell Receptor) Models
+
+| Model    | Command  | Embedding Dimension | TCR Type Support | Reference                                                                                            |
+| -------- | -------- | ------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| TCR-BERT | tcr-bert | 768                 | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
+| DeepTCR  | deep-tcr | 256                 | mainly α/β       | [doi:10.1038/s41467-021-21879-w](https://www.nature.com/articles/s41467-021-21879-w)                 |
+| Trex     | trex     | 768                 | α/β only         | [PMID:39164479](https://pubmed.ncbi.nlm.nih.gov/39164479/)                                           |
+| TCREMP   | tcremp   | 512                 | mainly α/β       | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
+
+## General Protein Models (BCR & TCR)
+
+| Model                 | Command | Embedding Dimension | TCR Type Support | Reference                                                                  |
+| --------------------- | ------- | ------------------- | ---------------- | -------------------------------------------------------------------------- |
+| ESM2 (650M parameter) | esm2    | 1280                | α/β + γ/δ        | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)     |
+| ProtT5                | prott5  | 1024                | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554) |
+| User-specified model  | custom  | Configurable        | depends on model | Custom model support                                                       |
+
+## Chain Parameter Interface
+
+AMULETY uses a unified chain parameter interface for both BCR and TCR sequences:
+
+- **For BCR**:
+
+  - `H` = Heavy chain
+  - `L` = Light chain
+  - `HL` = Heavy-Light chain pairs
+
+- **For TCR**:
+  - `H` = Beta/Delta chains (TRB/TRD)
+  - `L` = Alpha/Gamma chains (TRA/TRG)
+  - `HL` = Beta-Alpha/Delta-Gamma chain pairs
+
+This unified interface supports both alpha/beta and gamma/delta TCR types when the embedding models allow it.
 
 ## Installation
 

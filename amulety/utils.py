@@ -51,9 +51,22 @@ def process_airr(
     """
     Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
 
-    This function supports both BCR and TCR data with automatic chain mapping:
-    - BCR: IGH → H (Heavy), IGL/IGK → L (Light)
-    - TCR: TRB/TRD → H (Heavy), TRA/TRG → L (Light)
+    UNIFIED CHAIN PARAMETER INTERFACE:
+    AMULETY uses a unified H/L/HL parameter interface for both BCR and TCR sequences, providing
+    consistency across all receptor types:
+
+    For BCR (B-Cell Receptor):
+        - H: Heavy chain (IGH)
+        - L: Light chain (IGL/IGK)
+        - HL: Heavy-Light chain pairs
+
+    For TCR (T-Cell Receptor):
+        - H: Beta/Delta chains (TRB/TRD) - mapped to "Heavy" internally
+        - L: Alpha/Gamma chains (TRA/TRG) - mapped to "Light" internally
+        - HL: Beta-Alpha/Delta-Gamma chain pairs
+
+    This unified interface supports both alpha/beta and gamma/delta TCR types when the
+    embedding models allow it.
 
     It will drop cells with missing heavy or light chain if operating in single-cell only mode (no cell IDs missing) and log the number of missing chains.
     If the data is bulk only, it will raise an error if chain = "HL".
@@ -62,7 +75,7 @@ def process_airr(
     Parameters:
         airr_df (pandas.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
         chain (str): The input chain, which can be one of ["H", "L", "HL"].
-                    For TCR data: H=Beta chains, L=Alpha chains, HL=Alpha-Beta pairs
+                    Uses unified interface: H=Heavy/Beta, L=Light/Alpha, HL=Heavy-Light/Beta-Alpha pairs
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
         receptor_type (str): The receptor type to validate, one of ["BCR", "TCR", "all"].
@@ -121,8 +134,20 @@ def process_airr(
     else:
         raise ValueError(f"receptor_type must be one of ['BCR', 'TCR', 'all'], got '{receptor_type}'")
 
-    # ===== BCR CHAIN MAPPING (ORIGINAL CODE) =====
+    # ===== UNIFIED CHAIN MAPPING =====
+    # Map loci to unified H/L interface
     data.loc[:, "chain"] = data.loc[:, "locus"].apply(lambda x: "H" if x in ["IGH", "TRB", "TRD"] else "L")
+
+    # Check for gamma/delta TCR and warn about model compatibility
+    gamma_delta_present = bool(present_loci & {"TRG", "TRD"})
+    if gamma_delta_present and receptor_type.upper() in ["TCR", "ALL"]:
+        gamma_delta_chains = present_loci & {"TRG", "TRD"}
+        logger.warning(
+            "Gamma/Delta TCR chains (%s) detected. Note: TCR-specific models (TCR-BERT, Trex, TCREMP, DeepTCR) "
+            "are primarily trained on Alpha/Beta TCRs. For Gamma/Delta TCRs, consider using general protein "
+            "models (ESM2, ProtT5) which support all TCR types.",
+            list(gamma_delta_chains),
+        )
 
     if cell_id_col not in data.columns:
         data_type = "bulk-only"
@@ -168,9 +193,21 @@ def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: s
     """
     Concatenates heavy and light chain per cell and returns a pandas DataFrame.
 
-    This function works for both BCR and TCR data:
-    - BCR: Heavy (IGH) + Light (IGL/IGK) chains
-    - TCR: Beta (TRB/TRD) + Alpha (TRA/TRG) chains (mapped as Heavy + Light)
+    UNIFIED CHAIN CONCATENATION:
+    This function implements the unified H/L interface for both BCR and TCR data:
+
+    For BCR (B-Cell Receptor):
+        - Heavy (H): IGH chains
+        - Light (L): IGL/IGK chains
+        - Result: IGH<cls><cls>IGL/IGK
+
+    For TCR (T-Cell Receptor):
+        - Heavy (H): TRB/TRD chains (Beta/Delta)
+        - Light (L): TRA/TRG chains (Alpha/Gamma)
+        - Result: TRB/TRD<cls><cls>TRA/TRG
+
+    The unified interface allows the same HL parameter to work for both receptor types,
+    supporting alpha/beta and gamma/delta TCR combinations.
 
     If a cell contains several light or heavy chains, it will take the one with highest duplicate count.
 

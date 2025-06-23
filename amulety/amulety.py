@@ -13,7 +13,7 @@ from typing_extensions import Annotated
 
 from amulety.bcr_embeddings import antiberta2, antiberty, balm_paired
 from amulety.protein_embeddings import custommodel, esm2, prott5
-from amulety.tcr_embeddings import tcr_bert
+from amulety.tcr_embeddings import deep_tcr, tcr_bert, tcremp, trex
 from amulety.utils import (
     process_airr,
 )
@@ -139,6 +139,8 @@ def embed_airr(
     Parameters:
         airr (pd.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
         chain (str): The input chain, which can be one of ["H", "L", "HL"].
+                    For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs
+                    For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs
         model (str): The embedding model to use.
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
@@ -146,15 +148,19 @@ def embed_airr(
         batch_size (int): The batch size of sequences to embed.
         output_type (str): The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
     """
-    # Check valid chain
-    if chain not in ["H", "L", "HL"]:
-        raise ValueError("Input x must be one of ['H', 'L', 'HL']")
+    # Check valid chain - unified interface for both BCR and TCR
+    valid_chains = ["H", "L", "HL"]
+    if chain not in valid_chains:
+        raise ValueError(f"Input chain must be one of {valid_chains}")
+
+    # Use the chain parameter directly - no mapping needed
+    internal_chain = chain
     if output_type not in ["df", "pickle"]:
         raise ValueError("Output type must be one of ['df', 'pickle']")
     if sequence_col not in airr.columns:
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
 
-    dat = process_airr(airr, chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
+    dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     n_dat = dat.shape[0]
 
     dat = dat.dropna(subset=[sequence_col])
@@ -172,8 +178,14 @@ def embed_airr(
     elif model == "balm-paired":
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     # TCR models
+    elif model == "deep-tcr":
+        embedding = deep_tcr(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     elif model == "tcr-bert":
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+    elif model == "tcremp":
+        embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+    elif model == "trex":
+        embedding = trex(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     # Protein models
     elif model == "esm2":
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -219,7 +231,7 @@ def translate_igblast(
     sequence_col: Annotated[
         str,
         typer.Option(
-            default="sequence",
+            "--sequence-col",
             help="The name of the column containing the nucleotide sequences to translate.",
         ),
     ] = "sequence",
@@ -262,7 +274,7 @@ def embed(
         str,
         typer.Option(
             default=...,
-            help="Input sequences (H for heavy chain, L for light chain, HL for heavy and light concatenated)",
+            help="Input sequences. For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs. For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs.",
         ),
     ],
     model: Annotated[
@@ -281,7 +293,7 @@ def embed(
         typer.Option(help="Cache dir for storing the pre-trained model weights."),
     ] = "/tmp/amulety",
     sequence_col: Annotated[
-        str, typer.Option(help="The name of the column containing the amino acid sequences to embed.")
+        str, typer.Option("--sequence-col", help="The name of the column containing the amino acid sequences to embed.")
     ] = "sequence_vdj_aa",
     cell_id_col: Annotated[
         str, typer.Option(help="The name of the column containing the single-cell barcode.")
