@@ -13,6 +13,9 @@ import torch
 
 from amulety.amulety import embed
 
+# Skip large model tests on GitHub Actions due to disk space limitations
+SKIP_LARGE_MODELS = os.environ.get("GITHUB_ACTIONS") == "true"
+
 
 class TestAmulety(unittest.TestCase):
     """Function that runs at start of tests for common resources."""
@@ -109,6 +112,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
         os.remove("tcr_esm2_AB_test.pt")
 
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_tcr_prott5_A_embedding(self):
         """Test ProtT5 with TCR alpha chains (using unified approach)."""
         # Use generic prott5 function with TCR chain mapping: A -> A (handled internally)
@@ -120,6 +124,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 3  # 3 alpha chains in test data
         os.remove("tcr_prott5_A_test.pt")
 
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_tcr_prott5_AB_embedding(self):
         """Test ProtT5 with TCR alpha-beta pairs (using unified approach)."""
         # Use generic prott5 function with TCR chain mapping: AB -> AB (handled internally)
@@ -130,6 +135,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
         os.remove("tcr_prott5_AB_test.pt")
 
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_prott5_bcr_embedding(self):
         """Test ProtT5 with BCR data (backward compatibility)."""
         # Use generic prott5 function with BCR data
