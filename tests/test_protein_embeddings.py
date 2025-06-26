@@ -145,3 +145,86 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1024  # ProtT5 embedding dimension
         assert embeddings.shape[0] == 2  # 2 heavy-light pairs in BCR test data
         os.remove("prott5_bcr_test.pt")
+
+    def test_esm2_finetuned_custom_model(self):
+        """Test fine-tuned ESM2 with custom model name (using base ESM2 as example)."""
+        from amulety.amulety import embed_airr
+
+        # Test with base ESM2 model as a fine-tuned model example
+        result = embed_airr(
+            self.test_airr_sc_df,
+            "H",
+            "esm2-custom",
+            output_type="pickle",
+            custom_model_name="facebook/esm2_t33_650M_UR50D",  # Use base model as example
+            batch_size=2,
+        )
+        assert result.shape[1] == 1280  # ESM2 embedding dimension
+        assert result.shape[0] == 2  # 2 heavy chains in test data
+
+    def test_immune2vec_embedding(self):
+        """Test Immune2Vec embedding (will skip if dependencies not available)."""
+        from amulety.amulety import embed_airr
+
+        try:
+            # Test Immune2Vec with TCR data
+            result = embed_airr(self.test_airr_sc_df, "H", "immune2vec", output_type="pickle", batch_size=2)
+            assert result.shape[1] == 100  # Default Immune2Vec embedding dimension
+            assert result.shape[0] == 2  # 2 heavy chains in test data
+            print("PASS: Immune2Vec test passed")
+        except ImportError as e:
+            error_msg = str(e)
+            print("SKIP: Skipping Immune2Vec test due to missing dependencies")
+            print(f"   Error: {error_msg}")
+
+            # Verify that the error message contains installation instructions
+            assert "gensim" in error_msg or "immune2vec" in error_msg
+            assert "pip install" in error_msg
+
+            # Different error messages for different missing dependencies
+            if "gensim" in error_msg and "immune2vec" not in error_msg:
+                # Only gensim error
+                assert "conda install" in error_msg
+                print("   Detected gensim missing error")
+            else:
+                # Immune2vec error (may also mention gensim)
+                assert "git clone" in error_msg or "github" in error_msg
+                print("   Detected immune2vec missing error")
+
+            self.skipTest("Immune2Vec dependencies not available - this is expected behavior")
+        except Exception as e:
+            print(f"FAIL: Immune2Vec test failed with unexpected error: {e}")
+            raise
+
+    def test_immune2vec_error_messages(self):
+        """Test that Immune2Vec provides helpful error messages when dependencies are missing."""
+        import pandas as pd
+
+        from amulety.protein_embeddings import immune2vec
+
+        test_sequences = pd.Series(["CASSLAPGATNEKLFF", "CAVKDSNYQLIW"])
+
+        try:
+            result = immune2vec(test_sequences)
+            # If this succeeds, dependencies are available
+            assert result.shape[1] == 100
+            print("PASS: Immune2Vec dependencies are available")
+        except ImportError as e:
+            error_msg = str(e)
+            print(f"PASS: Proper ImportError caught: {error_msg[:100]}...")
+
+            # Verify error message quality - check for either gensim or immune2vec instructions
+            assert "gensim" in error_msg or "immune2vec" in error_msg
+            assert "pip install" in error_msg
+
+            # Different error messages for different missing dependencies
+            if "gensim" in error_msg:
+                assert "conda install" in error_msg
+                print("PASS: Gensim error message contains proper installation instructions")
+            else:
+                assert "git clone" in error_msg or "github" in error_msg
+                assert "sys.path.append" in error_msg or "PYTHONPATH" in error_msg
+                print("PASS: Immune2Vec error message contains proper installation instructions")
+        except Exception as e:
+            print(f"FAIL: Unexpected error type: {type(e).__name__}: {e}")
+            raise

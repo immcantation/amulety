@@ -24,28 +24,18 @@ Here is the list of currently supported embeddings:
 
 ## General Protein Models (BCR & TCR)
 
-| Model                 | Command | Embedding Dimension | TCR Type Support | Reference                                                                  |
-| --------------------- | ------- | ------------------- | ---------------- | -------------------------------------------------------------------------- |
-| ESM2 (650M parameter) | esm2    | 1280                | α/β + γ/δ        | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)     |
-| ProtT5                | prott5  | 1024                | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554) |
-| User-specified model  | custom  | Configurable        | depends on model | Custom model support                                                       |
+| Model                 | Command     | Embedding Dimension | TCR Type Support | Reference                                                                  |
+| --------------------- | ----------- | ------------------- | ---------------- | -------------------------------------------------------------------------- |
+| ESM2 (650M parameter) | esm2        | 1280                | α/β + γ/δ        | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)     |
+| Fine-tuned ESM2       | esm2-custom | 1280                | α/β + γ/δ        | Custom fine-tuned ESM2 models                                              |
+| ProtT5                | prott5      | 1024                | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554) |
+| User-specified model  | custom      | Configurable        | depends on model | Custom model support                                                       |
 
-## Chain Parameter Interface
+## Immune-Specific Models (BCR & TCR)
 
-AMULETY uses a unified chain parameter interface for both BCR and TCR sequences:
-
-- **For BCR**:
-
-  - `H` = Heavy chain
-  - `L` = Light chain
-  - `HL` = Heavy-Light chain pairs
-
-- **For TCR**:
-  - `H` = Beta/Delta chains (TRB/TRD)
-  - `L` = Alpha/Gamma chains (TRA/TRG)
-  - `HL` = Beta-Alpha/Delta-Gamma chain pairs
-
-This unified interface supports both alpha/beta and gamma/delta TCR types when the embedding models allow it.
+| Model      | Command    | Embedding Dimension | TCR Type Support | Reference                                                                                                                |
+| ---------- | ---------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Immune2Vec | immune2vec | 100 (configurable)  | α/β + γ/δ        | [doi:10.3389/fimmu.2021.680687](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2021.680687/full) |
 
 ## Installation
 
@@ -64,6 +54,63 @@ amulety --help
 ```
 
 The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
+
+### Using Fine-tuned ESM2 Models
+
+To use a fine-tuned ESM2 model, use the `esm2-custom` command with the `--custom-model-name` parameter:
+
+```bash
+# Using a HuggingFace model
+amulety embed --chain HL --model esm2-custom --custom-model-name "your-username/esm2-bcr-finetuned" --output-file-path embeddings.pt input.tsv
+
+# Using a local model path
+amulety embed --chain HL --model esm2-custom --custom-model-name "/path/to/local/model" --output-file-path embeddings.pt input.tsv
+```
+
+**Important Requirements for Fine-tuned ESM2 Models:**
+
+1. **Architecture Compatibility**: Must be based on ESM2 architecture (facebook/esm2_t33_650M_UR50D)
+2. **Tokenizer Compatibility**: Should use the same tokenizer as base ESM2
+3. **Output Dimensions**: Typically 1280-dimensional embeddings (will auto-detect if different)
+4. **HuggingFace Format**: Must be compatible with `transformers.AutoModelForMaskedLM`
+
+**Supported Model Sources:**
+
+- HuggingFace Hub models (e.g., `username/model-name`)
+- Local model directories
+- Any ESM2-compatible fine-tuned model
+
+**Note**: AMULETY will attempt to load any model you specify, but compatibility is not guaranteed for non-ESM2 models.
+
+### Using Immune2Vec
+
+Immune2Vec requires additional dependencies. To use it:
+
+1. **Install dependencies**:
+
+```bash
+pip install gensim numpy
+```
+
+2. **Clone the Immune2Vec repository**:
+
+```bash
+git clone https://github.com/edelarosilva/immune2vec.git
+cd immune2vec
+```
+
+3. **Add to Python path** (in your script):
+
+```python
+import sys
+sys.path.append('/path/to/immune2vec')
+```
+
+4. **Use with AMULETY**:
+
+```bash
+amulety embed --chain HL --model immune2vec --output-file-path embeddings.pt input.tsv
+```
 
 ## Contact
 
