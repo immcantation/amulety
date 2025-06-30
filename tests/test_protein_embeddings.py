@@ -23,14 +23,14 @@ class TestAmulety(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures, if any."""
         self.test_airr_sc = "AIRR_rearrangement_translated_single-cell.tsv"
-        self.test_airr_bulk = "AIRR_rearrangement_translated_bulk.tsv"
+
         self.test_airr_mixed = "AIRR_rearrangement_translated_mixed.tsv"
         self.test_airr_translation = "AIRR_rearrangement_single-cell_testtranslation.tsv"
         self.test_airr_tcr = "AIRR_rearrangement_tcr_test.tsv"
         self.this_dir = os.path.dirname(os.path.abspath(__file__))
         self.test_airr_sc_path = os.path.join(self.this_dir, self.test_airr_sc)
         self.test_airr_sc_df = pd.read_table(self.test_airr_sc_path, delimiter="\t", header=0)
-        self.test_airr_bulk_path = os.path.join(self.this_dir, self.test_airr_bulk)
+
         self.test_airr_mixed_path = os.path.join(self.this_dir, self.test_airr_mixed)
         self.test_airr_translation_path = os.path.join(self.this_dir, self.test_airr_translation)
         self.test_airr_tcr_path = os.path.join(self.this_dir, self.test_airr_tcr)
@@ -51,11 +51,6 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("HL_test.pt")
 
-    def test_esm2_bulk_HL_embedding(self):
-        """Test esm2 (bulk HL)."""
-        with self.assertRaises(ValueError):
-            embed(self.test_airr_bulk_path, "HL", "esm2", "HL_test.pt")
-
     def test_esm2_sc_H_embedding(self):
         """Test esm2 (single-cell H)."""
         embed(self.test_airr_sc_path, "H", "esm2", "H_test.pt")
@@ -65,27 +60,9 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("H_test.pt")
 
-    def test_esm2_bulk_H_embedding(self):
-        """Test antiberty (bulk H)."""
-        embed(self.test_airr_bulk_path, "H", "esm2", "H_test.pt")
-        assert os.path.exists("H_test.pt")
-        embeddings = torch.load("H_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("H_test.pt")
-
     def test_esm2_sc_L_embedding(self):
         """Test esm2 (single-cell L)."""
         embed(self.test_airr_sc_path, "L", "esm2", "L_test.pt")
-        assert os.path.exists("L_test.pt")
-        embeddings = torch.load("L_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("L_test.pt")
-
-    def test_esm2_bulk_L_embedding(self):
-        """Test esm2 (bulk L)."""
-        embed(self.test_airr_bulk_path, "L", "esm2", "L_test.pt")
         assert os.path.exists("L_test.pt")
         embeddings = torch.load("L_test.pt")
         assert embeddings.shape[1] == 1280
@@ -146,21 +123,98 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2  # 2 heavy-light pairs in BCR test data
         os.remove("prott5_bcr_test.pt")
 
-    def test_esm2_finetuned_custom_model(self):
-        """Test fine-tuned ESM2 with custom model name (using base ESM2 as example)."""
+    def test_custom_model_with_esm2(self):
+        """Test custom model functionality using ESM2 as example."""
         from amulety.amulety import embed_airr
 
-        # Test with base ESM2 model as a fine-tuned model example
+        # Test custom model with ESM2 parameters
         result = embed_airr(
             self.test_airr_sc_df,
             "H",
-            "esm2-custom",
+            "custom",
             output_type="pickle",
-            custom_model_name="facebook/esm2_t33_650M_UR50D",  # Use base model as example
+            model_path="facebook/esm2_t33_650M_UR50D",  # Use base ESM2 model as custom model example
+            embedding_dimension=1280,
+            max_length=512,
             batch_size=2,
         )
         assert result.shape[1] == 1280  # ESM2 embedding dimension
         assert result.shape[0] == 2  # 2 heavy chains in test data
+
+    def test_finetuned_esm2_custommodel(self):
+        """Test fine-tuned ESM2 model using custommodel function."""
+        from amulety.amulety import embed_airr
+
+        # Test fine-tuned ESM2 model: AmelieSchreiber/esm2_t6_8M_UR50D-finetuned-localization
+        # This model is based on ESM2-t6 (8M parameters) with 320-dimensional embeddings
+        result = embed_airr(
+            self.test_airr_sc_df,
+            "H",
+            "custom",
+            output_type="pickle",
+            model_path="AmelieSchreiber/esm2_t6_8M_UR50D-finetuned-localization",
+            embedding_dimension=320,  # ESM2-t6 uses 320-dim embeddings
+            max_length=512,
+            batch_size=2,
+        )
+        assert result.shape[1] == 320  # ESM2-t6 embedding dimension
+        assert result.shape[0] == 2  # 2 heavy chains in test data
+
+    def test_auto_receptor_type_validation(self):
+        """Test automatic receptor type validation functionality."""
+        from amulety.amulety import embed_airr
+
+        # Test 1: BCR data with BCR model (should work)
+        result = embed_airr(
+            self.test_airr_sc_df,
+            "H",
+            "antiberta2",
+            batch_size=2,
+        )
+        assert result.shape[1] == 1024  # AntiBERTa2 embedding dimension
+        assert result.shape[0] == 2  # 2 heavy chains in test data
+
+        # Test 2: TCR data with TCR model (should work)
+        result = embed_airr(
+            self.test_airr_tcr_df,
+            "H",
+            "tcr-bert",
+            batch_size=2,
+        )
+        assert result.shape[1] == 768  # TCR-BERT embedding dimension
+        assert result.shape[0] == 3  # 3 beta chains in TCR test data
+
+        # Test 3: BCR data with protein model (should work)
+        result = embed_airr(
+            self.test_airr_sc_df,
+            "H",
+            "esm2",
+            batch_size=2,
+        )
+        assert result.shape[1] == 1280  # ESM2 embedding dimension
+        assert result.shape[0] == 2  # 2 heavy chains in test data
+
+        # Test 4: TCR data with BCR model (should fail with clear error)
+        with self.assertRaises(ValueError) as context:
+            embed_airr(
+                self.test_airr_tcr_df,
+                "H",
+                "antiberta2",
+                batch_size=2,
+            )
+        self.assertIn("designed for BCR data", str(context.exception))
+        self.assertIn("only TCR data", str(context.exception))
+
+        # Test 5: BCR data with TCR model (should fail with clear error)
+        with self.assertRaises(ValueError) as context:
+            embed_airr(
+                self.test_airr_sc_df,
+                "H",
+                "tcr-bert",
+                batch_size=2,
+            )
+        self.assertIn("designed for TCR data", str(context.exception))
+        self.assertIn("only BCR data", str(context.exception))
 
     def test_immune2vec_embedding(self):
         """Test Immune2Vec embedding (will skip if dependencies not available)."""

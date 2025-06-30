@@ -21,14 +21,14 @@ class TestAmulety(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures, if any."""
         self.test_airr_sc = "AIRR_rearrangement_translated_single-cell.tsv"
-        self.test_airr_bulk = "AIRR_rearrangement_translated_bulk.tsv"
+
         self.test_airr_mixed = "AIRR_rearrangement_translated_mixed.tsv"
         self.test_airr_translation = "AIRR_rearrangement_single-cell_testtranslation.tsv"
         self.test_airr_tcr = "AIRR_rearrangement_tcr_test.tsv"
         self.this_dir = os.path.dirname(os.path.abspath(__file__))
         self.test_airr_sc_path = os.path.join(self.this_dir, self.test_airr_sc)
         self.test_airr_sc_df = pd.read_table(self.test_airr_sc_path, delimiter="\t", header=0)
-        self.test_airr_bulk_path = os.path.join(self.this_dir, self.test_airr_bulk)
+
         self.test_airr_mixed_path = os.path.join(self.this_dir, self.test_airr_mixed)
         self.test_airr_translation_path = os.path.join(self.this_dir, self.test_airr_translation)
         self.test_airr_tcr_path = os.path.join(self.this_dir, self.test_airr_tcr)

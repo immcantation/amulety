@@ -12,7 +12,7 @@ from rich.console import Console
 from typing_extensions import Annotated
 
 from amulety.bcr_embeddings import antiberta2, antiberty, balm_paired
-from amulety.protein_embeddings import custommodel, esm2, esm2_finetuned, immune2vec, prott5
+from amulety.protein_embeddings import custommodel, esm2, immune2vec, prott5
 from amulety.tcr_embeddings import deep_tcr, tcr_bert, tcremp, trex
 from amulety.utils import (
     process_airr,
@@ -133,7 +133,6 @@ def embed_airr(
     max_length: int = None,
     model_path: str = None,
     output_type: str = "pickle",
-    custom_model_name: str = None,
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
@@ -147,7 +146,7 @@ def embed_airr(
                     TCR models: ["deep-tcr", "tcr-bert", "tcremp", "trex"]
                     Immune models (BCR & TCR): ["immune2vec"]
                     Protein models: ["esm2", "prott5", "custom"]
-                    Fine-tuned ESM2: ["esm2-custom"] (requires custom_model_name)
+                    Use "custom" for fine-tuned models (requires model_path, embedding_dimension, max_length)
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
         cache_dir (Optional[str]): Cache dir for storing the pre-trained model weights.
@@ -156,7 +155,7 @@ def embed_airr(
         max_length (int): The maximum sequence length for custom models.
         model_path (str): The path to the custom model.
         output_type (str): The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
-        custom_model_name (str): HuggingFace model name or path for fine-tuned ESM2 models.
+
     """
     # Check valid chain - unified interface for both BCR and TCR
     valid_chains = ["H", "L", "HL"]
@@ -169,6 +168,37 @@ def embed_airr(
         raise ValueError("Output type must be one of ['df', 'pickle']")
     if sequence_col not in airr.columns:
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
+
+    # ===== AUTO RECEPTOR TYPE VALIDATION =====
+    # Define model compatibility
+    bcr_models = {"antiberta2", "antiberty", "balm-paired"}
+    tcr_models = {"deep-tcr", "tcr-bert", "tcremp", "trex"}
+
+    # Auto-detect data type from the input
+    data_copy = airr.copy()
+    if "locus" not in data_copy.columns:
+        data_copy.loc[:, "locus"] = data_copy.loc[:, "v_call"].apply(lambda x: x[:3])
+
+    bcr_loci = {"IGH", "IGL", "IGK"}
+    tcr_loci = {"TRA", "TRB", "TRG", "TRD"}
+    present_loci = set(data_copy["locus"].unique())
+
+    bcr_present = bool(present_loci & bcr_loci)
+    tcr_present = bool(present_loci & tcr_loci)
+
+    # Validate model-data compatibility
+    if model in bcr_models and tcr_present and not bcr_present:
+        raise ValueError(
+            f"Model '{model}' is designed for BCR data, but only TCR data (loci: {list(present_loci & tcr_loci)}) "
+            f"was found in the input. Please use a TCR model like 'tcr-bert', 'deep-tcr', 'tcremp', or 'trex', "
+            f"or a general protein model like 'esm2' or 'prott5'."
+        )
+    elif model in tcr_models and bcr_present and not tcr_present:
+        raise ValueError(
+            f"Model '{model}' is designed for TCR data, but only BCR data (loci: {list(present_loci & bcr_loci)}) "
+            f"was found in the input. Please use a BCR model like 'antiberta2', 'antiberty', or 'balm-paired', "
+            f"or a general protein model like 'esm2' or 'prott5'."
+        )
 
     dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
     n_dat = dat.shape[0]
@@ -202,41 +232,7 @@ def embed_airr(
     # Protein models
     elif model == "esm2":
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
-    elif model == "esm2-custom":
-        # Handle custom fine-tuned ESM2 models
-        if custom_model_name is None:
-            raise ValueError(
-                "For esm2-custom model, custom_model_name must be provided with the HuggingFace model name or local path."
-            )
 
-        embedding = esm2_finetuned(
-            sequences=X,
-            model_name=custom_model_name,
-            cache_dir=cache_dir,
-            batch_size=batch_size,
-            max_seq_length=max_length or 512,
-            embedding_dim=embedding_dimension or 1280,
-        )
-    elif model.startswith("esm2-"):
-        # Handle predefined fine-tuned ESM2 models with format: esm2-{model_identifier}
-        # These are curated models known to work well with AMULETY
-        model_mapping = {
-            # Add verified fine-tuned models here
-            # "esm2-bcr": "username/esm2-bcr-finetuned",
-            # "esm2-tcr": "username/esm2-tcr-finetuned",
-            # "esm2-immune": "username/esm2-immune-finetuned",
-        }
-
-        if model in model_mapping:
-            model_name = model_mapping[model]
-            embedding = esm2_finetuned(sequences=X, model_name=model_name, cache_dir=cache_dir, batch_size=batch_size)
-        else:
-            available_models = list(model_mapping.keys()) if model_mapping else ["None currently available"]
-            raise ValueError(
-                f"Predefined fine-tuned ESM2 model '{model}' not recognized.\n"
-                f"Available predefined models: {available_models}\n"
-                f"To use a custom model, use 'esm2-custom' with --custom-model-name parameter."
-            )
     elif model == "prott5":
         embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     elif model == "custom":
@@ -329,7 +325,7 @@ def embed(
         str,
         typer.Option(
             default=...,
-            help="The embedding model to use. BCR: ['antiberta2', 'antiberty', 'balm-paired']. TCR: ['deep-tcr', 'tcr-bert', 'tcremp', 'trex']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Fine-tuned ESM2: ['esm2-custom'].",
+            help="The embedding model to use. BCR: ['antiberta2', 'antiberty', 'balm-paired']. TCR: ['deep-tcr', 'tcr-bert', 'tcremp', 'trex']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
         ),
     ],
     output_file_path: Annotated[
@@ -350,9 +346,17 @@ def embed(
         str, typer.Option(help="The name of the column containing the single-cell barcode.")
     ] = "cell_id",
     batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
-    custom_model_name: Annotated[
+    model_path: Annotated[
         str,
-        typer.Option(help="HuggingFace model name or local path for fine-tuned ESM2 models (used with esm2-custom)."),
+        typer.Option(help="Path to custom model (HuggingFace model name or local path). Required for 'custom' model."),
+    ] = None,
+    embedding_dimension: Annotated[
+        int,
+        typer.Option(help="Embedding dimension for custom model. Required for 'custom' model."),
+    ] = None,
+    max_length: Annotated[
+        int,
+        typer.Option(help="Maximum sequence length for custom model. Required for 'custom' model."),
     ] = None,
 ):
     """
@@ -377,8 +381,10 @@ def embed(
         cell_id_col=cell_id_col,
         cache_dir=cache_dir,
         batch_size=batch_size,
+        embedding_dimension=embedding_dimension,
+        max_length=max_length,
+        model_path=model_path,
         output_type=output_type,
-        custom_model_name=custom_model_name,
     )
 
     if output_type == "pickle":

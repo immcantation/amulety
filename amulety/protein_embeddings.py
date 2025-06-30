@@ -155,115 +155,6 @@ def esm2(
     return embeddings
 
 
-def esm2_finetuned(
-    sequences: pd.Series,
-    model_name: str,
-    cache_dir: Optional[str] = None,
-    batch_size: int = 50,
-    max_seq_length: int = 512,
-    embedding_dim: int = 1280,
-):
-    """
-    Embeds sequences using a fine-tuned ESM2 model.
-
-    Args:
-        sequences: Input protein sequences
-        model_name: HuggingFace model name or local path to fine-tuned ESM2 model
-        cache_dir: Directory to cache model files
-        batch_size: Number of sequences to process in each batch
-        max_seq_length: Maximum sequence length to process
-        embedding_dim: Expected embedding dimension
-
-    Note:
-        The model should be based on ESM2 architecture and compatible with
-        facebook/esm2_t33_650M_UR50D tokenizer and model structure.
-    """
-    from transformers import AutoModelForMaskedLM, AutoTokenizer
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    sequences = X.values
-
-    logger.info("Loading fine-tuned ESM2 model: %s", model_name)
-
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
-        model = AutoModelForMaskedLM.from_pretrained(model_name, cache_dir=cache_dir)
-
-        # Basic compatibility check
-        if not hasattr(model, "esm"):
-            logger.warning("Model may not be ESM2-based. Proceeding with caution...")
-
-    except Exception as e:
-        logger.error("Failed to load model %s: %s", model_name, str(e))
-        raise RuntimeError(
-            f"Could not load fine-tuned ESM2 model '{model_name}'. "
-            f"Please ensure:\n"
-            f"1. The model exists and is accessible\n"
-            f"2. The model is based on ESM2 architecture\n"
-            f"3. You have proper permissions to access the model\n"
-            f"Original error: {str(e)}"
-        ) from e
-    model = model.to(device)
-    model_size = sum(p.numel() for p in model.parameters())
-    logger.info("Fine-tuned ESM2 model loaded. Size: %s M", round(model_size / 1e6, 2))
-
-    # validate model output dimensions with a test sequence
-    try:
-        test_seq = "ACDEFGHIKLMNPQRSTVWY"
-        test_input = torch.tensor([tokenizer.encode(test_seq, max_length=50, truncation=True)]).to(device)
-        with torch.no_grad():
-            test_output = model(test_input, output_hidden_states=True)
-            actual_dim = test_output.hidden_states[-1].shape[-1]
-
-        if actual_dim != embedding_dim:
-            logger.warning(
-                "Model output dimension (%d) differs from expected (%d). Adjusting...", actual_dim, embedding_dim
-            )
-            embedding_dim = actual_dim
-
-    except Exception as e:
-        logger.warning("Could not validate model dimensions: %s", str(e))
-
-    embeddings = torch.zeros((len(sequences), embedding_dim))
-    n_batches = len(sequences) // batch_size + (1 if len(sequences) % batch_size != 0 else 0)
-
-    i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
-        logger.info("Batch %s/%s.", i, n_batches)
-        x = torch.tensor(
-            [
-                tokenizer.encode(
-                    seq,
-                    padding="max_length",
-                    truncation=True,
-                    max_length=max_seq_length,
-                    return_special_tokens_mask=True,
-                )
-                for seq in batch
-            ]
-        ).to(device)
-        attention_mask = (x != tokenizer.pad_token_id).float().to(device)
-        with torch.no_grad():
-            outputs = model(x, attention_mask=attention_mask, output_hidden_states=True)
-            outputs = outputs.hidden_states[-1]
-            outputs = list(outputs.detach())
-
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
-
-        embeddings[start:end] = torch.stack(outputs)
-        del x
-        del attention_mask
-        del outputs
-        i += 1
-
-    logger.info("Fine-tuned ESM2 embedding completed")
-    return embeddings
-
-
 def prott5(
     sequences: pd.Series,
     cache_dir: Optional[str] = None,
@@ -478,15 +369,11 @@ def immune2vec(
     logger.info("Starting Immune2Vec embedding...")
     logger.info("Parameters: n_dim=%d, n_gram=%d, window=%d", n_dim, n_gram, window)
 
-    # Convert sequences to pandas Series and filter out empty/invalid sequences
-    # Following the reference implementation pattern
-    sequences_clean = sequences.dropna()
-    sequences_clean = sequences_clean[sequences_clean.str.len() > 0]
-
-    if len(sequences_clean) == 0:
+    # Sequences are already cleaned by process_airr function
+    if len(sequences) == 0:
         raise ValueError("No valid sequences found for embedding")
 
-    logger.info("Processing %d sequences", len(sequences_clean))
+    logger.info("Processing %d sequences", len(sequences))
 
     # Create cache directory if specified
     if cache_dir:
@@ -528,7 +415,7 @@ def immune2vec(
             if cache_dir:
                 corpus_filename = os.path.join(cache_dir, corpus_filename)
 
-            model = train_immune2vec(sequences_clean, corpus_filename)
+            model = train_immune2vec(sequences, corpus_filename)
 
             # save model to cache if cache_dir is provided
             if cache_dir:
@@ -539,7 +426,7 @@ def immune2vec(
         logger.info("Generating embeddings...")
 
         # Apply embedding function to all sequences (following reference implementation)
-        embed_vectors = sequences_clean.apply(embed_data_helper)
+        embed_vectors = sequences.apply(embed_data_helper)
 
         # Convert to list and handle NaN values
         embeddings_list = []

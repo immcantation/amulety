@@ -49,33 +49,15 @@ def process_airr(
     receptor_type: str = "all",
 ):
     """
-    Processes AIRR-seq data from the input file path and returns a pandas DataFrame containing the sequence to embed.
+    Processes AIRR-seq data and returns a pandas DataFrame containing sequences to embed.
 
-    UNIFIED CHAIN PARAMETER INTERFACE:
-    AMULETY uses a unified H/L/HL parameter interface for both BCR and TCR sequences, providing
-    consistency across all receptor types:
-
-    For BCR (B-Cell Receptor):
-        - H: Heavy chain (IGH)
-        - L: Light chain (IGL/IGK)
-        - HL: Heavy-Light chain pairs
-
-    For TCR (T-Cell Receptor):
-        - H: Beta/Delta chains (TRB/TRD) - mapped to "Heavy" internally
-        - L: Alpha/Gamma chains (TRA/TRG) - mapped to "Light" internally
-        - HL: Beta-Alpha/Delta-Gamma chain pairs
-
-    This unified interface supports both alpha/beta and gamma/delta TCR types when the
-    embedding models allow it.
-
-    It will drop cells with missing heavy or light chain if operating in single-cell only mode (no cell IDs missing) and log the number of missing chains.
-    If the data is bulk only, it will raise an error if chain = "HL".
-    If the data is mixed bulk and single-cell, and the mode is HL it will concatenate heavy and light chains per cell and drop cells with missing chains.
+    Uses AMULETY's unified H/L/HL interface for both BCR and TCR data. See embed_airr()
+    function documentation for detailed chain parameter explanations.
 
     Parameters:
         airr_df (pandas.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
-        chain (str): The input chain, which can be one of ["H", "L", "HL"].
-                    Uses unified interface: H=Heavy/Beta, L=Light/Alpha, HL=Heavy-Light/Beta-Alpha pairs
+        chain (str): The input chain, one of ["H", "L", "HL"].
+
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
         receptor_type (str): The receptor type to validate, one of ["BCR", "TCR", "all"].
@@ -191,28 +173,16 @@ def process_airr(
 
 def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: str):
     """
-    Concatenates heavy and light chain per cell and returns a pandas DataFrame.
+    Concatenates heavy and light chain per cell using AMULETY's unified H/L interface.
 
-    UNIFIED CHAIN CONCATENATION:
-    This function implements the unified H/L interface for both BCR and TCR data:
+    Concatenates sequences as: Heavy<cls><cls>Light for both BCR (IGH + IGL/IGK) and
+    TCR (TRB/TRD + TRA/TRG) data. See embed_airr() documentation for chain mappings.
 
-    For BCR (B-Cell Receptor):
-        - Heavy (H): IGH chains
-        - Light (L): IGL/IGK chains
-        - Result: IGH<cls><cls>IGL/IGK
-
-    For TCR (T-Cell Receptor):
-        - Heavy (H): TRB/TRD chains (Beta/Delta)
-        - Light (L): TRA/TRG chains (Alpha/Gamma)
-        - Result: TRB/TRD<cls><cls>TRA/TRG
-
-    The unified interface allows the same HL parameter to work for both receptor types,
-    supporting alpha/beta and gamma/delta TCR combinations.
-
-    If a cell contains several light or heavy chains, it will take the one with highest duplicate count.
+    If a cell contains multiple chains of the same type, selects the one with highest
+    duplicate count.
 
     Parameters:
-        data (pandas.DataFrame): Input data containing information about heavy and light chains.
+        data (pandas.DataFrame): Input data containing heavy and light chain information.
                                  Must include columns: cell_id_col, "chain", "duplicate_count", sequence_col
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
