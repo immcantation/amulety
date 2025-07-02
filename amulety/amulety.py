@@ -133,6 +133,7 @@ def embed_airr(
     max_length: int = None,
     model_path: str = None,
     output_type: str = "pickle",
+    selection_col: str = "duplicate_count",
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
@@ -155,6 +156,8 @@ def embed_airr(
         max_length (int): The maximum sequence length for custom models.
         model_path (str): The path to the custom model.
         output_type (str): The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
+        selection_col (str): The name of the numeric column used to select the best chain when
+                           multiple chains of the same type exist per cell. Default: "duplicate_count".
 
     """
     # Check valid chain - unified interface for both BCR and TCR
@@ -200,7 +203,9 @@ def embed_airr(
             f"or a general protein model like 'esm2' or 'prott5'."
         )
 
-    dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col)
+    dat = process_airr(
+        airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col, selection_col=selection_col
+    )
     n_dat = dat.shape[0]
 
     dat = dat.dropna(subset=[sequence_col])
@@ -358,6 +363,12 @@ def embed(
         int,
         typer.Option(help="Maximum sequence length for custom model. Required for 'custom' model."),
     ] = None,
+    selection_col: Annotated[
+        str,
+        typer.Option(
+            help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined."
+        ),
+    ] = "duplicate_count",
 ):
     """
     Embeds sequences from an AIRR rearrangement file using the specified model.
@@ -385,6 +396,7 @@ def embed(
         max_length=max_length,
         model_path=model_path,
         output_type=output_type,
+        selection_col=selection_col,
     )
 
     if output_type == "pickle":

@@ -82,6 +82,55 @@ amulety embed --chain HL --model custom --model-path "/path/to/local/model" --em
 
 **Note**: AMULETY will attempt to load any model you specify, but compatibility is not guaranteed for non-ESM2 models.
 
+### Custom Light Chain Selection
+
+When using paired chains (`--chain HL`), AMULETY automatically selects the best light chain when multiple light chains exist for the same cell. By default, it uses the `duplicate_count` column (sequence read count), but you can specify a custom numeric column:
+
+```bash
+# Default behavior: use duplicate_count
+amulety embed --chain HL --model antiberta2 --output-file-path embeddings.pt input.tsv
+
+# Custom selection: use a quality score column
+amulety embed --chain HL --model antiberta2 --selection-col quality_score --output-file-path embeddings.pt input.tsv
+
+# Custom selection: use UMI count
+amulety embed --chain HL --model antiberta2 --selection-col umi_count --output-file-path embeddings.pt input.tsv
+```
+
+**Requirements for Custom Selection Columns:**
+
+1. **Numeric Type**: The column must contain numeric values (integers or floats)
+2. **Higher is Better**: AMULETY selects the chain with the highest value
+3. **User-Defined**: You need to add these columns to your AIRR data file yourself
+
+**Common Custom Columns:**
+
+- `quality_score`: Sequence quality metrics
+- `umi_count`: Unique molecular identifier counts
+- `expression_level`: Gene expression levels
+- `confidence_score`: Assembly confidence scores
+
+**Example: Adding a Custom Column**
+
+```python
+import pandas as pd
+
+# Read your AIRR data
+data = pd.read_csv('input.tsv', sep='\t')
+
+# Add a custom quality score (example calculation)
+data['quality_score'] = data['duplicate_count'] * data['sequence_length'] / 100
+
+# Save enhanced data
+data.to_csv('enhanced_input.tsv', sep='\t', index=False)
+```
+
+Then use with AMULETY:
+
+```bash
+amulety embed --chain HL --model antiberta2 --selection-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
+```
+
 ### Using Immune2Vec
 
 Immune2Vec requires cloning the repository. To use it:

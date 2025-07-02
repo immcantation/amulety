@@ -23,6 +23,41 @@ Embed sequences with different models
     :preferred: text
 
 
+Custom Light Chain Selection
+=============================
+
+When using paired chains (``--chain HL``), AMULETY automatically selects the best light chain when multiple light chains exist for the same cell. By default, it uses the ``duplicate_count`` column, but you can specify a custom numeric column using the ``--selection-col`` parameter.
+
+**Default behavior:**
+
+.. code-block:: bash
+
+  amulety embed --chain HL --model antiberta2 --output-file-path embeddings.pt input.tsv
+
+**Custom selection column:**
+
+.. code-block:: bash
+
+  # Use a quality score column
+  amulety embed --chain HL --model antiberta2 --selection-col quality_score --output-file-path embeddings.pt input.tsv
+
+  # Use UMI count
+  amulety embed --chain HL --model antiberta2 --selection-col umi_count --output-file-path embeddings.pt input.tsv
+
+**Requirements:**
+
+- The column must contain numeric values (integers or floats)
+- AMULETY selects the chain with the highest value
+- Custom columns must be added to your AIRR data file by the user
+
+**Common custom columns:**
+
+- ``quality_score``: Sequence quality metrics
+- ``umi_count``: Unique molecular identifier counts
+- ``expression_level``: Gene expression levels
+- ``confidence_score``: Assembly confidence scores
+
+
 Protein embeddings
 ==================
 

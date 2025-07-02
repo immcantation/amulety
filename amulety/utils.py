@@ -47,6 +47,7 @@ def process_airr(
     sequence_col: str = "sequence_vdj_aa",
     cell_id_col: str = "cell_id",
     receptor_type: str = "all",
+    selection_col: str = "duplicate_count",
 ):
     """
     Processes AIRR-seq data and returns a pandas DataFrame containing sequences to embed.
@@ -64,6 +65,8 @@ def process_airr(
                            - "BCR": validates only BCR chains (IGH, IGL, IGK) are present
                            - "TCR": validates only TCR chains (TRA, TRB, TRG, TRD) are present
                            - "all": allows both BCR and TCR chains in the same file
+        selection_col (str): The name of the numeric column used to select the best chain when
+                           multiple chains of the same type exist per cell. Default: "duplicate_count".
 
     Returns:
         pandas.DataFrame: Dataframe with formatted sequences.
@@ -153,7 +156,7 @@ def process_airr(
         logger.info("Processing single-cell data...")
         if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell...")
-            data = concatenate_heavylight(data, sequence_col, cell_id_col)
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col)
         else:
             colnames = [cell_id_col, sequence_col]
             data = data.loc[data.chain == chain, colnames]
@@ -163,7 +166,7 @@ def process_airr(
         if chain == "HL":
             logger.info("Concatenating heavy and light chain per cell...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(data, sequence_col, cell_id_col)
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col)
         else:
             colnames = ["sequence_id", cell_id_col, sequence_col]
             data = data.loc[data.chain == chain, colnames]
@@ -171,7 +174,9 @@ def process_airr(
     return data
 
 
-def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: str):
+def concatenate_heavylight(
+    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count"
+):
     """
     Concatenates heavy and light chain per cell using AMULETY's unified H/L interface.
 
@@ -179,27 +184,38 @@ def concatenate_heavylight(data: pd.DataFrame, sequence_col: str, cell_id_col: s
     TCR (TRB/TRD + TRA/TRG) data. See embed_airr() documentation for chain mappings.
 
     If a cell contains multiple chains of the same type, selects the one with highest
-    duplicate count.
+    value in the selection column.
 
     Parameters:
         data (pandas.DataFrame): Input data containing heavy and light chain information.
-                                 Must include columns: cell_id_col, "chain", "duplicate_count", sequence_col
+                                 Must include columns: cell_id_col, "chain", selection_col, sequence_col
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
+        selection_col (str): The name of the numeric column used to select the best chain when
+                           multiple chains of the same type exist per cell. Default: "duplicate_count".
 
     Returns:
         pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
                          Format: HEAVY<cls><cls>LIGHT for each cell.
+
+    Raises:
+        ValueError: If required columns are missing or selection_col is not numeric.
     """
-    colnames = [cell_id_col, "locus", "duplicate_count", sequence_col]
+    colnames = [cell_id_col, "locus", selection_col, sequence_col]
     missing_cols = [col for col in colnames if col not in data.columns]
     if missing_cols:
         raise ValueError(
             f"Column(s) {missing_cols} is/are not present in the input data and are needed to concatenate heavy and light chains."
         )
 
-    # if tie in maximum duplicate_count, return the first occurrence
-    data = data.loc[data.groupby([cell_id_col, "chain"])["duplicate_count"].idxmax()]
+    # Check that selection_col is numeric
+    if not pd.api.types.is_numeric_dtype(data[selection_col]):
+        raise ValueError(
+            f"Selection column '{selection_col}' must be numeric. Found dtype: {data[selection_col].dtype}"
+        )
+
+    # if tie in maximum selection_col value, return the first occurrence
+    data = data.loc[data.groupby([cell_id_col, "chain"])[selection_col].idxmax()]
     data = data.pivot(index=cell_id_col, columns="chain", values=sequence_col)
     data = data.reset_index(level=cell_id_col)
     n_cells = data.shape[0]

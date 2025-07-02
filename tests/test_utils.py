@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 
 from amulety.amulety import translate_igblast
-from amulety.utils import process_airr
+from amulety.utils import concatenate_heavylight, process_airr
 
 
 class TestAmulety(unittest.TestCase):
@@ -177,3 +177,41 @@ class TestAmulety(unittest.TestCase):
         # Verify that sequences contain both BCR and TCR data
         assert any("EVQL" in seq for seq in result_h["sequence_vdj_aa"])  # BCR signature
         assert any("CASS" in seq for seq in result_h["sequence_vdj_aa"])  # TCR signature
+
+    def test_custom_selection_column(self):
+        """Test concatenate_heavylight with custom selection column."""
+        # Create test data with custom selection column
+        test_data = pd.DataFrame(
+            {
+                "cell_id": ["cell1", "cell1", "cell1", "cell2", "cell2"],
+                "locus": ["IGH", "IGL", "IGK", "IGH", "IGL"],
+                "sequence_vdj_aa": ["HEAVY1", "LIGHT1", "LIGHT2", "HEAVY2", "LIGHT3"],
+                "duplicate_count": [10, 5, 8, 15, 12],
+                "custom_score": [100, 50, 90, 200, 150],  # Custom numeric column
+            }
+        )
+
+        # Add chain mapping
+        test_data["chain"] = test_data["locus"].apply(lambda x: "H" if x == "IGH" else "L")
+
+        # Test with default duplicate_count column
+        result_default = concatenate_heavylight(test_data, "sequence_vdj_aa", "cell_id")
+        # Should select LIGHT2 for cell1 (duplicate_count=8 > 5) and LIGHT3 for cell2
+        assert "HEAVY1<cls><cls>LIGHT2" in result_default["sequence_vdj_aa"].values
+        assert "HEAVY2<cls><cls>LIGHT3" in result_default["sequence_vdj_aa"].values
+
+        # Test with custom selection column
+        result_custom = concatenate_heavylight(test_data, "sequence_vdj_aa", "cell_id", "custom_score")
+        # Should select LIGHT2 for cell1 (custom_score=90 > 50) and LIGHT3 for cell2
+        assert "HEAVY1<cls><cls>LIGHT2" in result_custom["sequence_vdj_aa"].values
+        assert "HEAVY2<cls><cls>LIGHT3" in result_custom["sequence_vdj_aa"].values
+
+        # Test error when selection column doesn't exist
+        with pytest.raises(ValueError, match="Column\\(s\\) \\['nonexistent'\\] is/are not present"):
+            concatenate_heavylight(test_data, "sequence_vdj_aa", "cell_id", "nonexistent")
+
+        # Test error when selection column is not numeric
+        test_data_non_numeric = test_data.copy()
+        test_data_non_numeric["text_col"] = ["A", "B", "C", "D", "E"]
+        with pytest.raises(ValueError, match="Selection column 'text_col' must be numeric"):
+            concatenate_heavylight(test_data_non_numeric, "sequence_vdj_aa", "cell_id", "text_col")
