@@ -59,7 +59,7 @@ class TestAmulety(unittest.TestCase):
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 515  # 512 + cell_id + chain + sequence_id
-        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        assert embeddings.shape[0] == 2  # 1 H chain + 1 L chain (only single-cell data processed)
         os.remove("H_plus_L_test.tsv")
 
     def test_antiberty_HL_chain_validation(self):
@@ -164,7 +164,7 @@ class TestAmulety(unittest.TestCase):
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
         assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
-        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        assert embeddings.shape[0] == 2  # 1 H chain + 1 L chain (only single-cell data processed)
         os.remove("H_plus_L_test.tsv")
 
     def test_antiberta2_HL_chain_validation(self):

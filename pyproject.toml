@@ -4,12 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "amulety"
-version = "0.1.0"
-description = "Adaptive imMUne receptor Language model Embedding Tool"
-readme = "README.md"
-requires-python = ">=3.11"
+version = "0.1.1"
+description = "Python package to create embeddings of BCR amino acid sequences."
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.8, <4"
+license = {text = "MIT"}
+keywords = [
+    "immcantation",
+    "immunoinformatics",
+    "bioinformatics",
+    "embedding",
+    "antibody",
+    "BCR",
+    "Machine Learning",
+    "biology",
+    "NGS",
+    "next generation sequencing"
+]
 authors = [
-    {name = "AMULETY Team"}
+    {name = "Mamie Wang", email = "mamie.wang@yale.edu"},
+    {name = "Gisela Gabernet", email = "gisela.gabernet@yale.edu"},
+    {name = "Steven Kleinstein", email = "steven.kleinstein@yale.edu"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -17,6 +32,9 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -39,9 +57,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/amulety"
-Repository = "https://github.com/your-org/amulety"
-Issues = "https://github.com/your-org/amulety/issues"
+Homepage = "https://github.com/immcantation/amulety"
+Repository = "https://github.com/immcantation/amulety"
+Issues = "https://github.com/immcantation/amulety/issues"
 
 [project.scripts]
 amulety = "amulety.amulety:main"

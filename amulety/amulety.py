@@ -375,7 +375,7 @@ def embed_airr(
     if output_type == "pickle":
         return embedding
     elif output_type == "df":
-        allowed_index_cols = ["sequence_id", cell_id_col]
+        allowed_index_cols = ["sequence_id", cell_id_col, "chain"]
         index_cols = [col for col in dat.columns if col in allowed_index_cols]
         embedding_df = pd.DataFrame(embedding.numpy())
         result_df = pd.concat([dat.loc[:, index_cols].reset_index(drop=True), embedding_df], axis=1)
