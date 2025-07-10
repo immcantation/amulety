@@ -44,23 +44,31 @@ class TestAmulety(unittest.TestCase):
     # amulety tests #
     ##################
 
-    def test_antiberty_sc_HL_embedding(self):
-        """Test antiberty (single-cell HL)."""
-        embed(input_airr=self.test_airr_sc_path, chain="HL", model="antiberty", output_file_path="HL_test.pt")
-        assert os.path.exists("HL_test.pt")
-        embeddings = torch.load("HL_test.pt")
+    def test_antiberty_sc_H_plus_L_embedding(self):
+        """Test antiberty (single-cell H+L)."""
+        embed(input_airr=self.test_airr_sc_path, chain="H+L", model="antiberty", output_file_path="H_plus_L_test.pt")
+        assert os.path.exists("H_plus_L_test.pt")
+        embeddings = torch.load("H_plus_L_test.pt")
         assert embeddings.shape[1] == 512
-        assert embeddings.shape[0] == 2
-        os.remove("HL_test.pt")
+        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        os.remove("H_plus_L_test.pt")
 
-    def test_antiberty_mixed_HL_embedding_tsv(self):
-        """Test antiberty (mixed BCR/TCR HL)."""
-        embed(self.test_airr_mixed_path, "HL", "antiberty", "HL_test.tsv")
-        assert os.path.exists("HL_test.tsv")
-        embeddings = pd.read_table("HL_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 513
-        assert embeddings.shape[0] == 1
-        os.remove("HL_test.tsv")
+    def test_antiberty_mixed_H_plus_L_embedding_tsv(self):
+        """Test antiberty (mixed BCR/TCR H+L)."""
+        embed(self.test_airr_mixed_path, "H+L", "antiberty", "H_plus_L_test.tsv")
+        assert os.path.exists("H_plus_L_test.tsv")
+        embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 515  # 512 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        os.remove("H_plus_L_test.tsv")
+
+    def test_antiberty_HL_chain_validation(self):
+        """Test that antiberty rejects HL chain (individual chain model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "HL", "antiberty", "should_fail.pt")
+        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("--chain H", str(context.exception))
+        self.assertIn("--chain L", str(context.exception))
 
     def test_antiberty_sc_H_embedding(self):
         """Test antiberty (single-cell H)."""
@@ -98,23 +106,74 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("L_test.tsv")
 
-    def test_antiBERTa2_sc_HL_embedding(self):
-        """Test antiBERTa2 (single-cell HL)."""
-        embed(self.test_airr_sc_path, "HL", "antiberta2", "HL_test.pt")
-        assert os.path.exists("HL_test.pt")
-        embeddings = torch.load("HL_test.pt")
-        assert embeddings.shape[1] == 1024
+    def test_ablang_sc_H_embedding(self):
+        """Test AbLang (single-cell H)."""
+        embed(self.test_airr_sc_path, "H", "ablang", "H_test.pt")
+        assert os.path.exists("H_test.pt")
+        embeddings = torch.load("H_test.pt")
+        assert embeddings.shape[1] == 768  # AbLang embedding dimension
         assert embeddings.shape[0] == 2
-        os.remove("HL_test.pt")
+        os.remove("H_test.pt")
 
-    def test_antiberta2_mixed_HL_embedding_tsv(self):
-        """Test antiberta2 (mixed BCR/TCR HL)."""
-        embed(self.test_airr_mixed_path, "HL", "antiberta2", "HL_test.tsv")
-        assert os.path.exists("HL_test.tsv")
-        embeddings = pd.read_table("HL_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1025
-        assert embeddings.shape[0] == 1
-        os.remove("HL_test.tsv")
+    def test_ablang_sc_L_embedding(self):
+        """Test AbLang (single-cell L)."""
+        embed(self.test_airr_sc_path, "L", "ablang", "L_test.pt")
+        assert os.path.exists("L_test.pt")
+        embeddings = torch.load("L_test.pt")
+        assert embeddings.shape[1] == 768  # AbLang embedding dimension
+        assert embeddings.shape[0] == 2
+        os.remove("L_test.pt")
+
+    def test_ablang_sc_H_plus_L_embedding(self):
+        """Test AbLang (single-cell H+L)."""
+        embed(self.test_airr_sc_path, "H+L", "ablang", "H_plus_L_test.pt")
+        assert os.path.exists("H_plus_L_test.pt")
+        embeddings = torch.load("H_plus_L_test.pt")
+        assert embeddings.shape[1] == 768  # AbLang embedding dimension
+        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        os.remove("H_plus_L_test.pt")
+
+    def test_ablang_HL_chain_validation(self):
+        """Test that AbLang rejects HL chains (individual chain model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "HL", "ablang", "should_fail.pt")
+        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("--chain H", str(context.exception))
+        self.assertIn("--chain L", str(context.exception))
+
+    def test_ablang_LH_chain_validation(self):
+        """Test that AbLang rejects LH chains (individual chain model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "LH", "ablang", "should_fail.pt")
+        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("--chain H", str(context.exception))
+        self.assertIn("--chain L", str(context.exception))
+
+    def test_antiBERTa2_sc_H_plus_L_embedding(self):
+        """Test antiBERTa2 (single-cell H+L)."""
+        embed(self.test_airr_sc_path, "H+L", "antiberta2", "H_plus_L_test.pt")
+        assert os.path.exists("H_plus_L_test.pt")
+        embeddings = torch.load("H_plus_L_test.pt")
+        assert embeddings.shape[1] == 1024
+        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        os.remove("H_plus_L_test.pt")
+
+    def test_antiberta2_mixed_H_plus_L_embedding_tsv(self):
+        """Test antiberta2 (mixed BCR/TCR H+L)."""
+        embed(self.test_airr_mixed_path, "H+L", "antiberta2", "H_plus_L_test.tsv")
+        assert os.path.exists("H_plus_L_test.tsv")
+        embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        os.remove("H_plus_L_test.tsv")
+
+    def test_antiberta2_HL_chain_validation(self):
+        """Test that antiberta2 rejects HL chain (individual chain model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "HL", "antiberta2", "should_fail.pt")
+        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("--chain H", str(context.exception))
+        self.assertIn("--chain L", str(context.exception))
 
     def test_antiBERTa2_sc_H_embedding(self):
         """Test antiBERTa2 (single-cell H)."""
@@ -160,6 +219,43 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1024
         assert embeddings.shape[0] == 2
         os.remove("HL_test.pt")
+
+    def test_balm_paired_sc_LH_embedding(self):
+        """Test balm-paired (single-cell LH with warning)."""
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            embed(self.test_airr_sc_path, "LH", "balm-paired", "LH_test.pt")
+            assert os.path.exists("LH_test.pt")
+            embeddings = torch.load("LH_test.pt")
+            assert embeddings.shape[1] == 1024
+            assert embeddings.shape[0] == 2
+            os.remove("LH_test.pt")
+            # Check that LH warning was issued
+            assert len(w) > 0
+            assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
+
+    def test_balm_paired_H_chain_validation(self):
+        """Test that balm-paired rejects individual H chains (paired-only model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "H", "balm-paired", "should_fail.pt")
+        self.assertIn("requires paired chains", str(context.exception))
+        self.assertIn("--chain HL", str(context.exception))
+
+    def test_balm_paired_L_chain_validation(self):
+        """Test that balm-paired rejects individual L chains (paired-only model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "L", "balm-paired", "should_fail.pt")
+        self.assertIn("requires paired chains", str(context.exception))
+        self.assertIn("--chain HL", str(context.exception))
+
+    def test_balm_paired_H_plus_L_chain_validation(self):
+        """Test that balm-paired rejects H+L chains (paired-only model)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_sc_path, "H+L", "balm-paired", "should_fail.pt")
+        self.assertIn("requires paired chains", str(context.exception))
+        self.assertIn("--chain HL", str(context.exception))
 
     @pytest.mark.needsigblast  # mark test as needing igblast installation and databases, run with pytest --needsigblast
     def test_translation(self):

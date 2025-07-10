@@ -5,45 +5,116 @@ It is a Python command line tool to embed B-cell receptor (antibody) and T-cell 
 
 Here is the list of currently supported embeddings:
 
+## Chain Type Classification
+
+AMULETY supports different chain input formats based on model architecture and training data:
+
+- **H**: Heavy chains (BCR) or Beta/Delta chains (TCR) - individual chain embedding
+- **L**: Light chains (BCR) or Alpha/Gamma chains (TCR) - individual chain embedding
+- **HL**: Paired chains - concatenated Heavy-Light (BCR) or Beta-Alpha/Delta-Gamma (TCR) sequences
+- **LH**: Reverse paired chains - concatenated Light-Heavy (BCR) or Alpha-Beta/Gamma-Delta (TCR) sequences
+- **H+L**: Both chains separately - processes H and L chains individually without pairing
+
+### Model Chain Requirements:
+
+- **HL, LH only**: Paired-only models trained on concatenated sequences (BALM-paired)
+  - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
+- **H, L, HL, LH, H+L**: Flexible paired models understanding chain relationships (TCR-BERT, Trex)
+  - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
+- **H, L, H+L**: Individual chain models, no paired understanding (AntiBERTy, AntiBERTa2, DeepTCR, TCREMP)
+- **H only**: Specialized models for specific chain types (ProtLM.TCR - TCR beta chain only)
+- **H, L, H+L + (warning) paired warning**: Protein language models, no paired chain mechanisms (ESM2, ProtT5, Immune2Vec, Custom)
+  - (warning) **Warning**: Cannot distinguish chain segments in paired sequences, results may be inaccurate
+
 ## BCR (B-Cell Receptor) Models
 
-| Model       | Command     | Embedding Dimension | Reference                                                                        |
-| ----------- | ----------- | ------------------- | -------------------------------------------------------------------------------- |
-| AntiBERTa2  | antiberta2  | 1024                | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
-| AntiBERTy   | antiberty   | 512                 | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
-| BALM-paired | balm-paired | 1024                | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
+| Model       | Command     | Embedding Dimension | Chain Support | Reference                                                                        |
+| ----------- | ----------- | ------------------- | ------------- | -------------------------------------------------------------------------------- |
+| AbLang      | ablang      | 768                 | H, L, H+L     | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)   |
+| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L     | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
+| AntiBERTy   | antiberty   | 512                 | H, L, H+L     | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
+| BALM-paired | balm-paired | 1024                | HL, LH        | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
 
 ## TCR (T-Cell Receptor) Models
 
-| Model    | Command  | Embedding Dimension | TCR Type Support | Reference                                                                                            |
-| -------- | -------- | ------------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| TCR-BERT | tcr-bert | 768                 | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
-| DeepTCR  | deep-tcr | 256                 | mainly α/β       | [doi:10.1038/s41467-021-21879-w](https://www.nature.com/articles/s41467-021-21879-w)                 |
-| Trex     | trex     | 768                 | α/β only         | [PMID:39164479](https://pubmed.ncbi.nlm.nih.gov/39164479/)                                           |
-| TCREMP   | tcremp   | 512                 | mainly α/β       | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
+| Model     | Command   | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                            |
+| --------- | --------- | ------------------- | ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| DeepTCR   | deep-tcr  | 64                  | H, L, H+L         | mainly α/β       | [doi:10.1038/s41467-021-21879-w](https://www.nature.com/articles/s41467-021-21879-w)                 |
+| TCR-BERT  | tcr-bert  | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
+| TCR-VALID | tcr-valid | 16                  | H, L, HL, LH, H+L | TRB, TRA         | [doi.org/10.1038/s41467-024-48198-0](https://doi.org/10.1038/s41467-024-48198-0)                     |
+| TCREMP    | tcremp    | configurable        | H, L, HL, LH, H+L | mainly α/β       | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
 
-## General Protein Models (BCR & TCR)
+## General Protein Models
 
-| Model                 | Command | Embedding Dimension | TCR Type Support | Reference                                                                                      |
-| --------------------- | ------- | ------------------- | ---------------- | ---------------------------------------------------------------------------------------------- |
-| ESM2 (650M parameter) | esm2    | 1280                | α/β + γ/δ        | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)                         |
-| Fine-tuned models     | custom  | Configurable        | depends on model | Fine-tuned ESM2 and other custom models (requires model_path, embedding_dimension, max_length) |
-| ProtT5                | prott5  | 1024                | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554)                     |
-| User-specified model  | custom  | Configurable        | depends on model | Custom model support                                                                           |
+| Model                 | Command | Embedding Dimension | Chain Support              | TCR Type Support | Reference                                                                                              |
+| --------------------- | ------- | ------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
+| ESM2 (650M parameter) | esm2    | 1280                | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)                                 |
+| ProtT5                | prott5  | 1024                | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554)                             |
+| Custom models         | custom  | Configurable        | H, L, H+L + (warning)HL/LH | depends on model | User-provided fine-tuned or custom models (requires --model-path, --embedding-dimension, --max-length) |
 
 ## Immune-Specific Models (BCR & TCR)
 
-| Model      | Command    | Embedding Dimension | TCR Type Support | Reference                                                                                                                |
-| ---------- | ---------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Immune2Vec | immune2vec | 100 (configurable)  | α/β + γ/δ        | [doi:10.3389/fimmu.2021.680687](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2021.680687/full) |
+| Model      | Command    | Embedding Dimension | Chain Support              | TCR Type Support | Reference                                                                                                                |
+| ---------- | ---------- | ------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Immune2Vec | immune2vec | 100 (configurable)  | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.3389/fimmu.2021.680687](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2021.680687/full) |
 
 ## Installation
+
+### Requirements
+
+- **Python 3.11 or higher** (required for optional TCREMP model)
+- For Python < 3.11, AMULETY will work but TCREMP will not be available
+
+### Install AMULETY
 
 You can install AMULETY using pip:
 
 ```bash
 pip install amulety
 ```
+
+Or install from source:
+
+```bash
+git clone https://github.com/your-repo/amulety.git
+cd amulety
+pip install -e .
+```
+
+### Optional Dependencies
+
+Most models work out-of-the-box. Some models require additional packages:
+
+**Included in requirements.txt:**
+
+- **antiberty** - BCR model (included)
+- **ablang** - BCR model (included)
+
+**Manual Installation:**
+
+- **TCREMP** - Requires Python 3.11+ and manual installation (instructions provided when used)
+- **TCR-VALID** - Requires separate Python 3.8 environment due to version conflicts (instructions provided when used)
+
+### Troubleshooting TCR Models
+
+If you encounter warnings about missing TCR packages, AMULETY will automatically fall back to placeholder embeddings. To use the actual models:
+
+1. **Check which packages are missing:**
+
+```bash
+amulety check-deps
+```
+
+Or in Python:
+
+```python
+from amulety.tcr_embeddings import check_tcr_dependencies
+check_tcr_dependencies()
+```
+
+2. **Install missing packages** following the instructions above
+
+3. **Verify installation** by running the check again
 
 ## Usage
 
@@ -55,32 +126,34 @@ amulety --help
 
 The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
 
-### Using Fine-tuned and Custom Models
+### Using Custom Models
 
-To use a fine-tuned ESM2 model or other custom models, use the `custom` command with the required parameters:
+To use any fine-tuned or custom model, use the `custom` command with the required parameters:
 
 ```bash
-# Using a fine-tuned ESM2 model from HuggingFace
-amulety embed --chain HL --model custom --model-path "your-username/esm2-bcr-finetuned" --embedding-dimension 1280 --max-length 512 --output-file-path embeddings.pt input.tsv
+# Using a custom model from HuggingFace
+amulety embed --chain HL --model custom --model-path "your-username/your-custom-model" --embedding-dimension 1280 --max-length 512 --output-file-path embeddings.pt input.tsv
 
-# Using a local fine-tuned model
-amulety embed --chain HL --model custom --model-path "/path/to/local/model" --embedding-dimension 1280 --max-length 512 --output-file-path embeddings.pt input.tsv
+# Using a local custom model
+amulety embed --chain HL --model custom --model-path "/path/to/local/model" --embedding-dimension 768 --max-length 256 --output-file-path embeddings.pt input.tsv
 ```
 
 **Important Requirements for Custom Models:**
 
-1. **Architecture Compatibility**: For fine-tuned ESM2 models, must be based on ESM2 architecture (facebook/esm2_t33_650M_UR50D)
-2. **Tokenizer Compatibility**: Should use the same tokenizer as base ESM2
-3. **Output Dimensions**: Typically 1280-dimensional embeddings (will auto-detect if different)
-4. **HuggingFace Format**: Must be compatible with `transformers.AutoModelForMaskedLM`
+1. **HuggingFace Compatibility**: Must be compatible with `transformers.AutoModelForMaskedLM` or similar interfaces
+2. **Tokenizer Compatibility**: Should use a compatible tokenizer (ESM2, BERT, or similar)
+3. **Output Dimensions**: You must specify the correct embedding dimension with `--embedding-dimension`
+4. **Sequence Length**: You must specify the maximum sequence length with `--max-length`
+5. **Model Architecture**: Works best with transformer-based protein language models
 
 **Supported Model Sources:**
 
 - HuggingFace Hub models (e.g., `username/model-name`)
 - Local model directories
-- Any ESM2-compatible fine-tuned model
+- Any transformer-based protein language model
+- Fine-tuned versions of ESM2, ProtBERT, ProtT5, or similar models
 
-**Note**: AMULETY will attempt to load any model you specify, but compatibility is not guaranteed for non-ESM2 models.
+**Note**: AMULETY will attempt to load any model you specify, but compatibility depends on the model architecture and tokenizer. Transformer-based protein language models work best.
 
 ### Custom Light Chain Selection
 
@@ -129,30 +202,6 @@ Then use with AMULETY:
 
 ```bash
 amulety embed --chain HL --model antiberta2 --selection-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
-```
-
-### Using Immune2Vec
-
-Immune2Vec requires cloning the repository. To use it:
-
-1. **Clone the Immune2Vec repository**:
-
-```bash
-git clone https://github.com/edelarosilva/immune2vec.git
-cd immune2vec
-```
-
-2. **Add to Python path** (in your script):
-
-```python
-import sys
-sys.path.append('/path/to/immune2vec')
-```
-
-3. **Use with AMULETY**:
-
-```bash
-amulety embed --chain HL --model immune2vec --output-file-path embeddings.pt input.tsv
 ```
 
 ## Contact

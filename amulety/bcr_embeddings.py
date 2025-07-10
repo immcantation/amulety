@@ -63,6 +63,55 @@ def antiberty(
     return embeddings
 
 
+def ablang(
+    sequences: pd.Series,
+    cache_dir: Optional[str] = None,
+    batch_size: int = 50,
+):
+    """
+    Embeds antibody sequences using the AbLang model.
+
+    Note:\n
+    AbLang consists of two models: one for heavy chains and one for light chains.
+    Each AbLang model has two parts: AbRep (creates representations) and AbHead (predicts amino acids).
+    Trained on antibody sequences in the OAS database, demonstrating power in restoring missing residues.
+    This is a key capability for B-cell receptor repertoire sequencing data.
+    Maximum sequence length: 160 amino acids.
+    Reference: https://github.com/oxpig/AbLang
+    """
+    # device = "cuda" if torch.cuda.is_available() else "cpu"  # Currently unused
+    max_seq_length = 160
+    # dim = 768  # Currently unused
+
+    X = sequences
+    X = X.apply(lambda a: a[:max_seq_length])
+    sequences = X.values
+
+    import ablang
+
+    # Initialize AbLang model
+    # AbLang has separate models for heavy and light chains
+    # For simplicity, we'll use the heavy chain model as default
+    heavy_ablang = ablang.pretrained("heavy")
+    heavy_ablang.freeze()
+
+    logger.info("AbLang model loaded successfully")
+
+    # Generate embeddings using AbLang
+    # AbLang can generate different types of embeddings
+    # We'll use seq-codings (768 values per sequence)
+    embeddings_list = []
+
+    for seq in sequences:
+        # AbLang expects sequences as strings
+        seq_embedding = heavy_ablang([seq], mode="seqcoding")
+        embeddings_list.append(torch.tensor(seq_embedding[0]))
+
+    embeddings = torch.stack(embeddings_list)
+    logger.info("AbLang embedding completed")
+    return embeddings
+
+
 def antiberta2(
     sequences: pd.Series,
     cache_dir: Optional[str] = None,

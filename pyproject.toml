@@ -2,6 +2,50 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "amulety"
+version = "0.1.0"
+description = "Adaptive imMUne receptor Language model Embedding Tool"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "AMULETY Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "torch",
+    "transformers",
+    "typer",
+    "antiberty",
+    "ablang",
+    "rjieba",
+    "pre-commit",
+    "protobuf",
+    "sentencepiece",
+    "pytest-workflow>=1.6.0",
+    "pytest>=7.0.0",
+    "gensim>=3.8.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/amulety"
+Repository = "https://github.com/your-org/amulety"
+Issues = "https://github.com/your-org/amulety/issues"
+
+[project.scripts]
+amulety = "amulety.amulety:main"
+
 
 [tool.pytest.ini_options]
 markers = ["datafiles: load datafiles"]

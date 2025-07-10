@@ -23,6 +23,27 @@ Embed sequences with different models
     :preferred: text
 
 
+Chain Type Requirements
+=======================
+
+Different models have specific chain input requirements based on their training data:
+
+**Paired-only models (HL required):**
+- ``balm-paired``: Trained on concatenated Heavy-Light sequences
+
+**Flexible paired models (all chain types):**
+- ``tcr-bert``: Trained on concatenated Alpha-Beta sequences, supports all chain formats
+- ``tcremp``: Supports all chain types including paired chains (HL/LH) and individual chains
+
+**Individual chain models (H or L only):**
+- ``antiberty``, ``antiberta2``: Trained on individual Heavy/Light chains
+- ``deep-tcr``: Trained on individual Alpha/Beta chains
+
+**Flexible models (H, L, or HL):**
+- ``esm2``, ``prott5``, ``immune2vec``, ``custom``: Support all chain formats
+
+AMULETY will validate chain compatibility and provide clear error messages for mismatched combinations.
+
 Custom Light Chain Selection
 =============================
 

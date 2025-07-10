@@ -43,13 +43,23 @@ class TestAmulety(unittest.TestCase):
         """Tear down test fixtures, if any."""
 
     def test_esm2_sc_HL_embedding(self):
-        """Test esm2 (single-cell HL)."""
-        embed(self.test_airr_sc_path, "HL", "esm2", "HL_test.pt")
-        assert os.path.exists("HL_test.pt")
-        embeddings = torch.load("HL_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("HL_test.pt")
+        """Test esm2 (single-cell HL with protein language model warning)."""
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            embed(self.test_airr_sc_path, "HL", "esm2", "HL_test.pt")
+            assert os.path.exists("HL_test.pt")
+            embeddings = torch.load("HL_test.pt")
+            assert embeddings.shape[1] == 1280
+            assert embeddings.shape[0] == 2
+            os.remove("HL_test.pt")
+            # Check that protein language model warning was issued
+            assert len(w) > 0
+            warning_messages = [str(warning.message) for warning in w]
+            assert any(
+                "does not have mechanisms to understand paired chain relationships" in msg for msg in warning_messages
+            )
 
     def test_esm2_sc_H_embedding(self):
         """Test esm2 (single-cell H)."""
@@ -69,25 +79,54 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2
         os.remove("L_test.pt")
 
-    def test_tcr_esm2_A_embedding(self):
+    def test_esm2_sc_LH_embedding(self):
+        """Test esm2 (single-cell LH with warnings for both LH order and protein language model)."""
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            embed(self.test_airr_sc_path, "LH", "esm2", "LH_test.pt")
+            assert os.path.exists("LH_test.pt")
+            embeddings = torch.load("LH_test.pt")
+            assert embeddings.shape[1] == 1280
+            assert embeddings.shape[0] == 2
+            os.remove("LH_test.pt")
+            # Check that both LH order warning and protein language model warning were issued
+            assert len(w) >= 2
+            warning_messages = [str(warning.message) for warning in w]
+            assert any("LH (Light-Heavy) chain order detected" in msg for msg in warning_messages)
+            assert any(
+                "does not have mechanisms to understand paired chain relationships" in msg for msg in warning_messages
+            )
+
+    def test_esm2_sc_H_plus_L_embedding(self):
+        """Test esm2 (single-cell H+L)."""
+        embed(self.test_airr_sc_path, "H+L", "esm2", "H_plus_L_test.pt")
+        assert os.path.exists("H_plus_L_test.pt")
+        embeddings = torch.load("H_plus_L_test.pt")
+        assert embeddings.shape[1] == 1280
+        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+        os.remove("H_plus_L_test.pt")
+
+    def test_tcr_esm2_L_embedding(self):
         """Test ESM2 with TCR alpha chains (using unified approach)."""
-        # Use existing esm2 function with TCR chain mapping: A -> L
-        embed(self.test_airr_tcr_path, "L", "esm2", "tcr_esm2_A_test.pt", batch_size=2)
-        assert os.path.exists("tcr_esm2_A_test.pt")
-        embeddings = torch.load("tcr_esm2_A_test.pt")
+        # Use existing esm2 function with TCR chain mapping: alpha -> L
+        embed(self.test_airr_tcr_path, "L", "esm2", "tcr_esm2_L_test.pt", batch_size=2)
+        assert os.path.exists("tcr_esm2_L_test.pt")
+        embeddings = torch.load("tcr_esm2_L_test.pt")
         assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
         assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("tcr_esm2_A_test.pt")
+        os.remove("tcr_esm2_L_test.pt")
 
-    def test_tcr_esm2_AB_embedding(self):
+    def test_tcr_esm2_HL_embedding(self):
         """Test ESM2 with TCR alpha-beta pairs (using unified approach)."""
-        # Use existing esm2 function with TCR chain mapping: AB -> HL
-        embed(self.test_airr_tcr_path, "HL", "esm2", "tcr_esm2_AB_test.pt", batch_size=2)
-        assert os.path.exists("tcr_esm2_AB_test.pt")
-        embeddings = torch.load("tcr_esm2_AB_test.pt")
+        # Use existing esm2 function with TCR chain mapping: alpha-beta -> HL
+        embed(self.test_airr_tcr_path, "HL", "esm2", "tcr_esm2_HL_test.pt", batch_size=2)
+        assert os.path.exists("tcr_esm2_HL_test.pt")
+        embeddings = torch.load("tcr_esm2_HL_test.pt")
         assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
         assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-        os.remove("tcr_esm2_AB_test.pt")
+        os.remove("tcr_esm2_HL_test.pt")
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_tcr_prott5_A_embedding(self):

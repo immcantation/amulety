@@ -1,5 +1,6 @@
 """Main module."""
 import logging
+import warnings
 from typing import Iterable
 
 import pandas as pd
@@ -57,7 +58,7 @@ def process_airr(
 
     Parameters:
         airr_df (pandas.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
-        chain (str): The input chain, one of ["H", "L", "HL"].
+        chain (str): The input chain, one of ["H", "L", "HL", "LH", "H+L"].
 
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
@@ -72,11 +73,19 @@ def process_airr(
         pandas.DataFrame: Dataframe with formatted sequences.
 
     Raises:
-        ValueError: If chain is not one of ["H", "L", "HL"] or receptor_type validation fails.
+        ValueError: If chain is not one of ["H", "L", "HL", "LH", "H+L"] or receptor_type validation fails.
     """
-    allowed_sequence_input = ["H", "L", "HL"]
+    allowed_sequence_input = ["H", "L", "HL", "LH", "H+L"]
     if chain not in allowed_sequence_input:
         raise ValueError(f"Input x must be one of {allowed_sequence_input}")
+
+    # Warning for LH order
+    if chain == "LH":
+        warnings.warn(
+            "LH (Light-Heavy) chain order detected. Most paired models are trained on HL (Heavy-Light) order. "
+            "Using LH order may result in reduced accuracy. Consider using --chain HL for better performance.",
+            UserWarning,
+        )
 
     data = airr_df.copy()
     if "locus" not in data.columns:
@@ -146,8 +155,8 @@ def process_airr(
             "No %s column detected. Processing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
             cell_id_col,
         )
-        if chain == "HL":
-            raise ValueError('chain = "HL" invalid for bulk mode.')
+        if chain in ["HL", "LH", "H+L"]:
+            raise ValueError(f'chain = "{chain}" invalid for bulk mode. Use "H" or "L" for bulk data.')
         else:
             colnames = ["sequence_id", sequence_col]
             data = data.loc[data.chain == chain, colnames]
@@ -155,8 +164,14 @@ def process_airr(
     elif data_type == "single-cell-only":
         logger.info("Processing single-cell data...")
         if chain == "HL":
-            logging.info("Concatenating heavy and light chain per cell...")
-            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col)
+            logging.info("Concatenating heavy and light chain per cell (HL order)...")
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="HL")
+        elif chain == "LH":
+            logger.info("Concatenating light and heavy chain per cell (LH order)...")
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="LH")
+        elif chain == "H+L":
+            logger.info("Processing both heavy and light chains separately...")
+            data = process_h_plus_l(data, sequence_col, cell_id_col, selection_col)
         else:
             colnames = [cell_id_col, sequence_col]
             data = data.loc[data.chain == chain, colnames]
@@ -164,9 +179,17 @@ def process_airr(
     elif data_type == "mixed":
         logger.info("Missing values in %s column. Processing as mixed bulk and single-cell data...", cell_id_col)
         if chain == "HL":
-            logger.info("Concatenating heavy and light chain per cell...")
+            logger.info("Concatenating heavy and light chain per cell (HL order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col)
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="HL")
+        elif chain == "LH":
+            logger.info("Concatenating light and heavy chain per cell (LH order)...")
+            data = data.loc[data[cell_id_col].notna(),]
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="LH")
+        elif chain == "H+L":
+            logger.info("Processing both heavy and light chains separately...")
+            data = data.loc[data[cell_id_col].notna(),]
+            data = process_h_plus_l(data, sequence_col, cell_id_col, selection_col)
         else:
             colnames = ["sequence_id", cell_id_col, sequence_col]
             data = data.loc[data.chain == chain, colnames]
@@ -175,16 +198,21 @@ def process_airr(
 
 
 def concatenate_heavylight(
-    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count"
+    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count", order: str = "HL"
 ):
     """
     Concatenates heavy and light chain per cell using AMULETY's unified H/L interface.
 
-    Concatenates sequences as: Heavy<cls><cls>Light for both BCR (IGH + IGL/IGK) and
-    TCR (TRB/TRD + TRA/TRG) data. See embed_airr() documentation for chain mappings.
+    Concatenates sequences as: Heavy<cls><cls>Light (HL order) or Light<cls><cls>Heavy (LH order)
+    for both BCR (IGH + IGL/IGK) and TCR (TRB/TRD + TRA/TRG) data.
+    See embed_airr() documentation for chain mappings.
 
     If a cell contains multiple chains of the same type, selects the one with highest
     value in the selection column.
+
+    Parameters:
+        order (str): Chain concatenation order, either "HL" (Heavy-Light) or "LH" (Light-Heavy).
+                    Default: "HL".
 
     Parameters:
         data (pandas.DataFrame): Input data containing heavy and light chain information.
@@ -223,5 +251,45 @@ def concatenate_heavylight(
     n_dropped = n_cells - data.shape[0]
     if n_dropped > 0:
         logging.info("Dropping %s cells with missing heavy or light chain...", n_dropped)
-    data.loc[:, sequence_col] = data.H + "<cls><cls>" + data.L
+
+    # Concatenate based on order parameter
+    if order == "HL":
+        data.loc[:, sequence_col] = data.H + "<cls><cls>" + data.L
+    elif order == "LH":
+        data.loc[:, sequence_col] = data.L + "<cls><cls>" + data.H
+    else:
+        raise ValueError(f"Invalid order parameter: {order}. Must be 'HL' or 'LH'.")
+
+    return data
+
+
+def process_h_plus_l(data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count"):
+    """
+    Processes both heavy and light chains separately for H+L format.
+
+    Returns a DataFrame with both heavy and light chain sequences for each cell,
+    but keeps them as separate entries rather than concatenating them.
+
+    If a cell contains multiple chains of the same type, selects the one with highest
+    value in the selection column.
+    """
+    # Validate selection column
+    if selection_col not in data.columns:
+        raise ValueError(f"Selection column '{selection_col}' not found in data.")
+
+    if not pd.api.types.is_numeric_dtype(data[selection_col]):
+        raise ValueError(
+            f"Selection column '{selection_col}' must be numeric. Found dtype: {data[selection_col].dtype}"
+        )
+
+    # Select best chain for each cell and chain type
+    data = data.loc[data.groupby([cell_id_col, "chain"])[selection_col].idxmax()]
+
+    # Keep both H and L chains as separate entries
+    colnames = [cell_id_col, "chain", sequence_col]
+    data = data.loc[:, colnames]
+
+    # Add chain type identifier to sequence_id for tracking
+    data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
+
     return data

@@ -284,11 +284,6 @@ def immune2vec(
     immune receptor sequences (both BCR and TCR). It uses n-gram decomposition
     of amino acid sequences to learn vector representations.
 
-    Based on the reference implementation by Edel Aron Silva.
-
-    Reference:
-    Immune2vec: Embedding B/T Cell Receptor Sequences in ℝⁿ Using Natural Language Processing
-    https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2021.680687/full
 
     Args:
         sequences: Input protein sequences

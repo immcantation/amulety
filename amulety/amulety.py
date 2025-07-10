@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 import time
+import warnings
 from importlib.metadata import version
 
 import pandas as pd
@@ -11,9 +12,9 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from amulety.bcr_embeddings import antiberta2, antiberty, balm_paired
+from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
 from amulety.protein_embeddings import custommodel, esm2, immune2vec, prott5
-from amulety.tcr_embeddings import deep_tcr, tcr_bert, tcremp, trex
+from amulety.tcr_embeddings import deep_tcr, tcr_bert, tcr_valid, tcremp
 from amulety.utils import (
     process_airr,
 )
@@ -139,11 +140,11 @@ def embed_airr(
     Embeds sequences from an AIRR DataFrame using the specified model.
     Parameters:
         airr (pd.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
-        chain (str): The input chain, which can be one of ["H", "L", "HL"].
-                    For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs
-                    For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs
+        chain (str): The input chain, which can be one of ["H", "L", "HL", "LH", "H+L"].
+                    For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs, LH=Light-Heavy pairs, H+L=Both chains separately
+                    For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately
         model (str): The embedding model to use.
-                    BCR models: ["antiberta2", "antiberty", "balm-paired"]
+                    BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired"]
                     TCR models: ["deep-tcr", "tcr-bert", "tcremp", "trex"]
                     Immune models (BCR & TCR): ["immune2vec"]
                     Protein models: ["esm2", "prott5", "custom"]
@@ -161,9 +162,17 @@ def embed_airr(
 
     """
     # Check valid chain - unified interface for both BCR and TCR
-    valid_chains = ["H", "L", "HL"]
+    valid_chains = ["H", "L", "HL", "LH", "H+L"]
     if chain not in valid_chains:
         raise ValueError(f"Input chain must be one of {valid_chains}")
+
+    # Warning for LH order - models are trained on HL order
+    if chain == "LH":
+        warnings.warn(
+            "LH (Light-Heavy) chain order detected. Most paired models are trained on HL (Heavy-Light) order. "
+            "Using LH order may result in reduced accuracy. Consider using --chain HL for better performance.",
+            UserWarning,
+        )
 
     # Use the chain parameter directly - no mapping needed
     internal_chain = chain
@@ -172,11 +181,60 @@ def embed_airr(
     if sequence_col not in airr.columns:
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
 
-    # ===== AUTO RECEPTOR TYPE VALIDATION =====
-    # Define model compatibility
-    bcr_models = {"antiberta2", "antiberty", "balm-paired"}
-    tcr_models = {"deep-tcr", "tcr-bert", "tcremp", "trex"}
+    # ===== MODEL CHAIN COMPATIBILITY VALIDATION =====
+    # Define model compatibility based on training data and architecture
+    bcr_models = {"ablang", "antiberta2", "antiberty", "balm-paired"}
+    tcr_models = {"deep-tcr", "tcr-bert", "tcr-valid", "tcremp"}
 
+    # Models that support only paired chains (HL/LH) - trained on concatenated sequences
+    paired_only_models = {"balm-paired"}
+
+    # Models that support true paired chains (HL/LH, H, L, H+L) - understand chain relationships
+    # flexible_paired_models = {"tcr-bert", "tcr-valid", "tcremp"}  # Currently unused
+
+    # Models that support individual chains only (H, L, H+L) - no paired understanding
+    individual_only_models = {"ablang", "antiberta2", "antiberty", "deep-tcr"}
+
+    # Models that support only H chain (beta chain for TCR) - specialized models
+    h_chain_only_models = set()  # No models currently in this category
+
+    # Protein language models (H, L, H+L + warning for paired) - no paired chain understanding
+    protein_language_models = {"immune2vec", "esm2", "prott5", "custom"}
+
+    # Validate chain compatibility with model
+    if model in paired_only_models and chain not in ["HL", "LH"]:
+        if model == "balm-paired":
+            raise ValueError(
+                f"BALM-paired model requires paired chains (--chain HL or --chain LH). "
+                f"This model was trained on concatenated Heavy-Light sequences and cannot process individual chains or H+L format. "
+                f"Got --chain {chain}. Use --chain HL (recommended) or --chain LH for paired embedding."
+            )
+
+    elif model in individual_only_models and chain in ["HL", "LH"]:
+        model_type = "BCR" if model in bcr_models else "TCR"
+        chain_desc = "Heavy/Light" if model_type == "BCR" else "Beta-Alpha/Delta-Gamma"
+        raise ValueError(
+            f"{model} model supports individual chains only (--chain H, --chain L, or --chain H+L). "
+            f"This model was trained on individual {chain_desc} chains separately and cannot understand paired sequences. "
+            f"Got --chain {chain}. Use --chain H, --chain L, or --chain H+L for individual chain embedding."
+        )
+
+    elif model in h_chain_only_models and chain not in ["H"]:
+        raise ValueError(
+            f"{model} model supports only H chain (TCR beta chain) input (--chain H). "
+            f"This model was specifically designed for TCR beta chain analysis and cannot process other chain types. "
+            f"Got --chain {chain}. Use --chain H for TCR beta chain embedding."
+        )
+
+    elif model in protein_language_models and chain in ["HL", "LH"]:
+        warnings.warn(
+            f"Protein language model '{model}' does not have mechanisms to understand paired chain relationships. "
+            f"When using --chain {chain}, the model cannot distinguish 'this segment is H chain, this segment is L chain' structure. "
+            f"Results may be inaccurate for paired chain analysis. Consider using --chain H, --chain L, or --chain H+L for better results.",
+            UserWarning,
+        )
+
+    # ===== DATA AND CHAIN PARAMETER VALIDATION =====
     # Auto-detect data type from the input
     data_copy = airr.copy()
     if "locus" not in data_copy.columns:
@@ -189,6 +247,53 @@ def embed_airr(
     bcr_present = bool(present_loci & bcr_loci)
     tcr_present = bool(present_loci & tcr_loci)
 
+    # Validate data-chain parameter consistency
+    if chain in ["HL", "LH", "H+L"]:
+        # For paired or multi-chain analysis, need both heavy and light chains
+        heavy_loci = {"IGH", "TRB", "TRD"}  # Heavy chains: IGH for BCR, TRB/TRD for TCR
+        light_loci = {"IGL", "IGK", "TRA", "TRG"}  # Light chains: IGL/IGK for BCR, TRA/TRG for TCR
+
+        heavy_present = bool(present_loci & heavy_loci)
+        light_present = bool(present_loci & light_loci)
+
+        if not heavy_present:
+            raise ValueError(
+                f"Chain parameter '{chain}' requires heavy chain data, but no heavy chain loci found. "
+                f"Expected heavy chain loci: {heavy_loci}. Found loci: {present_loci}. "
+                f"Use --chain L if you only have light chain data."
+            )
+
+        if not light_present:
+            raise ValueError(
+                f"Chain parameter '{chain}' requires light chain data, but no light chain loci found. "
+                f"Expected light chain loci: {light_loci}. Found loci: {present_loci}. "
+                f"Use --chain H if you only have heavy chain data."
+            )
+
+    elif chain == "H":
+        # For heavy chain analysis, need heavy chain data
+        heavy_loci = {"IGH", "TRB", "TRD"}
+        heavy_present = bool(present_loci & heavy_loci)
+
+        if not heavy_present:
+            raise ValueError(
+                f"Chain parameter 'H' requires heavy chain data, but no heavy chain loci found. "
+                f"Expected heavy chain loci: {heavy_loci}. Found loci: {present_loci}. "
+                f"Use --chain L if you have light chain data, or check your data."
+            )
+
+    elif chain == "L":
+        # For light chain analysis, need light chain data
+        light_loci = {"IGL", "IGK", "TRA", "TRG"}
+        light_present = bool(present_loci & light_loci)
+
+        if not light_present:
+            raise ValueError(
+                f"Chain parameter 'L' requires light chain data, but no light chain loci found. "
+                f"Expected light chain loci: {light_loci}. Found loci: {present_loci}. "
+                f"Use --chain H if you have heavy chain data, or check your data."
+            )
+
     # Validate model-data compatibility
     if model in bcr_models and tcr_present and not bcr_present:
         raise ValueError(
@@ -199,7 +304,7 @@ def embed_airr(
     elif model in tcr_models and bcr_present and not tcr_present:
         raise ValueError(
             f"Model '{model}' is designed for TCR data, but only BCR data (loci: {list(present_loci & bcr_loci)}) "
-            f"was found in the input. Please use a BCR model like 'antiberta2', 'antiberty', or 'balm-paired', "
+            f"was found in the input. Please use a BCR model like 'ablang', 'antiberta2', 'antiberty', or 'balm-paired', "
             f"or a general protein model like 'esm2' or 'prott5'."
         )
 
@@ -216,7 +321,9 @@ def embed_airr(
     X = dat.loc[:, sequence_col]
 
     # BCR models
-    if model == "antiberta2":
+    if model == "ablang":
+        embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+    elif model == "antiberta2":
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     elif model == "antiberty":
         embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -225,12 +332,23 @@ def embed_airr(
     # TCR models
     elif model == "deep-tcr":
         embedding = deep_tcr(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "tcr-bert":
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+    elif model == "tcr-valid":
+        # TCR-VALID supports TRB (beta) and TRA (alpha) chains
+        # Map our chain notation to TCR-VALID notation
+        if chain in ["H", "HL", "LH"]:
+            tcr_chain = "TRB"  # H corresponds to TCR beta chain
+        elif chain in ["L"]:
+            tcr_chain = "TRA"  # L corresponds to TCR alpha chain
+        else:
+            tcr_chain = "TRB"  # Default to beta chain
+
+        embedding = tcr_valid(sequences=X, chain_type=tcr_chain, cache_dir=cache_dir, batch_size=batch_size)
     elif model == "tcremp":
         embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
-    elif model == "trex":
-        embedding = trex(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     # Immune-specific models (BCR & TCR)
     elif model == "immune2vec":
         embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -323,14 +441,14 @@ def embed(
         str,
         typer.Option(
             default=...,
-            help="Input sequences. For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs. For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs.",
+            help="Input sequences. For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs, LH=Light-Heavy pairs, H+L=Both chains separately. For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately.",
         ),
     ],
     model: Annotated[
         str,
         typer.Option(
             default=...,
-            help="The embedding model to use. BCR: ['antiberta2', 'antiberty', 'balm-paired']. TCR: ['deep-tcr', 'tcr-bert', 'tcremp', 'trex']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
+            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['deep-tcr', 'tcr-bert', 'tcr-valid', 'tcremp']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
         ),
     ],
     output_file_path: Annotated[
@@ -404,6 +522,24 @@ def embed(
     else:
         embedding.to_csv(output_file_path, sep="\t" if out_extension == "tsv" else ",", index=False)
     logger.info("Saved embedding at %s", output_file_path)
+
+
+@app.command()
+def check_deps():
+    """Check if optional TCR embedding dependencies are installed."""
+    from amulety.tcr_embeddings import check_tcr_dependencies
+
+    print("Checking TCR embedding dependencies...")
+    missing = check_tcr_dependencies()
+
+    if not missing:
+        print("✓ All TCR embedding dependencies are installed!")
+    else:
+        print(f"\n{len(missing)} dependencies are missing.")
+        print("AMULETY will use placeholder embeddings for missing packages.")
+        print("\nTo install missing dependencies:")
+        for name, install_cmd in missing:
+            print(f"  {name}: {install_cmd}")
 
 
 def main():
