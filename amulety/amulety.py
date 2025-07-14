@@ -14,7 +14,7 @@ from typing_extensions import Annotated
 
 from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
 from amulety.protein_embeddings import custommodel, esm2, immune2vec, prott5
-from amulety.tcr_embeddings import deep_tcr, tcr_bert, tcr_valid, tcremp
+from amulety.tcr_embeddings import tcr_bert, tcremp, tcrt5
 from amulety.utils import (
     process_airr,
 )
@@ -145,7 +145,7 @@ def embed_airr(
                     For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately
         model (str): The embedding model to use.
                     BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired"]
-                    TCR models: ["deep-tcr", "tcr-bert", "tcremp", "trex"]
+                    TCR models: ["tcr-bert", "tcremp", "tcrt5"]
                     Immune models (BCR & TCR): ["immune2vec"]
                     Protein models: ["esm2", "prott5", "custom"]
                     Use "custom" for fine-tuned models (requires model_path, embedding_dimension, max_length)
@@ -184,19 +184,19 @@ def embed_airr(
     # ===== MODEL CHAIN COMPATIBILITY VALIDATION =====
     # Define model compatibility based on training data and architecture
     bcr_models = {"ablang", "antiberta2", "antiberty", "balm-paired"}
-    tcr_models = {"deep-tcr", "tcr-bert", "tcr-valid", "tcremp"}
+    tcr_models = {"tcr-bert", "tcremp", "tcrt5"}
 
     # Models that support only paired chains (HL/LH) - trained on concatenated sequences
     paired_only_models = {"balm-paired"}
 
     # Models that support true paired chains (HL/LH, H, L, H+L) - understand chain relationships
-    # flexible_paired_models = {"tcr-bert", "tcr-valid", "tcremp"}  # Currently unused
+    # flexible_paired_models = {"tcr-bert", "tcremp"}  # Currently unused
 
     # Models that support individual chains only (H, L, H+L) - no paired understanding
-    individual_only_models = {"ablang", "antiberta2", "antiberty", "deep-tcr"}
+    individual_only_models = {"ablang", "antiberta2", "antiberty"}
 
     # Models that support only H chain (beta chain for TCR) - specialized models
-    h_chain_only_models = set()  # No models currently in this category
+    h_chain_only_models = {"tcrt5"}  # TCRT5 only supports beta chains (H chains for TCR)
 
     # Protein language models (H, L, H+L + warning for paired) - no paired chain understanding
     protein_language_models = {"immune2vec", "esm2", "prott5", "custom"}
@@ -218,6 +218,14 @@ def embed_airr(
             f"This model was trained on individual {chain_desc} chains separately and cannot understand paired sequences. "
             f"Got --chain {chain}. Use --chain H, --chain L, or --chain H+L for individual chain embedding."
         )
+
+    elif model in h_chain_only_models and chain not in ["H"]:
+        if model == "tcrt5":
+            raise ValueError(
+                f"TCRT5 model only supports H chains (beta chains for TCR). "
+                f"This model was trained exclusively on CDR3 β sequences and cannot process other chain types. "
+                f"Got --chain {chain}. Use --chain H for TCRT5 embedding."
+            )
 
     elif model in h_chain_only_models and chain not in ["H"]:
         raise ValueError(
@@ -298,7 +306,7 @@ def embed_airr(
     if model in bcr_models and tcr_present and not bcr_present:
         raise ValueError(
             f"Model '{model}' is designed for BCR data, but only TCR data (loci: {list(present_loci & tcr_loci)}) "
-            f"was found in the input. Please use a TCR model like 'tcr-bert', 'deep-tcr', 'tcremp', or 'trex', "
+            f"was found in the input. Please use a TCR model like 'tcr-bert', 'tcremp', or 'trex', "
             f"or a general protein model like 'esm2' or 'prott5'."
         )
     elif model in tcr_models and bcr_present and not tcr_present:
@@ -330,24 +338,12 @@ def embed_airr(
     elif model == "balm-paired":
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
     # TCR models
-    elif model == "deep-tcr":
-        embedding = deep_tcr(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
-
     elif model == "tcr-bert":
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
-    elif model == "tcr-valid":
-        # TCR-VALID supports TRB (beta) and TRA (alpha) chains
-        # Map our chain notation to TCR-VALID notation
-        if chain in ["H", "HL", "LH"]:
-            tcr_chain = "TRB"  # H corresponds to TCR beta chain
-        elif chain in ["L"]:
-            tcr_chain = "TRA"  # L corresponds to TCR alpha chain
-        else:
-            tcr_chain = "TRB"  # Default to beta chain
-
-        embedding = tcr_valid(sequences=X, chain_type=tcr_chain, cache_dir=cache_dir, batch_size=batch_size)
     elif model == "tcremp":
         embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+    elif model == "tcrt5":
+        embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # Immune-specific models (BCR & TCR)
     elif model == "immune2vec":
@@ -448,7 +444,7 @@ def embed(
         str,
         typer.Option(
             default=...,
-            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['deep-tcr', 'tcr-bert', 'tcr-valid', 'tcremp']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
+            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['tcr-bert', 'tcremp', 'tcrt5']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
         ),
     ],
     output_file_path: Annotated[

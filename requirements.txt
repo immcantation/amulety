@@ -18,9 +18,6 @@ gensim>=3.8.3
 
 
 # TCR embedding tools (require manual installation)
-# TCR-VALID: Requires Python 3.8 and old package versions (incompatible with Python 3.11)
-#   conda create -n tcrvalid python=3.8 pip
-#   git clone https://github.com/peterghawkins-regn/tcrvalid.git && pip install ./tcrvalid/
 # TCREMP: Requires Python 3.11+ (specified above)
 #   git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .
 # TCR-BERT: Available through transformers (wukevin/tcr-bert)

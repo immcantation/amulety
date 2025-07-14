@@ -77,40 +77,32 @@ class TestAmulety(unittest.TestCase):
             assert len(w) > 0
             assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
 
-    def test_deep_tcr_L_embedding(self):
-        """Test DeepTCR (alpha/gamma chains - L chains for TCR)."""
-        embed(self.test_airr_tcr_path, "L", "deep-tcr", "deep_tcr_L_test.pt", batch_size=2)
-        assert os.path.exists("deep_tcr_L_test.pt")
-        embeddings = torch.load("deep_tcr_L_test.pt")
-        assert embeddings.shape[1] == 64  # DeepTCR embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("deep_tcr_L_test.pt")
-
-    def test_deep_tcr_H_embedding(self):
-        """Test DeepTCR (beta/delta chains - H chains for TCR)."""
-        embed(self.test_airr_tcr_path, "H", "deep-tcr", "deep_tcr_H_test.pt", batch_size=2)
-        assert os.path.exists("deep_tcr_H_test.pt")
-        embeddings = torch.load("deep_tcr_H_test.pt")
-        assert embeddings.shape[1] == 64  # DeepTCR embedding dimension
+    def test_tcrt5_H_embedding(self):
+        """Test TCRT5 (beta chains only - H chains for TCR)."""
+        embed(self.test_airr_tcr_path, "H", "tcrt5", "tcrt5_H_test.pt", batch_size=2)
+        assert os.path.exists("tcrt5_H_test.pt")
+        embeddings = torch.load("tcrt5_H_test.pt")
+        assert embeddings.shape[1] == 256  # TCRT5 embedding dimension
         assert embeddings.shape[0] == 3  # 3 beta chains in test data
-        os.remove("deep_tcr_H_test.pt")
+        os.remove("tcrt5_H_test.pt")
 
-    def test_deep_tcr_H_plus_L_embedding(self):
-        """Test DeepTCR (both alpha and beta chains separately - H+L for TCR)."""
-        embed(self.test_airr_tcr_path, "H+L", "deep-tcr", "deep_tcr_H_plus_L_test.pt", batch_size=2)
-        assert os.path.exists("deep_tcr_H_plus_L_test.pt")
-        embeddings = torch.load("deep_tcr_H_plus_L_test.pt")
-        assert embeddings.shape[1] == 64  # DeepTCR embedding dimension
-        assert embeddings.shape[0] == 6  # 3 alpha + 3 beta chains in test data
-        os.remove("deep_tcr_H_plus_L_test.pt")
-
-    def test_deep_tcr_HL_chain_validation(self):
-        """Test that DeepTCR rejects HL chains (individual chain model)."""
+    def test_tcrt5_L_embedding_should_fail(self):
+        """Test TCRT5 with L chains should fail (only supports H chains)."""
         with self.assertRaises(ValueError) as context:
-            embed(self.test_airr_tcr_path, "HL", "deep-tcr", "should_fail.pt", batch_size=2)
-        self.assertIn("supports individual chains only", str(context.exception))
-        self.assertIn("--chain H", str(context.exception))
-        self.assertIn("--chain L", str(context.exception))
+            embed(self.test_airr_tcr_path, "L", "tcrt5", "tcrt5_L_test.pt", batch_size=2)
+
+        error_msg = str(context.exception)
+        assert "TCRT5 model only supports H chains" in error_msg
+        assert "beta chains for TCR" in error_msg
+
+    def test_tcrt5_HL_embedding_should_fail(self):
+        """Test TCRT5 with HL chains should fail (only supports H chains)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_tcr_path, "HL", "tcrt5", "tcrt5_HL_test.pt", batch_size=2)
+
+        error_msg = str(context.exception)
+        assert "TCRT5 model only supports H chains" in error_msg
+        assert "beta chains for TCR" in error_msg
 
     def test_tcremp_L_embedding(self):
         """Test TCREMP (alpha/gamma chains - L chains for TCR)."""

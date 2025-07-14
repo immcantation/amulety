@@ -137,7 +137,7 @@ def process_airr(
     if gamma_delta_present and receptor_type.upper() in ["TCR", "ALL"]:
         gamma_delta_chains = present_loci & {"TRG", "TRD"}
         logger.warning(
-            "Gamma/Delta TCR chains (%s) detected. Note: TCR-specific models (TCR-BERT, Trex, TCREMP, DeepTCR) "
+            "Gamma/Delta TCR chains (%s) detected. Note: TCR-specific models (TCR-BERT, Trex, TCREMP) "
             "are primarily trained on Alpha/Beta TCRs. For Gamma/Delta TCRs, consider using general protein "
             "models (ESM2, ProtT5) which support all TCR types.",
             list(gamma_delta_chains),

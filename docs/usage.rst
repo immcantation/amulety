@@ -37,7 +37,9 @@ Different models have specific chain input requirements based on their training 
 
 **Individual chain models (H or L only):**
 - ``antiberty``, ``antiberta2``: Trained on individual Heavy/Light chains
-- ``deep-tcr``: Trained on individual Alpha/Beta chains
+
+**H chain only models:**
+- ``tcrt5``: Trained exclusively on TCR beta chains, only supports H chains
 
 **Flexible models (H, L, or HL):**
 - ``esm2``, ``prott5``, ``immune2vec``, ``custom``: Support all chain formats
@@ -140,21 +142,7 @@ BERT model pre-trained on 88,403 human TCR alpha and beta sequences (TRA/TRB) fr
 Reference:
 Lu T, Zhang Z, Zhu J, et al. Deep learning-based prediction of the T cell receptor–antigen binding specificity. bioRxiv. 2021. `doi:10.1101/2021.11.18.469186 <https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1>`_
 
-DeepTCR
--------
 
-Deep learning framework for analyzing T-cell receptor repertoires. Trained on human and murine datasets, including CDR3 sequences and V/D/J gene usage.
-
-Reference:
-Sidhom JW, Larman HB, Pardoll DM, Baras AS. DeepTCR is a deep learning framework for revealing sequence concepts within T-cell repertoires. Nature Communications. 2021;12: 1605. `doi:10.1038/s41467-021-21879-w <https://www.nature.com/articles/s41467-021-21879-w>`_
-
-Trex
-----
-
-TCR representation learning model trained on 288,043 unique CDR3α and 453,111 unique CDR3β sequences from 15 single-cell datasets and 4 curated TCR databases (McPAS-TCR, VDJdb, IEDB, PIRD).
-
-Reference:
-Deng K, Guan R, Liu Z, et al. Contrastive learning of T cell receptor representations. Cell Reports Methods. 2024;4: 100833. `PMID:39164479 <https://pubmed.ncbi.nlm.nih.gov/39164479/>`_
 
 TCREMP
 ------
@@ -163,5 +151,13 @@ TCR-specific embedding method trained for T-cell receptor repertoire-based repre
 
 Reference:
 Zhang H, Zeng T, Zhao Y, et al. TCREMP: T-cell receptor repertoire-based embedding for immunotherapy response prediction. Journal of Molecular Biology. 2025;437: 168712. `doi:10.1016/j.jmb.2025.168712 <https://www.sciencedirect.com/science/article/pii/S0022283625002712>`_
+
+TCRT5
+-----
+
+T5-based model pre-trained on masked span reconstruction using ~14M CDR3 β sequences from TCRdb and ~780k peptide-pseudosequence pairs from IEDB. This model is specialized for TCR beta chains only and supports H chain embedding exclusively.
+
+Reference:
+Deng K, Guan R, Liu Z, et al. TCRT5: T-cell receptor sequence modeling with T5. bioRxiv. 2024. `doi:10.1101/2024.11.11.623124 <https://doi.org/10.1101/2024.11.11.623124>`_
 
 

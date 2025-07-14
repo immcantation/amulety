@@ -21,8 +21,8 @@ AMULETY supports different chain input formats based on model architecture and t
   - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
 - **H, L, HL, LH, H+L**: Flexible paired models understanding chain relationships (TCR-BERT, Trex)
   - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
-- **H, L, H+L**: Individual chain models, no paired understanding (AntiBERTy, AntiBERTa2, DeepTCR, TCREMP)
-- **H only**: Specialized models for specific chain types (ProtLM.TCR - TCR beta chain only)
+- **H, L, H+L**: Individual chain models, no paired understanding (AntiBERTy, AntiBERTa2, TCREMP)
+- **H only**: Specialized models for specific chain types (TCRT5 - TCR beta chain only)
 - **H, L, H+L + (warning) paired warning**: Protein language models, no paired chain mechanisms (ESM2, ProtT5, Immune2Vec, Custom)
   - (warning) **Warning**: Cannot distinguish chain segments in paired sequences, results may be inaccurate
 
@@ -37,12 +37,11 @@ AMULETY supports different chain input formats based on model architecture and t
 
 ## TCR (T-Cell Receptor) Models
 
-| Model     | Command   | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                            |
-| --------- | --------- | ------------------- | ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| DeepTCR   | deep-tcr  | 64                  | H, L, H+L         | mainly α/β       | [doi:10.1038/s41467-021-21879-w](https://www.nature.com/articles/s41467-021-21879-w)                 |
-| TCR-BERT  | tcr-bert  | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
-| TCR-VALID | tcr-valid | 16                  | H, L, HL, LH, H+L | TRB, TRA         | [doi.org/10.1038/s41467-024-48198-0](https://doi.org/10.1038/s41467-024-48198-0)                     |
-| TCREMP    | tcremp    | configurable        | H, L, HL, LH, H+L | mainly α/β       | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
+| Model    | Command  | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                            |
+| -------- | -------- | ------------------- | ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
+| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
+| TCREMP   | tcremp   | configurable        | H, L, HL, LH, H+L | mainly α/β       | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
+| TCRT5    | tcrt5    | 256                 | H only            | β only           | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)                       |
 
 ## General Protein Models
 
@@ -93,7 +92,6 @@ Most models work out-of-the-box. Some models require additional packages:
 **Manual Installation:**
 
 - **TCREMP** - Requires Python 3.11+ and manual installation (instructions provided when used)
-- **TCR-VALID** - Requires separate Python 3.8 environment due to version conflicts (instructions provided when used)
 
 ### Troubleshooting TCR Models
 
