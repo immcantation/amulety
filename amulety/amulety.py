@@ -531,11 +531,12 @@ def check_deps():
     if not missing:
         print("✓ All TCR embedding dependencies are installed!")
     else:
-        print(f"\n{len(missing)} dependencies are missing.")
-        print("AMULETY will use placeholder embeddings for missing packages.")
+        print(f"\n❌ {len(missing)} dependencies are missing.")
+        print("AMULETY will raise ImportError with installation instructions when these models are used.")
         print("\nTo install missing dependencies:")
         for name, install_cmd in missing:
-            print(f"  {name}: {install_cmd}")
+            print(f"  • {name}: {install_cmd}")
+        print("\nNote: Models will provide detailed installation instructions when used.")
 
 
 def main():

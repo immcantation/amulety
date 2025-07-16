@@ -9,6 +9,7 @@ import math
 import time
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -22,20 +23,74 @@ logger = logging.getLogger(__name__)
 
 def check_tcr_dependencies():
     """Check if optional TCR embedding dependencies are installed and provide installation instructions."""
+    import subprocess
+
     missing_deps = []
+    available_models = []
 
-    # Following the pattern of BCR/protein models where most models don't appear in dependency checks
-    # Only check for packages that require special installation (git clone, etc.)
-    # ablang is now in requirements.txt like antiberty
-    # TCREMP handles its own import errors with detailed messages when actually used
-    # TCR-BERT is available through transformers (no additional installation needed)
+    # Check TCREMP (command-line tool)
+    try:
+        result = subprocess.run(["tcremp-run", "-h"], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            available_models.append("TCREMP")
+        else:
+            missing_deps.append(
+                (
+                    "TCREMP",
+                    "git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install . (requires Python 3.11+)",
+                )
+            )
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        missing_deps.append(
+            (
+                "TCREMP",
+                "git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install . (requires Python 3.11+)",
+            )
+        )
 
-    # Currently no packages require special dependency checking
-    # All available packages are either in requirements.txt or handle their own errors
+    # Check TCR-BERT (requires transformers)
+    try:
+        from transformers import BertModel, BertTokenizer  # noqa: F401
 
-    logger.info("All standard TCR embedding dependencies are handled automatically.")
-    logger.info("Optional packages (ablang) may have dependency conflicts - see README for details.")
-    logger.info("TCREMP will provide installation instructions when used.")
+        available_models.append("TCR-BERT")
+    except ImportError:
+        missing_deps.append(("TCR-BERT", "pip install transformers"))
+
+    # Check TCRT5 (requires transformers)
+    try:
+        from transformers import T5ForConditionalGeneration, T5Tokenizer  # noqa: F401
+
+        available_models.append("TCRT5")
+    except ImportError:
+        missing_deps.append(("TCRT5", "pip install transformers"))
+
+    # Check Immune2Vec (in protein_embeddings but used for TCR too)
+    try:
+        import gensim  # noqa: F401
+        from embedding import sequence_modeling  # noqa: F401
+
+        available_models.append("Immune2Vec")
+    except ImportError as e:
+        if "gensim" in str(e):
+            missing_deps.append(
+                (
+                    "Immune2Vec",
+                    "pip install gensim>=3.8.3 && git clone https://bitbucket.org/yaarilab/immune2vec_model.git",
+                )
+            )
+        else:
+            missing_deps.append(
+                ("Immune2Vec", "git clone https://bitbucket.org/yaarilab/immune2vec_model.git && add to Python path")
+            )
+
+    # Report results
+    if available_models:
+        logger.info("Available TCR models: %s", ", ".join(available_models))
+
+    if missing_deps:
+        logger.warning("Missing TCR model dependencies: %s", ", ".join([dep[0] for dep in missing_deps]))
+    else:
+        logger.info("All TCR embedding dependencies are available!")
 
     return missing_deps
 
@@ -49,15 +104,20 @@ def tcremp(
     Embeds T-Cell Receptor (TCR) sequences using the TCREMP model.
 
     Note:\n
-    Embedding method trained specifically for TCR sequences; focuses on T-cell receptor
-    repertoire-based representation learning. Details on architecture not publicly released,
-    but known to support repertoire-level prediction tasks.
+    TCREMP is a command-line tool for TCR sequence embedding via prototypes.
+    It focuses on T-cell receptor repertoire-based representation learning using prototype-based
+    similarity calculations. This function provides a bridge to use TCREMP within AMULETY.
 
     TCREMP supports all chain types including paired chains (HL/LH) and individual chains (H, L, H+L).
     Maximum sequence length: 30 amino acids.
-    Embedding dimension: To be determined from original implementation.
+    Embedding dimension: Variable, depends on number of prototypes used (default: 3000 prototypes).
 
+    Reference: https://github.com/antigenomics/tcremp
     """
+    import os
+    import subprocess
+    import tempfile
+
     max_seq_length = 30  # TCREMP max sequence length
 
     X = sequences
@@ -66,55 +126,117 @@ def tcremp(
 
     logger.info("Loading TCREMP model for TCR embedding...")
 
+    # Check if tcremp-run command is available
     try:
-        # Try to import the actual TCREMP package
-        try:
-            import tcremp  # noqa: F401
+        result = subprocess.run(["tcremp-run", "-h"], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            raise FileNotFoundError("tcremp-run command not found")
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        detailed_instructions = (
+            "TCREMP command-line tool is not installed or not accessible.\n\n"
+            "INSTALLATION:\n"
+            "1. Ensure Python 3.11+ is installed: python --version\n"
+            "2. Clone the repository: git clone https://github.com/antigenomics/tcremp.git\n"
+            "3. Install: cd tcremp && pip install .\n"
+            "4. Verify installation: tcremp-run -h\n\n"
+            "TCREMP generates distance-based embeddings using prototype similarity.\n"
+            "For direct TCR sequence embedding, consider using:\n"
+            "- tcr-bert: Transformer-based TCR embedding\n"
+            "- tcrt5: T5-based TCR embedding\n"
+            "- esm2 or prott5: General protein language models\n\n"
+            "Reference: https://github.com/antigenomics/tcremp"
+        )
+        raise ImportError(f"TCREMP command-line tool is required but not installed.\n\n{detailed_instructions}")
 
-            logger.info("TCREMP package found, using actual TCREMP model")
+    # Create temporary files for TCREMP input and output
+    with tempfile.TemporaryDirectory() as temp_dir:
+        input_file = os.path.join(temp_dir, "input.txt")
+        output_dir = os.path.join(temp_dir, "output")
 
-            # TCREMP integration would go here
-            # Note: This requires the actual TCREMP package to be installed
-            logger.warning("TCREMP integration is experimental - please verify results")
-
-            # For now, return placeholder embeddings with temporary dimensions
-            # Actual TCREMP embedding dimension is TBD from original implementation
-            n_seqs = len(sequences)
-            embeddings = torch.randn((n_seqs, 256))  # Temporary dimension - actual TCREMP dimension TBD
-
-            logger.info("TCREMP embedding completed")
-            return embeddings
-
-        except ImportError as tcremp_error:
-            logger.error("TCREMP package not found: %s", str(tcremp_error))
-            detailed_instructions = (
-                "TCREMP package not available. Please follow these installation instructions:\n\n"
-                "REQUIREMENTS: Python 3.11 or higher is required for TCREMP\n"
-                "   Check your Python version: python --version\n"
-                "   If you have Python < 3.11, please upgrade or use a different environment\n\n"
-                "STEP 1: Clone the TCREMP repository\n"
-                "   git clone https://github.com/antigenomics/tcremp.git\n"
-                "   cd tcremp\n\n"
-                "STEP 2: Install the package\n"
-                "   pip install .\n\n"
-                "STEP 3: Verify installation\n"
-                "   python -c 'import tcremp; print(\"TCREMP installed successfully\")'\n\n"
-                "Note: TCREMP supports all chain types (H, L, HL, LH, H+L) with configurable dimensions.\n"
-                "Reference: https://github.com/antigenomics/tcremp"
+        # Prepare input data in TCREMP format
+        # TCREMP expects AIRR format with specific columns
+        input_data = []
+        for i, seq in enumerate(sequences):
+            # Create minimal AIRR-like format for TCREMP
+            # Note: This is a simplified format - real usage would need proper V/J gene annotations
+            input_data.append(
+                {
+                    "clone_id": f"seq_{i}",
+                    "junction_aa": seq,
+                    "v_call": "TRBV1*01",  # Placeholder - would need real V gene annotation
+                    "j_call": "TRBJ1-1*01",  # Placeholder - would need real J gene annotation
+                    "locus": "beta",  # Assuming beta chain for H, alpha for L
+                }
             )
-            logger.warning("Using placeholder embeddings. %s", detailed_instructions)
 
-            # Placeholder: return random embeddings with temporary shape
-            # Note: Actual TCREMP embedding dimension is TBD from original implementation
-            n_seqs = len(sequences)
-            embeddings = torch.randn((n_seqs, 256))  # Temporary dimension - actual TCREMP dimension TBD
+        # Write input file
+        input_df = pd.DataFrame(input_data)
+        input_df.to_csv(input_file, sep="\t", index=False)
 
-            logger.info("TCREMP placeholder embedding completed")
+        try:
+            # Run TCREMP command
+            # Adjust parameters based on sample size to avoid dimension issues
+            n_samples = len(sequences)
+            pca_components = min(50, max(1, n_samples - 1))  # Ensure valid PCA components
+            k_neighbors = min(4, max(1, n_samples - 1))  # Ensure valid k-neighbors
+
+            cmd = [
+                "tcremp-run",
+                "-i",
+                input_file,
+                "-c",
+                "TRB",  # Single chain mode
+                "-o",
+                output_dir,
+                "-n",
+                "1000",  # Number of prototypes
+                "-x",
+                "clone_id",
+                "-cl",
+                "False",  # Disable clustering to avoid DBSCAN issues
+                "-d",
+                "False",  # Disable distance saving to focus on embeddings
+                "-npc",
+                str(pca_components),  # Set PCA components based on sample size
+                "-kn",
+                str(k_neighbors),  # Set k-neighbors based on sample size
+            ]
+
+            logger.info("Running TCREMP command-line tool...")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+            if result.returncode != 0:
+                logger.error("TCREMP command failed: %s", result.stderr)
+                raise RuntimeError(f"TCREMP execution failed: {result.stderr}")
+
+            # Read TCREMP output
+            # TCREMP outputs distance matrices - we need to convert to embeddings
+            output_files = [f for f in os.listdir(output_dir) if f.endswith(".tsv")]
+            if not output_files:
+                raise RuntimeError("TCREMP did not generate expected output files")
+
+            output_file = os.path.join(output_dir, output_files[0])
+            tcremp_output = pd.read_csv(output_file, sep="\t")
+
+            # Extract distance features as embeddings
+            # TCREMP outputs distance columns - use these as embedding features
+            distance_cols = [col for col in tcremp_output.columns if "_v" in col or "_j" in col or "_cdr3" in col]
+
+            if not distance_cols:
+                logger.warning("No distance columns found in TCREMP output, using all numeric columns")
+                distance_cols = tcremp_output.select_dtypes(include=[np.number]).columns.tolist()
+
+            embeddings_array = tcremp_output[distance_cols].values
+            embeddings = torch.tensor(embeddings_array, dtype=torch.float32)
+
+            logger.info("TCREMP embedding completed with dimension %d", embeddings.shape[1])
             return embeddings
 
-    except Exception as e:
-        logger.error("Failed to load TCREMP model: %s", str(e))
-        raise RuntimeError("Could not load TCREMP model") from e
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("TCREMP execution timed out (>5 minutes)")
+        except Exception as e:
+            logger.error("TCREMP execution failed: %s", str(e))
+            raise RuntimeError(f"TCREMP execution failed: {str(e)}") from e
 
 
 def tcr_bert(
@@ -136,8 +258,10 @@ def tcr_bert(
     X = sequences
     X = X.apply(lambda a: a[:max_seq_length])
 
-    # TCR-BERT expects standard amino acid sequences without special tokens
-    X = X.apply(lambda seq: seq.replace("<cls><cls>", " "))
+    # TCR-BERT expects space-separated amino acid sequences
+    # Convert "CASSLAPGATNEKLFF" to "C A S S L A P G A T N E K L F F"
+    X = X.apply(lambda seq: seq.replace("<cls><cls>", " "))  # Remove any existing special tokens
+    X = X.apply(lambda seq: " ".join(list(seq)))  # Space-separate amino acids
     sequences = X.values
 
     logger.info("Loading TCR-BERT model for TCR embedding...")

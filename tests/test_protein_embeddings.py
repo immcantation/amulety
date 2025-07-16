@@ -306,17 +306,22 @@ class TestAmulety(unittest.TestCase):
             error_msg = str(e)
             print(f"PASS: Proper ImportError caught: {error_msg[:100]}...")
 
-            # Verify error message quality - check for either gensim or immune2vec instructions
-            assert "gensim" in error_msg or "immune2vec" in error_msg
+            # Verify error message quality - check for installation instructions
+            assert (
+                "Immune2Vec package is required but not installed" in error_msg
+                or "Gensim library is required" in error_msg
+            )
             assert "pip install" in error_msg
+            assert "bitbucket.org/yaarilab/immune2vec_model" in error_msg
 
             # Different error messages for different missing dependencies
-            if "gensim" in error_msg:
-                assert "conda install" in error_msg
+            if "Gensim library is required" in error_msg:
+                assert "pip install gensim" in error_msg
+                assert "git clone" in error_msg
                 print("PASS: Gensim error message contains proper installation instructions")
             else:
-                assert "git clone" in error_msg or "github" in error_msg
-                assert "sys.path.append" in error_msg or "PYTHONPATH" in error_msg
+                assert "git clone" in error_msg
+                assert "sys.path.append" in error_msg
                 print("PASS: Immune2Vec error message contains proper installation instructions")
         except Exception as e:
             print(f"FAIL: Unexpected error type: {type(e).__name__}: {e}")

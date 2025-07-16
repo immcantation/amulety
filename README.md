@@ -21,7 +21,8 @@ AMULETY supports different chain input formats based on model architecture and t
   - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
 - **H, L, HL, LH, H+L**: Flexible paired models understanding chain relationships (TCR-BERT, Trex)
   - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
-- **H, L, H+L**: Individual chain models, no paired understanding (AntiBERTy, AntiBERTa2, TCREMP)
+- **H, L, H+L**: Individual chain models, no paired understanding (AntiBERTy, AntiBERTa2)
+- **Not available**: Command-line tools not integrated as Python libraries (TCREMP)
 - **H only**: Specialized models for specific chain types (TCRT5 - TCR beta chain only)
 - **H, L, H+L + (warning) paired warning**: Protein language models, no paired chain mechanisms (ESM2, ProtT5, Immune2Vec, Custom)
   - (warning) **Warning**: Cannot distinguish chain segments in paired sequences, results may be inaccurate
@@ -40,7 +41,7 @@ AMULETY supports different chain input formats based on model architecture and t
 | Model    | Command  | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                            |
 | -------- | -------- | ------------------- | ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
-| TCREMP   | tcremp   | configurable        | H, L, HL, LH, H+L | mainly α/β       | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
+| TCREMP   | tcremp   | 3000                | H, L, HL, LH, H+L | α/β, γ/δ         | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
 | TCRT5    | tcrt5    | 256                 | H only            | β only           | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)                       |
 
 ## General Protein Models
@@ -61,8 +62,7 @@ AMULETY supports different chain input formats based on model architecture and t
 
 ### Requirements
 
-- **Python 3.11 or higher** (required for optional TCREMP model)
-- For Python < 3.11, AMULETY will work but TCREMP will not be available
+- **Python 3.8 or higher** (Python 3.11+ required only for external TCREMP tool)
 
 ### Install AMULETY
 
@@ -89,13 +89,13 @@ Most models work out-of-the-box. Some models require additional packages:
 - **antiberty** - BCR model (included)
 - **ablang** - BCR model (included)
 
-**Manual Installation:**
+**TCR Models (Require Manual Installation):**
 
-- **TCREMP** - Requires Python 3.11+ and manual installation (instructions provided when used)
+- **TCREMP** - TCR embedding via prototypes for repertoire-based representation learning. Install: `git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .` (requires Python 3.11+). Available through AMULETY as `tcremp` model.
 
 ### Troubleshooting TCR Models
 
-If you encounter warnings about missing TCR packages, AMULETY will automatically fall back to placeholder embeddings. To use the actual models:
+If you encounter errors about missing TCR packages, AMULETY will provide detailed installation instructions. To use the actual models:
 
 1. **Check which packages are missing:**
 
