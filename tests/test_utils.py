@@ -37,6 +37,11 @@ class TestAmulety(unittest.TestCase):
         self.test_mixed_path = os.path.join(self.this_dir, self.test_mixed)
         self.test_mixed_df = pd.read_table(self.test_mixed_path, delimiter="\t", header=0)
 
+        # Bulk test data (no cell_id column)
+        self.test_bulk = "AIRR_rearrangement_bulk_test.tsv"
+        self.test_bulk_path = os.path.join(self.this_dir, self.test_bulk)
+        self.test_bulk_df = pd.read_table(self.test_bulk_path, delimiter="\t", header=0)
+
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
@@ -215,3 +220,60 @@ class TestAmulety(unittest.TestCase):
         test_data_non_numeric["text_col"] = ["A", "B", "C", "D", "E"]
         with pytest.raises(ValueError, match="Selection column 'text_col' must be numeric"):
             concatenate_heavylight(test_data_non_numeric, "sequence_vdj_aa", "cell_id", "text_col")
+
+    def test_bulk_data_processing_h_chain(self):
+        """Test bulk data processing for H chains (heavy chains)."""
+        # Test BCR H chain processing
+        result_bcr_h = process_airr(self.test_bulk_df, "H", receptor_type="BCR")
+        assert result_bcr_h.shape[0] == 2  # 2 BCR heavy chains
+        assert all(result_bcr_h["sequence_vdj_aa"].str.contains("EVQL|QLQL"))  # BCR heavy chain signatures
+
+        # Test TCR H chain processing (beta chains)
+        result_tcr_h = process_airr(self.test_bulk_df, "H", receptor_type="TCR")
+        assert result_tcr_h.shape[0] == 2  # 2 TCR beta chains
+        assert all(result_tcr_h["sequence_vdj_aa"].str.contains("CASS"))  # TCR beta chain signatures
+
+        # Test unified processing (all H chains)
+        result_all_h = process_airr(self.test_bulk_df, "H", receptor_type="all")
+        assert result_all_h.shape[0] == 4  # 2 BCR + 2 TCR heavy chains
+
+    def test_bulk_data_processing_l_chain(self):
+        """Test bulk data processing for L chains (light chains)."""
+        # Test BCR L chain processing
+        result_bcr_l = process_airr(self.test_bulk_df, "L", receptor_type="BCR")
+        assert result_bcr_l.shape[0] == 2  # 2 BCR light chains
+        assert any(result_bcr_l["sequence_vdj_aa"].str.contains("QSVLT"))  # IGL signature
+        assert any(result_bcr_l["sequence_vdj_aa"].str.contains("DIQMT"))  # IGK signature
+
+        # Test TCR L chain processing (alpha chains)
+        result_tcr_l = process_airr(self.test_bulk_df, "L", receptor_type="TCR")
+        assert result_tcr_l.shape[0] == 2  # 2 TCR alpha chains
+        assert all(result_tcr_l["sequence_vdj_aa"].str.contains("CAV"))  # TCR alpha chain signatures
+
+        # Test unified processing (all L chains)
+        result_all_l = process_airr(self.test_bulk_df, "L", receptor_type="all")
+        assert result_all_l.shape[0] == 4  # 2 BCR + 2 TCR light chains
+
+    def test_bulk_data_invalid_chain_types(self):
+        """Test that bulk data rejects paired chain types (HL, LH, H+L)."""
+        # Test that HL is not allowed for bulk data
+        with pytest.raises(ValueError, match='chain = "HL" invalid for bulk mode'):
+            process_airr(self.test_bulk_df, "HL")
+
+        # Test that LH is not allowed for bulk data
+        with pytest.raises(ValueError, match='chain = "LH" invalid for bulk mode'):
+            process_airr(self.test_bulk_df, "LH")
+
+        # Test that H+L is not allowed for bulk data
+        with pytest.raises(ValueError, match='chain = "H\\+L" invalid for bulk mode'):
+            process_airr(self.test_bulk_df, "H+L")
+
+    def test_bulk_data_columns(self):
+        """Test that bulk data processing returns correct columns."""
+        result = process_airr(self.test_bulk_df, "H")
+        expected_columns = ["sequence_id", "sequence_vdj_aa"]
+        assert list(result.columns) == expected_columns
+
+        # Verify sequence_id column is preserved
+        assert "BCR_bulk_001" in result["sequence_id"].values
+        assert "TCR_bulk_001" in result["sequence_id"].values

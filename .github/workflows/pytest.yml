@@ -55,7 +55,6 @@ jobs:
         if: ${{ always() }}
       - name: Test IgBlast translation
         shell: bash -el {0}
-        continue-on-error: true
         run: |
           # Configure conda with timeout and retries
           conda config --set remote_connect_timeout_secs 30
