@@ -319,8 +319,8 @@ class TestAmulety(unittest.TestCase):
 
     def test_bulk_invalid_chain_types(self):
         """Test that bulk data rejects paired chain types."""
-        # Test that HL is not allowed for bulk data
-        with pytest.raises(ValueError, match='chain = "HL" invalid for bulk mode'):
+        # Test that HL is not allowed for bulk data - should fail on model compatibility first
+        with pytest.raises(ValueError, match="antiberty model supports individual chains only"):
             embed(self.test_bulk_path, "HL", "antiberty", "should_fail.pt")
 
         # Test that H+L is not allowed for bulk data
