@@ -191,14 +191,8 @@ def process_airr(
             list(gamma_delta_chains),
         )
 
+    # bulk only
     if cell_id_col not in data.columns:
-        data_type = "bulk-only"
-    elif data[cell_id_col].notna().all():
-        data_type = "single-cell-only"
-    else:
-        data_type = "mixed"
-
-    if data_type == "bulk-only":
         logger.info(
             "No %s column detected. Processing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
             cell_id_col,
@@ -208,8 +202,8 @@ def process_airr(
         else:
             colnames = ["sequence_id", sequence_col]
             data = data.loc[data.chain == chain, colnames]
-
-    elif data_type == "single-cell-only":
+    # single-cell only
+    elif data[cell_id_col].notna().all():
         logger.info("Processing single-cell data...")
         if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell (HL order)...")
@@ -223,8 +217,8 @@ def process_airr(
         else:
             colnames = [cell_id_col, effective_sequence_col]
             data = data.loc[data.chain == chain, colnames]
-
-    elif data_type == "mixed":
+    #mixed
+    else:
         logger.info("Missing values in %s column. Processing as mixed bulk and single-cell data...", cell_id_col)
         if chain == "HL":
             logger.info("Concatenating heavy and light chain per cell (HL order)...")
