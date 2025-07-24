@@ -42,6 +42,41 @@ def insert_space_every_other_except_cls(input_string: str):
     return result
 
 
+def get_cdr3_sequence_column(airr_df: pd.DataFrame, sequence_col: str = "sequence_vdj_aa"):
+    """
+    Determines the appropriate CDR3 sequence column for TCR models.
+
+    TCR embedding models (TCR-BERT, TCRT5, TCREMP) require CDR3 sequences, not full VDJ sequences.
+    This function checks for standard AIRR CDR3 columns and falls back to the specified sequence column.
+
+    Parameters:
+        airr_df (pandas.DataFrame): Input AIRR rearrangement table.
+        sequence_col (str): Default sequence column to use if no CDR3 column is found.
+
+    Returns:
+        str: The name of the column to use for CDR3 sequences.
+
+    Note:
+        Priority order: junction_aa > cdr3_aa > sequence_col
+        For TCR models, using full VDJ sequences may reduce accuracy.
+    """
+    # Check for standard AIRR CDR3 columns in priority order
+    cdr3_columns = ["junction_aa", "cdr3_aa"]
+
+    for col in cdr3_columns:
+        if col in airr_df.columns and not airr_df[col].isna().all():
+            logger.info(f"Using CDR3 sequences from column '{col}' for TCR embedding")
+            return col
+
+    # Fall back to the specified sequence column with a warning
+    logger.warning(
+        f"No CDR3-specific columns (junction_aa, cdr3_aa) found. Using '{sequence_col}' column. "
+        f"Note: TCR models (TCR-BERT, TCRT5, TCREMP) are trained on CDR3 sequences, not full VDJ sequences. "
+        f"Using full sequences may reduce embedding accuracy."
+    )
+    return sequence_col
+
+
 def process_airr(
     airr_df: pd.DataFrame,
     chain: str,
@@ -49,6 +84,7 @@ def process_airr(
     cell_id_col: str = "cell_id",
     receptor_type: str = "all",
     selection_col: str = "duplicate_count",
+    use_cdr3_for_tcr: bool = True,
 ):
     """
     Processes AIRR-seq data and returns a pandas DataFrame containing sequences to embed.
@@ -68,6 +104,8 @@ def process_airr(
                            - "all": allows both BCR and TCR chains in the same file
         selection_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
+        use_cdr3_for_tcr (bool): Whether to automatically use CDR3 sequences for TCR data when available.
+                               Default: True. Set to False to force use of sequence_col for all data.
 
     Returns:
         pandas.DataFrame: Dataframe with formatted sequences.
@@ -90,6 +128,16 @@ def process_airr(
     data = airr_df.copy()
     if "locus" not in data.columns:
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
+
+    # Detect if this is TCR data and adjust sequence column for CDR3 if requested
+    tcr_loci = {"TRA", "TRB", "TRG", "TRD"}
+    present_loci = set(data["locus"].unique())
+    is_tcr_data = bool(present_loci & tcr_loci)
+
+    # Use CDR3 sequences for TCR data if available and requested
+    effective_sequence_col = sequence_col
+    if use_cdr3_for_tcr and is_tcr_data:
+        effective_sequence_col = get_cdr3_sequence_column(data, sequence_col)
 
     # ===== RECEPTOR TYPE VALIDATION =====
     bcr_loci = {"IGH", "IGL", "IGK"}
@@ -165,15 +213,15 @@ def process_airr(
         logger.info("Processing single-cell data...")
         if chain == "HL":
             logging.info("Concatenating heavy and light chain per cell (HL order)...")
-            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="HL")
+            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="HL")
         elif chain == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
-            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="LH")
+            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="LH")
         elif chain == "H+L":
             logger.info("Processing both heavy and light chains separately...")
-            data = process_h_plus_l(data, sequence_col, cell_id_col, selection_col)
+            data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col)
         else:
-            colnames = [cell_id_col, sequence_col]
+            colnames = [cell_id_col, effective_sequence_col]
             data = data.loc[data.chain == chain, colnames]
 
     elif data_type == "mixed":
@@ -181,17 +229,17 @@ def process_airr(
         if chain == "HL":
             logger.info("Concatenating heavy and light chain per cell (HL order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="HL")
+            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="HL")
         elif chain == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(data, sequence_col, cell_id_col, selection_col, order="LH")
+            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="LH")
         elif chain == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = process_h_plus_l(data, sequence_col, cell_id_col, selection_col)
+            data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col)
         else:
-            colnames = ["sequence_id", cell_id_col, sequence_col]
+            colnames = ["sequence_id", cell_id_col, effective_sequence_col]
             data = data.loc[data.chain == chain, colnames]
 
     return data

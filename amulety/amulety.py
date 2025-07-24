@@ -181,140 +181,23 @@ def embed_airr(
     if sequence_col not in airr.columns:
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
 
-    # ===== MODEL CHAIN COMPATIBILITY VALIDATION =====
-    # Define model compatibility based on training data and architecture
-    bcr_models = {"ablang", "antiberta2", "antiberty", "balm-paired"}
-    tcr_models = {"tcr-bert", "tcremp", "tcrt5"}
+    # ===== BASIC CHAIN VALIDATION =====
+    # Check if requested chains are available in the data
+    available_chains = set()
+    if "sequence_vdj_aa" in airr.columns and airr["sequence_vdj_aa"].notna().any():
+        available_chains.add("H")
+    if "sequence_vj_aa" in airr.columns and airr["sequence_vj_aa"].notna().any():
+        available_chains.add("L")
 
-    # Models that support only paired chains (HL/LH) - trained on concatenated sequences
-    paired_only_models = {"balm-paired"}
-
-    # Models that support true paired chains (HL/LH, H, L, H+L) - understand chain relationships
-    # flexible_paired_models = {"tcr-bert", "tcremp"}  # Currently unused
-
-    # Models that support individual chains only (H, L, H+L) - no paired understanding
-    individual_only_models = {"ablang", "antiberta2", "antiberty"}
-
-    # Models that support only H chain (beta chain for TCR) - specialized models
-    h_chain_only_models = {"tcrt5"}  # TCRT5 only supports beta chains (H chains for TCR)
-
-    # Protein language models (H, L, H+L + warning for paired) - no paired chain understanding
-    protein_language_models = {"immune2vec", "esm2", "prott5", "custom"}
-
-    # Validate chain compatibility with model
-    if model in paired_only_models and chain not in ["HL", "LH"]:
-        if model == "balm-paired":
-            raise ValueError(
-                f"BALM-paired model requires paired chains (--chain HL or --chain LH). "
-                f"This model was trained on concatenated Heavy-Light sequences and cannot process individual chains or H+L format. "
-                f"Got --chain {chain}. Use --chain HL (recommended) or --chain LH for paired embedding."
-            )
-
-    elif model in individual_only_models and chain in ["HL", "LH"]:
-        model_type = "BCR" if model in bcr_models else "TCR"
-        chain_desc = "Heavy/Light" if model_type == "BCR" else "Beta-Alpha/Delta-Gamma"
-        raise ValueError(
-            f"{model} model supports individual chains only (--chain H, --chain L, or --chain H+L). "
-            f"This model was trained on individual {chain_desc} chains separately and cannot understand paired sequences. "
-            f"Got --chain {chain}. Use --chain H, --chain L, or --chain H+L for individual chain embedding."
-        )
-
-    elif model in h_chain_only_models and chain not in ["H"]:
-        if model == "tcrt5":
-            raise ValueError(
-                f"TCRT5 model only supports H chains (beta chains for TCR). "
-                f"This model was trained exclusively on CDR3 β sequences and cannot process other chain types. "
-                f"Got --chain {chain}. Use --chain H for TCRT5 embedding."
-            )
-
-    elif model in h_chain_only_models and chain not in ["H"]:
-        raise ValueError(
-            f"{model} model supports only H chain (TCR beta chain) input (--chain H). "
-            f"This model was specifically designed for TCR beta chain analysis and cannot process other chain types. "
-            f"Got --chain {chain}. Use --chain H for TCR beta chain embedding."
-        )
-
-    elif model in protein_language_models and chain in ["HL", "LH"]:
-        warnings.warn(
-            f"Protein language model '{model}' does not have mechanisms to understand paired chain relationships. "
-            f"When using --chain {chain}, the model cannot distinguish 'this segment is H chain, this segment is L chain' structure. "
-            f"Results may be inaccurate for paired chain analysis. Consider using --chain H, --chain L, or --chain H+L for better results.",
-            UserWarning,
-        )
-
-    # ===== DATA AND CHAIN PARAMETER VALIDATION =====
-    # Auto-detect data type from the input
-    data_copy = airr.copy()
-    if "locus" not in data_copy.columns:
-        data_copy.loc[:, "locus"] = data_copy.loc[:, "v_call"].apply(lambda x: x[:3])
-
-    bcr_loci = {"IGH", "IGL", "IGK"}
-    tcr_loci = {"TRA", "TRB", "TRG", "TRD"}
-    present_loci = set(data_copy["locus"].unique())
-
-    bcr_present = bool(present_loci & bcr_loci)
-    tcr_present = bool(present_loci & tcr_loci)
-
-    # Validate data-chain parameter consistency
-    if chain in ["HL", "LH", "H+L"]:
-        # For paired or multi-chain analysis, need both heavy and light chains
-        heavy_loci = {"IGH", "TRB", "TRD"}  # Heavy chains: IGH for BCR, TRB/TRD for TCR
-        light_loci = {"IGL", "IGK", "TRA", "TRG"}  # Light chains: IGL/IGK for BCR, TRA/TRG for TCR
-
-        heavy_present = bool(present_loci & heavy_loci)
-        light_present = bool(present_loci & light_loci)
-
-        if not heavy_present:
-            raise ValueError(
-                f"Chain parameter '{chain}' requires heavy chain data, but no heavy chain loci found. "
-                f"Expected heavy chain loci: {heavy_loci}. Found loci: {present_loci}. "
-                f"Use --chain L if you only have light chain data."
-            )
-
-        if not light_present:
-            raise ValueError(
-                f"Chain parameter '{chain}' requires light chain data, but no light chain loci found. "
-                f"Expected light chain loci: {light_loci}. Found loci: {present_loci}. "
-                f"Use --chain H if you only have heavy chain data."
-            )
-
-    elif chain == "H":
-        # For heavy chain analysis, need heavy chain data
-        heavy_loci = {"IGH", "TRB", "TRD"}
-        heavy_present = bool(present_loci & heavy_loci)
-
-        if not heavy_present:
-            raise ValueError(
-                f"Chain parameter 'H' requires heavy chain data, but no heavy chain loci found. "
-                f"Expected heavy chain loci: {heavy_loci}. Found loci: {present_loci}. "
-                f"Use --chain L if you have light chain data, or check your data."
-            )
-
-    elif chain == "L":
-        # For light chain analysis, need light chain data
-        light_loci = {"IGL", "IGK", "TRA", "TRG"}
-        light_present = bool(present_loci & light_loci)
-
-        if not light_present:
-            raise ValueError(
-                f"Chain parameter 'L' requires light chain data, but no light chain loci found. "
-                f"Expected light chain loci: {light_loci}. Found loci: {present_loci}. "
-                f"Use --chain H if you have heavy chain data, or check your data."
-            )
-
-    # Validate model-data compatibility
-    if model in bcr_models and tcr_present and not bcr_present:
-        raise ValueError(
-            f"Model '{model}' is designed for BCR data, but only TCR data (loci: {list(present_loci & tcr_loci)}) "
-            f"was found in the input. Please use a TCR model like 'tcr-bert', 'tcremp', or 'trex', "
-            f"or a general protein model like 'esm2' or 'prott5'."
-        )
-    elif model in tcr_models and bcr_present and not tcr_present:
-        raise ValueError(
-            f"Model '{model}' is designed for TCR data, but only BCR data (loci: {list(present_loci & bcr_loci)}) "
-            f"was found in the input. Please use a BCR model like 'ablang', 'antiberta2', 'antiberty', or 'balm-paired', "
-            f"or a general protein model like 'esm2' or 'prott5'."
-        )
+    # Validate chain availability
+    if chain == "H" and "H" not in available_chains:
+        raise ValueError("Chain 'H' requested but no heavy chain sequences found in 'sequence_vdj_aa' column")
+    elif chain == "L" and "L" not in available_chains:
+        raise ValueError("Chain 'L' requested but no light chain sequences found in 'sequence_vj_aa' column")
+    elif chain in ["HL", "LH", "H+L"] and not available_chains.issuperset({"H", "L"}):
+        missing = {"H", "L"} - available_chains
+        raise ValueError(f"Chain '{chain}' requested but missing chains: {', '.join(missing)}")
+    # ===== PROCESS DATA =====
 
     dat = process_airr(
         airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col, selection_col=selection_col
@@ -328,33 +211,110 @@ def embed_airr(
 
     X = dat.loc[:, sequence_col]
 
+    # ===== MODEL EXECUTION WITH CHAIN VALIDATION =====
     # BCR models
     if model == "ablang":
+        # Check compatible chains
+        supported_chains = ["H", "L", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model ablang only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "antiberta2":
+        # Check compatible chains
+        supported_chains = ["H", "L", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model antiberta2 only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "antiberty":
+        # Check compatible chains
+        supported_chains = ["H", "L", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model antiberty only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "balm-paired":
+        # Check compatible chains
+        supported_chains = ["HL", "LH"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model balm-paired only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     # TCR models
     elif model == "tcr-bert":
+        # Check compatible chains
+        supported_chains = ["H", "L", "HL", "LH", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model tcr-bert only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "tcremp":
+        # Check compatible chains
+        supported_chains = ["H", "L", "HL", "LH", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model tcremp only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "tcrt5":
+        # Check compatible chains
+        supported_chains = ["H"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model tcrt5 only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
         embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # Immune-specific models (BCR & TCR)
     elif model == "immune2vec":
+        # Check compatible chains (with warning for paired chains)
+        supported_chains = ["H", "L", "HL", "LH", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model immune2vec only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+        if chain in ["HL", "LH"]:
+            warnings.warn(
+                f"Protein language model 'immune2vec' does not understand paired chain relationships. "
+                f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
+                UserWarning,
+            )
         embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     # Protein models
     elif model == "esm2":
+        # Check compatible chains (with warning for paired chains)
+        supported_chains = ["H", "L", "HL", "LH", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model esm2 only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+        if chain in ["HL", "LH"]:
+            warnings.warn(
+                f"Protein language model 'esm2' does not understand paired chain relationships. "
+                f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
+                UserWarning,
+            )
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "prott5":
+        # Check compatible chains (with warning for paired chains)
+        supported_chains = ["H", "L", "HL", "LH", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model prott5 only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+        if chain in ["HL", "LH"]:
+            warnings.warn(
+                f"Protein language model 'prott5' does not understand paired chain relationships. "
+                f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
+                UserWarning,
+            )
         embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+
     elif model == "custom":
+        # Check compatible chains (with warning for paired chains)
+        supported_chains = ["H", "L", "HL", "LH", "H+L"]
+        if chain not in supported_chains:
+            raise ValueError(f"Model custom only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+        if chain in ["HL", "LH"]:
+            warnings.warn(
+                f"Custom protein language model does not understand paired chain relationships. "
+                f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
+                UserWarning,
+            )
         if model_path is None or embedding_dimension is None or max_length is None:
             raise ValueError("For custom model, modelpath, embedding_dimension, and max_length must be provided.")
         embedding = custommodel(
