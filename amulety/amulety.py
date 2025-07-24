@@ -223,7 +223,15 @@ def embed_airr(
         receptor_type = "all"  # Default for unknown models
 
     # ===== PROCESS DATA =====
+    # Dropping rows were sequence column is NA
+    n_dat = dat.shape[0]
 
+    dat = dat.dropna(subset=[sequence_col])
+    n_dropped = n_dat - dat.shape[0]
+    if n_dropped > 0:
+        logger.info("Removed %s rows with missing values in %s", n_dropped, sequence_col)
+
+    #TODO: this part will have to be moved inside each model
     dat = process_airr(
         airr,
         internal_chain,
@@ -232,12 +240,6 @@ def embed_airr(
         selection_col=selection_col,
         receptor_type=receptor_type,
     )
-    n_dat = dat.shape[0]
-
-    dat = dat.dropna(subset=[sequence_col])
-    n_dropped = n_dat - dat.shape[0]
-    if n_dropped > 0:
-        logger.info("Removed %s rows with missing values in %s", n_dropped, sequence_col)
 
     X = dat.loc[:, sequence_col]
 
@@ -259,6 +261,10 @@ def embed_airr(
             raise ValueError(
                 f"Model 'antiberta2' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
             )
+        dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col,
+                        selection_col=selection_col, receptor_type=receptor_type)
+
+        X = dat.loc[:, sequence_col]
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "antiberty":
@@ -293,10 +299,16 @@ def embed_airr(
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "tcremp":
+        if sequence_col not "CDR3_aa":
+            raise ValueError(f"Model tcremp was trained on CDR3 aa sequences, please provide CDR3_aa as sequence column.")
         # Check compatible chains
         supported_chains = ["H", "L", "HL", "LH", "H+L"]
         if chain not in supported_chains:
             raise ValueError(f"Model tcremp only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+        dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col,
+                        selection_col=selection_col, receptor_type=receptor_type, mode="tab_locus_gene")
+        # TODO: Select necessary columns by the model and rename them according to model.
+        X = dat.loc[:, sequence_col]
         embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "tcrt5":

@@ -79,7 +79,7 @@ def get_cdr3_sequence_column(airr_df: pd.DataFrame, sequence_col: str = "sequenc
 
 def process_airr(
     airr_df: pd.DataFrame,
-    chain: str,
+    chain_mode: str,
     sequence_col: str = "sequence_vdj_aa",
     cell_id_col: str = "cell_id",
     receptor_type: str = "all",
@@ -94,7 +94,7 @@ def process_airr(
 
     Parameters:
         airr_df (pandas.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
-        chain (str): The input chain, one of ["H", "L", "HL", "LH", "H+L"].
+        chain_mode (str): The input chain, one of ["H", "L", "HL", "LH", "H+L"].
 
         sequence_col (str): The name of the column containing the amino acid sequences to embed.
         cell_id_col (str): The name of the column containing the single-cell barcode.
@@ -114,14 +114,14 @@ def process_airr(
         ValueError: If chain is not one of ["H", "L", "HL", "LH", "H+L"] or receptor_type validation fails.
     """
     allowed_sequence_input = ["H", "L", "HL", "LH", "H+L"]
-    if chain not in allowed_sequence_input:
+    if chain_mode not in allowed_sequence_input:
         raise ValueError(f"Input x must be one of {allowed_sequence_input}")
 
     # Warning for LH order
-    if chain == "LH":
+    if chain_mode == "LH":
         warnings.warn(
             "LH (Light-Heavy) chain order detected. Most paired models are trained on HL (Heavy-Light) order. "
-            "Using LH order may result in reduced accuracy. Consider using --chain HL for better performance.",
+            "Using LH order may result in reduced accuracy. Consider using --chain_mode HL for better performance.",
             UserWarning,
         )
 
@@ -197,26 +197,27 @@ def process_airr(
             "No %s column detected. Processing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
             cell_id_col,
         )
-        if chain in ["HL", "LH", "H+L"]:
-            raise ValueError(f'chain = "{chain}" invalid for bulk mode. Use "H" or "L" for bulk data.')
-        else:
-            colnames = ["sequence_id", sequence_col]
-            data = data.loc[data.chain == chain, colnames]
+        if chain_mode in ["HL", "LH", "H+L"]:
+            raise ValueError(f'chain_mode = "{chain_mode}" invalid for bulk mode. Use "H" or "L" for bulk data.')
+        #else:
+            #colnames = ["sequence_id", sequence_col]
+            #data = data.loc[data.chain == chain_mode, colnames]
+
     # single-cell only
     elif data[cell_id_col].notna().all():
         logger.info("Processing single-cell data...")
-        if chain == "HL":
+        if chain_mode == "HL":
             logging.info("Concatenating heavy and light chain per cell (HL order)...")
             data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="HL")
-        elif chain == "LH":
+        elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
             data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="LH")
-        elif chain == "H+L":
+        elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col)
-        else:
-            colnames = [cell_id_col, effective_sequence_col]
-            data = data.loc[data.chain == chain, colnames]
+        #else:
+            #colnames = [cell_id_col, effective_sequence_col]
+            #data = data.loc[data.chain == chain_mode, colnames]
     #mixed
     else:
         logger.info("Missing values in %s column. Processing as mixed bulk and single-cell data...", cell_id_col)
@@ -232,15 +233,15 @@ def process_airr(
             logger.info("Processing both heavy and light chains separately...")
             data = data.loc[data[cell_id_col].notna(),]
             data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col)
-        else:
-            colnames = ["sequence_id", cell_id_col, effective_sequence_col]
-            data = data.loc[data.chain == chain, colnames]
+        #else:
+            #colnames = ["sequence_id", cell_id_col, effective_sequence_col]
+            #data = data.loc[data.chain == chain, colnames]
 
     return data
 
 
 def concatenate_heavylight(
-    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count", order: str = "HL"
+    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count", order: str = "HL", mode: str = "concat"
 ):
     """
     Concatenates heavy and light chain per cell using AMULETY's unified H/L interface.
@@ -263,6 +264,8 @@ def concatenate_heavylight(
         cell_id_col (str): The name of the column containing the single-cell barcode.
         selection_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
+        mode (str): Mode to use in concatenating sequences. By default it concatenates the sequences (concat), 
+                    it can also tabulate the sequences alone (tab) or together with the locus and segment (tab_locus_gene).
 
     Returns:
         pandas.DataFrame: Dataframe with concatenated heavy and light chains per cell.
@@ -286,23 +289,37 @@ def concatenate_heavylight(
 
     # if tie in maximum selection_col value, return the first occurrence
     data = data.loc[data.groupby([cell_id_col, "chain"])[selection_col].idxmax()]
-    data = data.pivot(index=cell_id_col, columns="chain", values=sequence_col)
-    data = data.reset_index(level=cell_id_col)
-    n_cells = data.shape[0]
-    data = data.dropna(axis=0)
+
+    # TODO: implement the case for all modes
+    # First pivot dataframe according to chain column values (H and L)
+    data_chain = data.pivot(index=cell_id_col, columns="chain", values=sequence_col)
+    data_chain = data_chain.reset_index(level=cell_id_col)
+    n_cells = data_chain.shape[0]
+    data_chain = data_chain.dropna(axis=0)
     n_dropped = n_cells - data.shape[0]
     if n_dropped > 0:
         logging.info("Dropping %s cells with missing heavy or light chain...", n_dropped)
 
-    # Concatenate based on order parameter
-    if order == "HL":
-        data.loc[:, sequence_col] = data.H + "<cls><cls>" + data.L
-    elif order == "LH":
-        data.loc[:, sequence_col] = data.L + "<cls><cls>" + data.H
+    if mode == "concat":
+        # Concatenate based on order parameter
+        if order == "HL":
+            data_chain.loc[:, sequence_col] = data_chain.H + "<cls><cls>" + data_chain.L
+        elif order == "LH":
+            data_chain.loc[:, sequence_col] = data_chain.L + "<cls><cls>" + data_chain.H
+        else:
+            raise ValueError(f"Invalid order parameter: {order}. Must be 'HL' or 'LH'.")
+        return data_chain
+    elif mode == "tab":
+        return data_chain
+    elif mode == "tab_locus_gene":
+        # Do another pivot
+        data["locus_vgene"] #new column getting the 4 first characters of v_gene
+        data["locus_jgene"] #new column getting the 4 first characters of v_gene
+        data_locus_gene = data.pivot(...)
+        #merge locus_vgene pivot + locus jgene pivot + data-chain pivot
+        #return pivotted df
     else:
-        raise ValueError(f"Invalid order parameter: {order}. Must be 'HL' or 'LH'.")
-
-    return data
+        #throw error mode incorrect.
 
 
 def process_h_plus_l(data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count"):
@@ -329,7 +346,8 @@ def process_h_plus_l(data: pd.DataFrame, sequence_col: str, cell_id_col: str, se
 
     # Keep both H and L chains as separate entries
     colnames = [cell_id_col, "chain", sequence_col]
-    data = data.loc[:, colnames]
+    # TODO: we tried to keep all columns here instead.
+    #data = data.loc[:, colnames]
 
     # Add chain type identifier to sequence_id for tracking
     data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
