@@ -182,18 +182,28 @@ def embed_airr(
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
 
     # ===== BASIC CHAIN VALIDATION =====
-    # Check if requested chains are available in the data
+    # Check if requested chains are available in the data based on locus information
+    data_copy = airr.copy()
+    if "locus" not in data_copy.columns:
+        data_copy.loc[:, "locus"] = data_copy.loc[:, "v_call"].apply(lambda x: x[:3])
+
+    present_loci = set(data_copy["locus"].unique())
+
+    # Determine available chains based on locus
     available_chains = set()
-    if "sequence_vdj_aa" in airr.columns and airr["sequence_vdj_aa"].notna().any():
+    heavy_loci = {"IGH", "TRB", "TRD"}  # Heavy chains: IGH for BCR, TRB/TRD for TCR
+    light_loci = {"IGL", "IGK", "TRA", "TRG"}  # Light chains: IGL/IGK for BCR, TRA/TRG for TCR
+
+    if present_loci & heavy_loci:
         available_chains.add("H")
-    if "sequence_vj_aa" in airr.columns and airr["sequence_vj_aa"].notna().any():
+    if present_loci & light_loci:
         available_chains.add("L")
 
     # Validate chain availability
     if chain == "H" and "H" not in available_chains:
-        raise ValueError("Chain 'H' requested but no heavy chain sequences found in 'sequence_vdj_aa' column")
+        raise ValueError("Chain 'H' requested but no heavy chain sequences found")
     elif chain == "L" and "L" not in available_chains:
-        raise ValueError("Chain 'L' requested but no light chain sequences found in 'sequence_vj_aa' column")
+        raise ValueError("Chain 'L' requested but no light chain sequences found")
     elif chain in ["HL", "LH", "H+L"] and not available_chains.issuperset({"H", "L"}):
         missing = {"H", "L"} - available_chains
         raise ValueError(f"Chain '{chain}' requested but missing chains: {', '.join(missing)}")
@@ -217,28 +227,41 @@ def embed_airr(
         # Check compatible chains
         supported_chains = ["H", "L", "H+L"]
         if chain not in supported_chains:
-            raise ValueError(f"Model ablang only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+            raise ValueError(
+                f"Model 'ablang' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
+            )
         embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "antiberta2":
         # Check compatible chains
         supported_chains = ["H", "L", "H+L"]
         if chain not in supported_chains:
-            raise ValueError(f"Model antiberta2 only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+            raise ValueError(
+                f"Model 'antiberta2' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
+            )
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "antiberty":
         # Check compatible chains
         supported_chains = ["H", "L", "H+L"]
         if chain not in supported_chains:
-            raise ValueError(f"Model antiberty only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+            raise ValueError(
+                f"Model 'antiberty' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
+            )
         embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "balm-paired":
         # Check compatible chains
         supported_chains = ["HL", "LH"]
         if chain not in supported_chains:
-            raise ValueError(f"Model balm-paired only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+            raise ValueError(
+                f"Model 'balm-paired' requires paired chains (HL/LH). Use --chain HL or --chain LH instead of --chain {chain}."
+            )
+        if chain == "LH":
+            warnings.warn(
+                "Model 'balm-paired' was trained with H-L order. Using L-H order may reduce accuracy.",
+                UserWarning,
+            )
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # TCR models
@@ -260,7 +283,9 @@ def embed_airr(
         # Check compatible chains
         supported_chains = ["H"]
         if chain not in supported_chains:
-            raise ValueError(f"Model tcrt5 only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+            raise ValueError(
+                f"TCRT5 model only supports H chains (beta chains for TCR). Use --chain H instead of --chain {chain}."
+            )
         embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # Immune-specific models (BCR & TCR)

@@ -217,28 +217,40 @@ class TestAmulety(unittest.TestCase):
 
     def test_balm_paired_sc_HL_embedding(self):
         """Test balm-paired (single-cell HL)."""
-        embed(self.test_airr_sc_path, "HL", "balm-paired", "HL_test.pt")
-        assert os.path.exists("HL_test.pt")
-        embeddings = torch.load("HL_test.pt")
-        assert embeddings.shape[1] == 1024
-        assert embeddings.shape[0] == 2
-        os.remove("HL_test.pt")
+        try:
+            embed(self.test_airr_sc_path, "HL", "balm-paired", "HL_test.pt")
+            assert os.path.exists("HL_test.pt")
+            embeddings = torch.load("HL_test.pt")
+            assert embeddings.shape[1] == 1024
+            assert embeddings.shape[0] == 2
+            os.remove("HL_test.pt")
+        except RuntimeError as e:
+            if "Error downloading or extracting BALM-paired model" in str(e):
+                self.skipTest(f"BALM-paired model download failed: {e}")
+            else:
+                raise
 
     def test_balm_paired_sc_LH_embedding(self):
         """Test balm-paired (single-cell LH with warning)."""
         import warnings
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            embed(self.test_airr_sc_path, "LH", "balm-paired", "LH_test.pt")
-            assert os.path.exists("LH_test.pt")
-            embeddings = torch.load("LH_test.pt")
-            assert embeddings.shape[1] == 1024
-            assert embeddings.shape[0] == 2
-            os.remove("LH_test.pt")
-            # Check that LH warning was issued
-            assert len(w) > 0
-            assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                embed(self.test_airr_sc_path, "LH", "balm-paired", "LH_test.pt")
+                assert os.path.exists("LH_test.pt")
+                embeddings = torch.load("LH_test.pt")
+                assert embeddings.shape[1] == 1024
+                assert embeddings.shape[0] == 2
+                os.remove("LH_test.pt")
+                # Check that LH warning was issued
+                assert len(w) > 0
+                assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
+        except RuntimeError as e:
+            if "Error downloading or extracting BALM-paired model" in str(e):
+                self.skipTest(f"BALM-paired model download failed: {e}")
+            else:
+                raise
 
     def test_balm_paired_H_chain_validation(self):
         """Test that balm-paired rejects individual H chains (paired-only model)."""
@@ -319,8 +331,8 @@ class TestAmulety(unittest.TestCase):
 
     def test_bulk_invalid_chain_types(self):
         """Test that bulk data rejects paired chain types."""
-        # Test that HL is not allowed for bulk data - should fail on model compatibility first
-        with pytest.raises(ValueError, match="antiberty model supports individual chains only"):
+        # Test that HL is not allowed for bulk data - should fail on bulk mode check first
+        with pytest.raises(ValueError, match='chain = "HL" invalid for bulk mode'):
             embed(self.test_bulk_path, "HL", "antiberty", "should_fail.pt")
 
         # Test that H+L is not allowed for bulk data

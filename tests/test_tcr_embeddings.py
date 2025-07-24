@@ -36,55 +36,100 @@ class TestAmulety(unittest.TestCase):
 
     def test_tcr_bert_L_embedding(self):
         """Test TCR-BERT (alpha/gamma chains - L chains for TCR) - now supported."""
-        embed(self.test_airr_tcr_path, "L", "tcr-bert", "tcr_L_test.pt", batch_size=2)
-        assert os.path.exists("tcr_L_test.pt")
-        embeddings = torch.load("tcr_L_test.pt")
-        assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("tcr_L_test.pt")
+        try:
+            embed(self.test_airr_tcr_path, "L", "tcr-bert", "tcr_L_test.pt", batch_size=2)
+            assert os.path.exists("tcr_L_test.pt")
+            embeddings = torch.load("tcr_L_test.pt")
+            assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
+            assert embeddings.shape[0] == 3  # 3 alpha chains in test data
+            os.remove("tcr_L_test.pt")
+        except Exception as e:
+            if any(
+                error_type in str(e)
+                for error_type in ["SafetensorError", "InvalidHeaderDeserialization", "ConnectionError", "HTTPError"]
+            ):
+                self.skipTest(f"TCR-BERT model loading failed: {e}")
+            else:
+                raise
 
     def test_tcr_bert_H_embedding(self):
         """Test TCR-BERT (beta/delta chains - H chains for TCR) - now supported."""
-        embed(self.test_airr_tcr_path, "H", "tcr-bert", "tcr_H_test.pt", batch_size=2)
-        assert os.path.exists("tcr_H_test.pt")
-        embeddings = torch.load("tcr_H_test.pt")
-        assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-        assert embeddings.shape[0] == 3  # 3 beta chains in test data
-        os.remove("tcr_H_test.pt")
+        try:
+            embed(self.test_airr_tcr_path, "H", "tcr-bert", "tcr_H_test.pt", batch_size=2)
+            assert os.path.exists("tcr_H_test.pt")
+            embeddings = torch.load("tcr_H_test.pt")
+            assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
+            assert embeddings.shape[0] == 3  # 3 beta chains in test data
+            os.remove("tcr_H_test.pt")
+        except Exception as e:
+            if any(
+                error_type in str(e)
+                for error_type in ["SafetensorError", "InvalidHeaderDeserialization", "ConnectionError", "HTTPError"]
+            ):
+                self.skipTest(f"TCR-BERT model loading failed: {e}")
+            else:
+                raise
 
     def test_tcr_bert_HL_embedding(self):
         """Test TCR-BERT (alpha-beta/gamma-delta pairs - HL pairs for TCR)."""
-        embed(self.test_airr_tcr_path, "HL", "tcr-bert", "tcr_HL_test.pt", batch_size=2)
-        assert os.path.exists("tcr_HL_test.pt")
-        embeddings = torch.load("tcr_HL_test.pt")
-        assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-        os.remove("tcr_HL_test.pt")
+        try:
+            embed(self.test_airr_tcr_path, "HL", "tcr-bert", "tcr_HL_test.pt", batch_size=2)
+            assert os.path.exists("tcr_HL_test.pt")
+            embeddings = torch.load("tcr_HL_test.pt")
+            assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
+            assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
+            os.remove("tcr_HL_test.pt")
+        except Exception as e:
+            if any(
+                error_type in str(e)
+                for error_type in ["SafetensorError", "InvalidHeaderDeserialization", "ConnectionError", "HTTPError"]
+            ):
+                self.skipTest(f"TCR-BERT model loading failed: {e}")
+            else:
+                raise
 
     def test_tcr_bert_LH_embedding(self):
         """Test TCR-BERT (beta-alpha/delta-gamma pairs - LH pairs for TCR with warning)."""
         import warnings
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            embed(self.test_airr_tcr_path, "LH", "tcr-bert", "tcr_LH_test.pt", batch_size=2)
-            assert os.path.exists("tcr_LH_test.pt")
-            embeddings = torch.load("tcr_LH_test.pt")
-            assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-            assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-            os.remove("tcr_LH_test.pt")
-            # Check that LH warning was issued
-            assert len(w) > 0
-            assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                embed(self.test_airr_tcr_path, "LH", "tcr-bert", "tcr_LH_test.pt", batch_size=2)
+                assert os.path.exists("tcr_LH_test.pt")
+                embeddings = torch.load("tcr_LH_test.pt")
+                assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
+                assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
+                os.remove("tcr_LH_test.pt")
+                # Check that LH warning was issued
+                assert len(w) > 0
+                assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
+        except Exception as e:
+            if any(
+                error_type in str(e)
+                for error_type in ["SafetensorError", "InvalidHeaderDeserialization", "ConnectionError", "HTTPError"]
+            ):
+                self.skipTest(f"TCR-BERT model loading failed: {e}")
+            else:
+                raise
 
     def test_tcrt5_H_embedding(self):
         """Test TCRT5 (beta chains only - H chains for TCR)."""
-        embed(self.test_airr_tcr_path, "H", "tcrt5", "tcrt5_H_test.pt", batch_size=2)
-        assert os.path.exists("tcrt5_H_test.pt")
-        embeddings = torch.load("tcrt5_H_test.pt")
-        assert embeddings.shape[1] == 256  # TCRT5 embedding dimension
-        assert embeddings.shape[0] == 3  # 3 beta chains in test data
-        os.remove("tcrt5_H_test.pt")
+        try:
+            embed(self.test_airr_tcr_path, "H", "tcrt5", "tcrt5_H_test.pt", batch_size=2)
+            assert os.path.exists("tcrt5_H_test.pt")
+            embeddings = torch.load("tcrt5_H_test.pt")
+            assert embeddings.shape[1] == 256  # TCRT5 embedding dimension
+            assert embeddings.shape[0] == 3  # 3 beta chains in test data
+            os.remove("tcrt5_H_test.pt")
+        except Exception as e:
+            if any(
+                error_type in str(e)
+                for error_type in ["SafetensorError", "InvalidHeaderDeserialization", "ConnectionError", "HTTPError"]
+            ):
+                self.skipTest(f"TCRT5 model loading failed: {e}")
+            else:
+                raise
 
     def test_tcrt5_L_embedding_should_fail(self):
         """Test TCRT5 with L chains should fail (only supports H chains)."""

@@ -46,87 +46,131 @@ class TestAmulety(unittest.TestCase):
         """Test esm2 (single-cell HL with protein language model warning)."""
         import warnings
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            embed(self.test_airr_sc_path, "HL", "esm2", "HL_test.pt")
-            assert os.path.exists("HL_test.pt")
-            embeddings = torch.load("HL_test.pt")
-            assert embeddings.shape[1] == 1280
-            assert embeddings.shape[0] == 2
-            os.remove("HL_test.pt")
-            # Check that protein language model warning was issued
-            assert len(w) > 0
-            warning_messages = [str(warning.message) for warning in w]
-            assert any(
-                "does not have mechanisms to understand paired chain relationships" in msg for msg in warning_messages
-            )
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                embed(self.test_airr_sc_path, "HL", "esm2", "HL_test.pt")
+                assert os.path.exists("HL_test.pt")
+                embeddings = torch.load("HL_test.pt")
+                assert embeddings.shape[1] == 1280
+                assert embeddings.shape[0] == 2
+                os.remove("HL_test.pt")
+                # Check that protein language model warning was issued
+                assert len(w) > 0
+                warning_messages = [str(warning.message) for warning in w]
+                assert any(
+                    "does not have mechanisms to understand paired chain relationships" in msg
+                    for msg in warning_messages
+                )
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_esm2_sc_H_embedding(self):
         """Test esm2 (single-cell H)."""
-        embed(self.test_airr_sc_path, "H", "esm2", "H_test.pt")
-        assert os.path.exists("H_test.pt")
-        embeddings = torch.load("H_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("H_test.pt")
+        try:
+            embed(self.test_airr_sc_path, "H", "esm2", "H_test.pt")
+            assert os.path.exists("H_test.pt")
+            embeddings = torch.load("H_test.pt")
+            assert embeddings.shape[1] == 1280
+            assert embeddings.shape[0] == 2
+            os.remove("H_test.pt")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_esm2_sc_L_embedding(self):
         """Test esm2 (single-cell L)."""
-        embed(self.test_airr_sc_path, "L", "esm2", "L_test.pt")
-        assert os.path.exists("L_test.pt")
-        embeddings = torch.load("L_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("L_test.pt")
+        try:
+            embed(self.test_airr_sc_path, "L", "esm2", "L_test.pt")
+            assert os.path.exists("L_test.pt")
+            embeddings = torch.load("L_test.pt")
+            assert embeddings.shape[1] == 1280
+            assert embeddings.shape[0] == 2
+            os.remove("L_test.pt")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_esm2_sc_LH_embedding(self):
         """Test esm2 (single-cell LH with warnings for both LH order and protein language model)."""
         import warnings
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            embed(self.test_airr_sc_path, "LH", "esm2", "LH_test.pt")
-            assert os.path.exists("LH_test.pt")
-            embeddings = torch.load("LH_test.pt")
-            assert embeddings.shape[1] == 1280
-            assert embeddings.shape[0] == 2
-            os.remove("LH_test.pt")
-            # Check that both LH order warning and protein language model warning were issued
-            assert len(w) >= 2
-            warning_messages = [str(warning.message) for warning in w]
-            assert any("LH (Light-Heavy) chain order detected" in msg for msg in warning_messages)
-            assert any(
-                "does not have mechanisms to understand paired chain relationships" in msg for msg in warning_messages
-            )
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                embed(self.test_airr_sc_path, "LH", "esm2", "LH_test.pt")
+                assert os.path.exists("LH_test.pt")
+                embeddings = torch.load("LH_test.pt")
+                assert embeddings.shape[1] == 1280
+                assert embeddings.shape[0] == 2
+                os.remove("LH_test.pt")
+                # Check that both LH order warning and protein language model warning were issued
+                assert len(w) >= 2
+                warning_messages = [str(warning.message) for warning in w]
+                assert any("LH (Light-Heavy) chain order detected" in msg for msg in warning_messages)
+                assert any(
+                    "does not have mechanisms to understand paired chain relationships" in msg
+                    for msg in warning_messages
+                )
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_esm2_sc_H_plus_L_embedding(self):
         """Test esm2 (single-cell H+L)."""
-        embed(self.test_airr_sc_path, "H+L", "esm2", "H_plus_L_test.pt")
-        assert os.path.exists("H_plus_L_test.pt")
-        embeddings = torch.load("H_plus_L_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
-        os.remove("H_plus_L_test.pt")
+        try:
+            embed(self.test_airr_sc_path, "H+L", "esm2", "H_plus_L_test.pt")
+            assert os.path.exists("H_plus_L_test.pt")
+            embeddings = torch.load("H_plus_L_test.pt")
+            assert embeddings.shape[1] == 1280
+            assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
+            os.remove("H_plus_L_test.pt")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_tcr_esm2_L_embedding(self):
         """Test ESM2 with TCR alpha chains (using unified approach)."""
-        # Use existing esm2 function with TCR chain mapping: alpha -> L
-        embed(self.test_airr_tcr_path, "L", "esm2", "tcr_esm2_L_test.pt", batch_size=2)
-        assert os.path.exists("tcr_esm2_L_test.pt")
-        embeddings = torch.load("tcr_esm2_L_test.pt")
-        assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("tcr_esm2_L_test.pt")
+        try:
+            # Use existing esm2 function with TCR chain mapping: alpha -> L
+            embed(self.test_airr_tcr_path, "L", "esm2", "tcr_esm2_L_test.pt", batch_size=2)
+            assert os.path.exists("tcr_esm2_L_test.pt")
+            embeddings = torch.load("tcr_esm2_L_test.pt")
+            assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
+            assert embeddings.shape[0] == 3  # 3 alpha chains in test data
+            os.remove("tcr_esm2_L_test.pt")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_tcr_esm2_HL_embedding(self):
         """Test ESM2 with TCR alpha-beta pairs (using unified approach)."""
-        # Use existing esm2 function with TCR chain mapping: alpha-beta -> HL
-        embed(self.test_airr_tcr_path, "HL", "esm2", "tcr_esm2_HL_test.pt", batch_size=2)
-        assert os.path.exists("tcr_esm2_HL_test.pt")
-        embeddings = torch.load("tcr_esm2_HL_test.pt")
-        assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-        os.remove("tcr_esm2_HL_test.pt")
+        try:
+            # Use existing esm2 function with TCR chain mapping: alpha-beta -> HL
+            embed(self.test_airr_tcr_path, "HL", "esm2", "tcr_esm2_HL_test.pt", batch_size=2)
+            assert os.path.exists("tcr_esm2_HL_test.pt")
+            embeddings = torch.load("tcr_esm2_HL_test.pt")
+            assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
+            assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
+            os.remove("tcr_esm2_HL_test.pt")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_tcr_prott5_A_embedding(self):
@@ -203,57 +247,63 @@ class TestAmulety(unittest.TestCase):
         """Test automatic receptor type validation functionality."""
         from amulety.amulety import embed_airr
 
-        # Test 1: BCR data with BCR model (should work)
-        result = embed_airr(
-            self.test_airr_sc_df,
-            "H",
-            "antiberta2",
-            batch_size=2,
-        )
-        assert result.shape[1] == 1024  # AntiBERTa2 embedding dimension
-        assert result.shape[0] == 2  # 2 heavy chains in test data
-
-        # Test 2: TCR data with TCR model (should work)
-        result = embed_airr(
-            self.test_airr_tcr_df,
-            "H",
-            "tcr-bert",
-            batch_size=2,
-        )
-        assert result.shape[1] == 768  # TCR-BERT embedding dimension
-        assert result.shape[0] == 3  # 3 beta chains in TCR test data
-
-        # Test 3: BCR data with protein model (should work)
-        result = embed_airr(
-            self.test_airr_sc_df,
-            "H",
-            "esm2",
-            batch_size=2,
-        )
-        assert result.shape[1] == 1280  # ESM2 embedding dimension
-        assert result.shape[0] == 2  # 2 heavy chains in test data
-
-        # Test 4: TCR data with BCR model (should fail with clear error)
-        with self.assertRaises(ValueError) as context:
-            embed_airr(
-                self.test_airr_tcr_df,
+        try:
+            # Test 1: BCR data with BCR model (should work)
+            result = embed_airr(
+                self.test_airr_sc_df,
                 "H",
                 "antiberta2",
                 batch_size=2,
             )
-        self.assertIn("designed for BCR data", str(context.exception))
-        self.assertIn("only TCR data", str(context.exception))
+            assert result.shape[1] == 1024  # AntiBERTa2 embedding dimension
+            assert result.shape[0] == 2  # 2 heavy chains in test data
 
-        # Test 5: BCR data with TCR model (should fail with clear error)
-        with self.assertRaises(ValueError) as context:
-            embed_airr(
-                self.test_airr_sc_df,
+            # Test 2: TCR data with TCR model (should work)
+            result = embed_airr(
+                self.test_airr_tcr_df,
                 "H",
                 "tcr-bert",
                 batch_size=2,
             )
-        self.assertIn("designed for TCR data", str(context.exception))
-        self.assertIn("only BCR data", str(context.exception))
+            assert result.shape[1] == 768  # TCR-BERT embedding dimension
+            assert result.shape[0] == 3  # 3 beta chains in TCR test data
+
+            # Test 3: BCR data with protein model (should work)
+            result = embed_airr(
+                self.test_airr_sc_df,
+                "H",
+                "esm2",
+                batch_size=2,
+            )
+            assert result.shape[1] == 1280  # ESM2 embedding dimension
+            assert result.shape[0] == 2  # 2 heavy chains in test data
+
+            # Test 4: TCR data with BCR model (should fail with clear error)
+            with self.assertRaises(ValueError) as context:
+                embed_airr(
+                    self.test_airr_tcr_df,
+                    "H",
+                    "antiberta2",
+                    batch_size=2,
+                )
+            self.assertIn("designed for BCR data", str(context.exception))
+            self.assertIn("only TCR data", str(context.exception))
+
+            # Test 5: BCR data with TCR model (should fail with clear error)
+            with self.assertRaises(ValueError) as context:
+                embed_airr(
+                    self.test_airr_sc_df,
+                    "H",
+                    "tcr-bert",
+                    batch_size=2,
+                )
+            self.assertIn("designed for TCR data", str(context.exception))
+            self.assertIn("only BCR data", str(context.exception))
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"Model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
     def test_immune2vec_embedding(self):
         """Test Immune2Vec embedding (will skip if dependencies not available)."""

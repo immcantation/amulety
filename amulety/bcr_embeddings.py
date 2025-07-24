@@ -207,8 +207,7 @@ def balm_paired(
             """
             subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
         except subprocess.CalledProcessError as e:
-            print(f"Error downloading or extracting model: {e}")
-            return
+            raise RuntimeError(f"Error downloading or extracting BALM-paired model: {e}")
 
     embeddings = custommodel(
         sequences=sequences,
