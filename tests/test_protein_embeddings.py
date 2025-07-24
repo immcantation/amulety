@@ -14,7 +14,10 @@ import torch
 from amulety.amulety import embed
 
 # Skip large model tests on GitHub Actions due to disk space limitations
-SKIP_LARGE_MODELS = os.environ.get("GITHUB_ACTIONS") == "true"
+# Also allow users to skip locally by setting SKIP_LARGE_MODELS=true
+SKIP_LARGE_MODELS = (
+    os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("SKIP_LARGE_MODELS", "").lower() == "true"
+)
 
 
 class TestAmulety(unittest.TestCase):
@@ -58,10 +61,7 @@ class TestAmulety(unittest.TestCase):
                 # Check that protein language model warning was issued
                 assert len(w) > 0
                 warning_messages = [str(warning.message) for warning in w]
-                assert any(
-                    "does not have mechanisms to understand paired chain relationships" in msg
-                    for msg in warning_messages
-                )
+                assert any("does not understand paired chain relationships" in msg for msg in warning_messages)
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
@@ -115,10 +115,7 @@ class TestAmulety(unittest.TestCase):
                 assert len(w) >= 2
                 warning_messages = [str(warning.message) for warning in w]
                 assert any("LH (Light-Heavy) chain order detected" in msg for msg in warning_messages)
-                assert any(
-                    "does not have mechanisms to understand paired chain relationships" in msg
-                    for msg in warning_messages
-                )
+                assert any("does not understand paired chain relationships" in msg for msg in warning_messages)
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")

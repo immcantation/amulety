@@ -207,10 +207,30 @@ def embed_airr(
     elif chain in ["HL", "LH", "H+L"] and not available_chains.issuperset({"H", "L"}):
         missing = {"H", "L"} - available_chains
         raise ValueError(f"Chain '{chain}' requested but missing chains: {', '.join(missing)}")
+    # ===== DETERMINE RECEPTOR TYPE FOR VALIDATION =====
+    # Automatically determine receptor type based on model
+    bcr_models = {"ablang", "antiberty", "antiberta2", "balm-paired"}
+    tcr_models = {"tcr-bert", "tcremp", "tcrt5"}
+    protein_models = {"esm2", "prott5", "immune2vec", "custom"}
+
+    if model in bcr_models:
+        receptor_type = "BCR"
+    elif model in tcr_models:
+        receptor_type = "TCR"
+    elif model in protein_models:
+        receptor_type = "all"  # Protein models can handle both BCR and TCR
+    else:
+        receptor_type = "all"  # Default for unknown models
+
     # ===== PROCESS DATA =====
 
     dat = process_airr(
-        airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col, selection_col=selection_col
+        airr,
+        internal_chain,
+        sequence_col=sequence_col,
+        cell_id_col=cell_id_col,
+        selection_col=selection_col,
+        receptor_type=receptor_type,
     )
     n_dat = dat.shape[0]
 
