@@ -199,7 +199,7 @@ def process_airr(
             cell_id_col,
         )
         if chain_mode in ["HL", "LH", "H+L"]:
-            raise ValueError(f'chain_mode = "{chain_mode}" invalid for bulk mode. Use "H" or "L" for bulk data.')
+            raise ValueError(f'chain = "{chain_mode}" invalid for bulk mode')
         else:
             # For bulk data with single chain (H or L)
             colnames = ["sequence_id", effective_sequence_col]

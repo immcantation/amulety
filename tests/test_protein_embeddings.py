@@ -170,27 +170,27 @@ class TestAmulety(unittest.TestCase):
                 raise
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
-    def test_tcr_prott5_A_embedding(self):
-        """Test ProtT5 with TCR alpha chains (using unified approach)."""
-        # Use generic prott5 function with TCR chain mapping: A -> A (handled internally)
-        embed(self.test_airr_tcr_path, "A", "prott5", "tcr_prott5_A_test.pt", batch_size=2)
-        assert os.path.exists("tcr_prott5_A_test.pt")
-        embeddings = torch.load("tcr_prott5_A_test.pt")
+    def test_tcr_prott5_L_embedding(self):
+        """Test ProtT5 with TCR alpha chains (using unified L notation)."""
+        # Use generic prott5 function with TCR chain mapping: alpha -> L (unified approach)
+        embed(self.test_airr_tcr_path, "L", "prott5", "tcr_prott5_L_test.pt", batch_size=2)
+        assert os.path.exists("tcr_prott5_L_test.pt")
+        embeddings = torch.load("tcr_prott5_L_test.pt")
         # ProtT5: 1024 dim, ESM2 fallback: 1280 dim
         assert embeddings.shape[1] in [1024, 1280]
         assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("tcr_prott5_A_test.pt")
+        os.remove("tcr_prott5_L_test.pt")
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
-    def test_tcr_prott5_AB_embedding(self):
-        """Test ProtT5 with TCR alpha-beta pairs (using unified approach)."""
-        # Use generic prott5 function with TCR chain mapping: AB -> AB (handled internally)
-        embed(self.test_airr_tcr_path, "AB", "prott5", "tcr_prott5_AB_test.pt", batch_size=2)
-        assert os.path.exists("tcr_prott5_AB_test.pt")
-        embeddings = torch.load("tcr_prott5_AB_test.pt")
+    def test_tcr_prott5_HL_embedding(self):
+        """Test ProtT5 with TCR alpha-beta pairs (using unified HL notation)."""
+        # Use generic prott5 function with TCR chain mapping: alpha-beta -> HL (unified approach)
+        embed(self.test_airr_tcr_path, "HL", "prott5", "tcr_prott5_HL_test.pt", batch_size=2)
+        assert os.path.exists("tcr_prott5_HL_test.pt")
+        embeddings = torch.load("tcr_prott5_HL_test.pt")
         assert embeddings.shape[1] == 1024  # ProtT5 embedding dimension
         assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-        os.remove("tcr_prott5_AB_test.pt")
+        os.remove("tcr_prott5_HL_test.pt")
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_prott5_bcr_embedding(self):
@@ -283,8 +283,8 @@ class TestAmulety(unittest.TestCase):
                     "antiberta2",
                     batch_size=2,
                 )
-            self.assertIn("designed for BCR data", str(context.exception))
-            self.assertIn("only TCR data", str(context.exception))
+            self.assertIn("trained for BCR data", str(context.exception))
+            self.assertIn("TCR-only data", str(context.exception))
 
             # Test 5: BCR data with TCR model (should fail with clear error)
             with self.assertRaises(ValueError) as context:
@@ -294,8 +294,8 @@ class TestAmulety(unittest.TestCase):
                     "tcr-bert",
                     batch_size=2,
                 )
-            self.assertIn("designed for TCR data", str(context.exception))
-            self.assertIn("only BCR data", str(context.exception))
+            self.assertIn("trained for TCR data", str(context.exception))
+            self.assertIn("BCR-only data", str(context.exception))
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"Model loading failed (corrupted cache): {e}")
