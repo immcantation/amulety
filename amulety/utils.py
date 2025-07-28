@@ -85,6 +85,7 @@ def process_airr(
     receptor_type: str = "all",
     selection_col: str = "duplicate_count",
     use_cdr3_for_tcr: bool = True,
+    mode: str = "concat",
 ):
     """
     Processes AIRR-seq data and returns a pandas DataFrame containing sequences to embed.
@@ -199,49 +200,86 @@ def process_airr(
         )
         if chain_mode in ["HL", "LH", "H+L"]:
             raise ValueError(f'chain_mode = "{chain_mode}" invalid for bulk mode. Use "H" or "L" for bulk data.')
-        #else:
-            #colnames = ["sequence_id", sequence_col]
-            #data = data.loc[data.chain == chain_mode, colnames]
+        else:
+            # For bulk data with single chain (H or L)
+            colnames = ["sequence_id", effective_sequence_col]
+            data = data.loc[data.chain == chain_mode, colnames]
 
     # single-cell only
     elif data[cell_id_col].notna().all():
         logger.info("Processing single-cell data...")
         if chain_mode == "HL":
             logging.info("Concatenating heavy and light chain per cell (HL order)...")
-            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="HL")
+            data = concatenate_heavylight(
+                data, effective_sequence_col, cell_id_col, selection_col, order="HL", mode=mode
+            )
         elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
-            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="LH")
+            data = concatenate_heavylight(
+                data, effective_sequence_col, cell_id_col, selection_col, order="LH", mode=mode
+            )
         elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
-            data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col)
-        #else:
-            #colnames = [cell_id_col, effective_sequence_col]
-            #data = data.loc[data.chain == chain_mode, colnames]
-    #mixed
+            if mode == "tab_locus_gene":
+                # For models like TCREMP that need H+L in tab_locus_gene format
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+            else:
+                # For other models that need H+L in separate entries
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode="tab")
+        else:
+            # For single-cell data with single chain (H or L)
+            if mode == "tab_locus_gene":
+                # For models like TCREMP that need single chains in tab_locus_gene format
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+            else:
+                # For other models that need simple single chain processing
+                colnames = [cell_id_col, effective_sequence_col]
+                data = data.loc[data.chain == chain_mode, colnames]
+    # mixed
     else:
         logger.info("Missing values in %s column. Processing as mixed bulk and single-cell data...", cell_id_col)
-        if chain == "HL":
+        if chain_mode == "HL":
             logger.info("Concatenating heavy and light chain per cell (HL order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="HL")
-        elif chain == "LH":
+            data = concatenate_heavylight(
+                data, effective_sequence_col, cell_id_col, selection_col, order="HL", mode=mode
+            )
+        elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(data, effective_sequence_col, cell_id_col, selection_col, order="LH")
-        elif chain == "H+L":
+            data = concatenate_heavylight(
+                data, effective_sequence_col, cell_id_col, selection_col, order="LH", mode=mode
+            )
+        elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col)
-        #else:
-            #colnames = ["sequence_id", cell_id_col, effective_sequence_col]
-            #data = data.loc[data.chain == chain, colnames]
+            if mode == "tab_locus_gene":
+                # For models like TCREMP that need H+L in tab_locus_gene format
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+            else:
+                # For other models that need H+L in separate entries
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode="tab")
+        else:
+            # For mixed data with single chain (H or L)
+            if mode == "tab_locus_gene":
+                # For models like TCREMP that need single chains in tab_locus_gene format
+                data = data.loc[data[cell_id_col].notna(),]
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+            else:
+                # For other models that need simple single chain processing
+                colnames = ["sequence_id", cell_id_col, effective_sequence_col]
+                data = data.loc[data.chain == chain_mode, colnames]
 
     return data
 
 
 def concatenate_heavylight(
-    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count", order: str = "HL", mode: str = "concat"
+    data: pd.DataFrame,
+    sequence_col: str,
+    cell_id_col: str,
+    selection_col: str = "duplicate_count",
+    order: str = "HL",
+    mode: str = "concat",
 ):
     """
     Concatenates heavy and light chain per cell using AMULETY's unified H/L interface.
@@ -264,7 +302,7 @@ def concatenate_heavylight(
         cell_id_col (str): The name of the column containing the single-cell barcode.
         selection_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
-        mode (str): Mode to use in concatenating sequences. By default it concatenates the sequences (concat), 
+        mode (str): Mode to use in concatenating sequences. By default it concatenates the sequences (concat),
                     it can also tabulate the sequences alone (tab) or together with the locus and segment (tab_locus_gene).
 
     Returns:
@@ -312,25 +350,60 @@ def concatenate_heavylight(
     elif mode == "tab":
         return data_chain
     elif mode == "tab_locus_gene":
-        # Do another pivot
-        data["locus_vgene"] #new column getting the 4 first characters of v_gene
-        data["locus_jgene"] #new column getting the 4 first characters of v_gene
-        data_locus_gene = data.pivot(...)
-        #merge locus_vgene pivot + locus jgene pivot + data-chain pivot
-        #return pivotted df
+        # Create locus_vgene and locus_jgene columns for TCREMP format
+        data_full = data.copy()  # Work with full data before pivot
+
+        # Extract V and J gene information
+        # For V genes: extract locus + V (e.g., TRA -> TRAV, TRB -> TRBV)
+        data_full.loc[:, "locus_vgene"] = data_full["locus"] + "V"
+        # For J genes: extract locus + J (e.g., TRA -> TRAJ, TRB -> TRBJ)
+        data_full.loc[:, "locus_jgene"] = data_full["locus"] + "J"
+
+        # Second pivot for V genes
+        data_vgene = data_full.pivot(index=cell_id_col, columns="locus_vgene", values="v_call")
+        data_vgene = data_vgene.reset_index()
+
+        # Third pivot for J genes
+        data_jgene = data_full.pivot(index=cell_id_col, columns="locus_jgene", values="j_call")
+        data_jgene = data_jgene.reset_index()
+
+        # Merge all three pivoted dataframes
+        result = data_chain.merge(data_vgene, on=cell_id_col, how="outer")
+        result = result.merge(data_jgene, on=cell_id_col, how="outer")
+
+        # Remove columns ending with 'D' (D gene related) as TCREMP doesn't need them
+        d_columns = [col for col in result.columns if col.endswith("D")]
+        if d_columns:
+            result = result.drop(columns=d_columns)
+
+        return result
     else:
-        #throw error mode incorrect.
+        raise ValueError(f"Invalid mode parameter: {mode}. Must be 'concat', 'tab', or 'tab_locus_gene'.")
 
 
-def process_h_plus_l(data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count"):
+def process_h_plus_l(
+    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count", mode: str = "tab"
+):
     """
-    Processes both heavy and light chains separately for H+L format.
+    Processes both heavy and light chains separately for H+L, H, or L formats.
 
-    Returns a DataFrame with both heavy and light chain sequences for each cell,
-    but keeps them as separate entries rather than concatenating them.
+    Returns a DataFrame with heavy and/or light chain sequences for each cell,
+    keeping them as separate entries rather than concatenating them.
+    Supports different output modes including tab_locus_gene format.
 
     If a cell contains multiple chains of the same type, selects the one with highest
     value in the selection column.
+
+    Parameters:
+        data (pandas.DataFrame): Input data containing chain information.
+        sequence_col (str): The name of the column containing the amino acid sequences.
+        cell_id_col (str): The name of the column containing the single-cell barcode.
+        selection_col (str): The name of the numeric column used to select the best chain.
+        mode (str): Output mode - "tab" for simple tabular format, "tab_locus_gene" for
+                   extended format with V/J gene information.
+
+    Returns:
+        pandas.DataFrame: Dataframe with processed chain sequences in the specified format.
     """
     # Validate selection column
     if selection_col not in data.columns:
@@ -344,12 +417,58 @@ def process_h_plus_l(data: pd.DataFrame, sequence_col: str, cell_id_col: str, se
     # Select best chain for each cell and chain type
     data = data.loc[data.groupby([cell_id_col, "chain"])[selection_col].idxmax()]
 
-    # Keep both H and L chains as separate entries
-    colnames = [cell_id_col, "chain", sequence_col]
-    # TODO: we tried to keep all columns here instead.
-    #data = data.loc[:, colnames]
+    # Ensure the sequence column is properly included in the output
+    if sequence_col not in data.columns:
+        raise ValueError(f"Sequence column '{sequence_col}' not found in data.")
 
-    # Add chain type identifier to sequence_id for tracking
-    data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
+    if mode == "tab":
+        # Simple tabular format - keep chains as separate entries
+        # Add chain type identifier to sequence_id for tracking
+        data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
+        return data
 
-    return data
+    elif mode == "tab_locus_gene":
+        # Extended format with V/J gene information for models like TCREMP
+        # This handles H+L, H, or L chains separately with gene information
+
+        # Add chain type identifier to sequence_id for tracking
+        data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
+
+        # Create locus_vgene and locus_jgene columns
+        data.loc[:, "locus_vgene"] = data["locus"] + "V"
+        data.loc[:, "locus_jgene"] = data["locus"] + "J"
+
+        # For each row, create columns for the specific locus V and J genes
+        # This creates a wide format where each chain type gets its own V/J columns
+        result_rows = []
+
+        for _, row in data.iterrows():
+            result_row = {
+                cell_id_col: row[cell_id_col],
+                "sequence_id": row["sequence_id"],
+                sequence_col: row[sequence_col],
+                "chain": row["chain"],
+                "locus": row["locus"],
+            }
+
+            # Add V gene column for this locus
+            v_col_name = row["locus_vgene"]
+            result_row[v_col_name] = row["v_call"]
+
+            # Add J gene column for this locus
+            j_col_name = row["locus_jgene"]
+            result_row[j_col_name] = row["j_call"]
+
+            result_rows.append(result_row)
+
+        result = pd.DataFrame(result_rows)
+
+        # Remove any columns ending with 'D' (D gene related) as TCREMP doesn't need them
+        d_columns = [col for col in result.columns if col.endswith("D")]
+        if d_columns:
+            result = result.drop(columns=d_columns)
+
+        return result
+
+    else:
+        raise ValueError(f"Invalid mode parameter: {mode}. Must be 'tab' or 'tab_locus_gene'.")

@@ -25,6 +25,99 @@ __version__ = version("amulety")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
+def process_chain_data(
+    airr: pd.DataFrame,
+    chain: str,
+    internal_chain: str,
+    sequence_col: str,
+    cell_id_col: str,
+    selection_col: str,
+    receptor_type: str,
+    model_type: str = "standard",
+):
+    """
+    Universal chain data processing function for different chain modes and model types.
+
+    Parameters:
+        airr: AIRR DataFrame
+        chain: Chain mode (H, L, HL, LH, H+L)
+        internal_chain: Internal chain identifier
+        sequence_col: Sequence column name
+        cell_id_col: Cell ID column name
+        selection_col: Selection column name
+        receptor_type: Receptor type
+        model_type: Model type ("standard", "paired_only", "special")
+
+    Returns:
+        tuple: (processed_data_for_embedding, full_processed_data_for_output)
+    """
+    if model_type == "paired_only":
+        # Models that only support paired chains (e.g. BALM-paired)
+        dat = process_airr(
+            airr,
+            internal_chain,
+            sequence_col=sequence_col,
+            cell_id_col=cell_id_col,
+            selection_col=selection_col,
+            receptor_type=receptor_type,
+            mode="concat",
+        )
+        return dat.loc[:, sequence_col], dat
+
+    elif model_type == "special":
+        # Special processing mode (e.g. TCREMP)
+        dat = process_airr(
+            airr,
+            internal_chain,
+            sequence_col=sequence_col,
+            cell_id_col=cell_id_col,
+            selection_col=selection_col,
+            receptor_type=receptor_type,
+            mode="tab_locus_gene",
+        )
+        return dat, dat
+
+    else:
+        # Standard model processing mode
+        if chain in ["HL", "LH"]:
+            # Paired chains: concatenate sequences
+            dat = process_airr(
+                airr,
+                internal_chain,
+                sequence_col=sequence_col,
+                cell_id_col=cell_id_col,
+                selection_col=selection_col,
+                receptor_type=receptor_type,
+                mode="concat",
+            )
+            return dat.loc[:, sequence_col], dat
+        elif chain == "H+L":
+            # Separate chains: return DataFrame with H and L columns
+            dat = process_airr(
+                airr,
+                internal_chain,
+                sequence_col=sequence_col,
+                cell_id_col=cell_id_col,
+                selection_col=selection_col,
+                receptor_type=receptor_type,
+                mode="tab",
+            )
+            return dat, dat  # Return complete DataFrame for both
+        else:  # H or L single chain
+            # Single chain: return single sequence column
+            dat = process_airr(
+                airr,
+                internal_chain,
+                sequence_col=sequence_col,
+                cell_id_col=cell_id_col,
+                selection_col=selection_col,
+                receptor_type=receptor_type,
+                mode="tab",
+            )
+            return dat.loc[:, sequence_col], dat
+
+
 app = typer.Typer()
 stderr = Console(stderr=True)
 stdout = Console()
@@ -222,27 +315,31 @@ def embed_airr(
     else:
         receptor_type = "all"  # Default for unknown models
 
+    # ===== DETECT DATA TYPE AND VALIDATE CHAIN COMPATIBILITY =====
+    # Check if this is bulk data (no cell_id column) or single-cell data
+    is_bulk_data = cell_id_col not in airr.columns
+
+    if is_bulk_data:
+        # Bulk data validation: only individual chains (H, L) are supported
+        if chain in ["HL", "LH", "H+L"]:
+            raise ValueError(f'chain = "{chain}" invalid for bulk mode')
+        logger.info("Detected bulk data format (no cell_id column)")
+    else:
+        logger.info("Detected single-cell data format")
+
     # ===== PROCESS DATA =====
     # Dropping rows were sequence column is NA
-    n_dat = dat.shape[0]
+    n_dat = airr.shape[0]
 
-    dat = dat.dropna(subset=[sequence_col])
-    n_dropped = n_dat - dat.shape[0]
+    airr = airr.dropna(subset=[sequence_col])
+    n_dropped = n_dat - airr.shape[0]
     if n_dropped > 0:
         logger.info("Removed %s rows with missing values in %s", n_dropped, sequence_col)
 
-    #TODO: this part will have to be moved inside each model
-    dat = process_airr(
-        airr,
-        internal_chain,
-        sequence_col=sequence_col,
-        cell_id_col=cell_id_col,
-        selection_col=selection_col,
-        receptor_type=receptor_type,
-    )
+    # Data processing is now moved inside each model for customization
+    # Each model has different requirements for chain processing and input format
 
-    X = dat.loc[:, sequence_col]
-
+    # TODO: this part will have to be moved inside each model
     # ===== MODEL EXECUTION WITH CHAIN VALIDATION =====
     # BCR models
     if model == "ablang":
@@ -252,6 +349,12 @@ def embed_airr(
             raise ValueError(
                 f"Model 'ablang' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
             )
+
+        # Process data with unified pattern
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "antiberta2":
@@ -261,10 +364,12 @@ def embed_airr(
             raise ValueError(
                 f"Model 'antiberta2' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
             )
-        dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col,
-                        selection_col=selection_col, receptor_type=receptor_type)
 
-        X = dat.loc[:, sequence_col]
+        # Process data with unified pattern
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "antiberty":
@@ -274,10 +379,16 @@ def embed_airr(
             raise ValueError(
                 f"Model 'antiberty' supports individual chains only. Use --chain H, --chain L, or --chain H+L instead of --chain {chain}."
             )
+
+        # Process data for antiberty
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "balm-paired":
-        # Check compatible chains
+        # Check compatible chains - BALM-paired ONLY supports paired chains
         supported_chains = ["HL", "LH"]
         if chain not in supported_chains:
             raise ValueError(
@@ -288,6 +399,19 @@ def embed_airr(
                 "Model 'balm-paired' was trained with H-L order. Using L-H order may reduce accuracy.",
                 UserWarning,
             )
+
+        # Process data for BALM-paired - use concat mode for paired chains
+        X, dat = process_chain_data(
+            airr,
+            chain,
+            internal_chain,
+            sequence_col,
+            cell_id_col,
+            selection_col,
+            receptor_type,
+            model_type="paired_only",
+        )
+
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # TCR models
@@ -296,28 +420,80 @@ def embed_airr(
         supported_chains = ["H", "L", "HL", "LH", "H+L"]
         if chain not in supported_chains:
             raise ValueError(f"Model tcr-bert only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
+
+        # TCR-BERT: Only CDR3, supports H+L, H, L, HL/LH
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "tcremp":
-        if sequence_col not "CDR3_aa":
-            raise ValueError(f"Model tcremp was trained on CDR3 aa sequences, please provide CDR3_aa as sequence column.")
+        # TCREMP requires CDR3 sequences - check if we have CDR3 data available
+        from amulety.utils import get_cdr3_sequence_column
+
+        # Check if this is TCR data and if CDR3 columns are available
+        tcr_loci = {"TRA", "TRB", "TRG", "TRD"}
+        present_loci = set(airr["locus"].unique())
+        is_tcr_data = bool(present_loci & tcr_loci)
+
+        if is_tcr_data:
+            # For TCR data, try to get the best CDR3 column
+            effective_sequence_col = get_cdr3_sequence_column(airr, sequence_col)
+            if effective_sequence_col == sequence_col and sequence_col not in ["junction_aa", "cdr3_aa"]:
+                logger.warning(
+                    f"TCREMP was trained on CDR3 sequences, but using {sequence_col}. Consider using junction_aa or cdr3_aa columns if available."
+                )
+        else:
+            # For non-TCR data, require explicit CDR3 column
+            if sequence_col not in ["CDR3_aa", "junction_aa", "cdr3_aa"]:
+                raise ValueError(
+                    "Model tcremp was trained on CDR3 aa sequences. For non-TCR data, please provide CDR3_aa, junction_aa, or cdr3_aa as sequence column."
+                )
         # Check compatible chains
         supported_chains = ["H", "L", "HL", "LH", "H+L"]
         if chain not in supported_chains:
             raise ValueError(f"Model tcremp only accepts {', '.join(supported_chains)} inputs! Got: {chain}")
-        dat = process_airr(airr, internal_chain, sequence_col=sequence_col, cell_id_col=cell_id_col,
-                        selection_col=selection_col, receptor_type=receptor_type, mode="tab_locus_gene")
-        # TODO: Select necessary columns by the model and rename them according to model.
-        X = dat.loc[:, sequence_col]
+
+        # TCREMP: All chain modes use tab_locus_gene to get CDR3 + V/J gene information
+        raw_dat, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="special"
+        )
+
+        # Select necessary columns by the embedding tool and rename them according to TCREMP requirements
+        # TCREMP expects: barcode_or_id, a_cdr3aa, TRAV, TRAJ, b_cdr3aa, TRBV, TRBJ, epitope
+        X = raw_dat[[cell_id_col]].copy()  # Start with cell ID
+        X.rename(columns={cell_id_col: "barcode_or_id"}, inplace=True)
+
+        # Map H/L chains to alpha/beta CDR3 sequences based on available columns
+        if "L" in raw_dat.columns:  # Alpha chain (TRA)
+            X["a_cdr3aa"] = raw_dat["L"]  # L chain maps to alpha
+        if "H" in raw_dat.columns:  # Beta chain (TRB)
+            X["b_cdr3aa"] = raw_dat["H"]  # H chain maps to beta
+
+        # Add V and J gene information if available
+        for gene_col in ["TRAV", "TRAJ", "TRBV", "TRBJ"]:
+            if gene_col in raw_dat.columns:
+                X[gene_col] = raw_dat[gene_col]
+
+        # Add placeholder epitope column (TCREMP format requirement)
+        X["epitope"] = "epitope1"  # Default value
+
         embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "tcrt5":
-        # Check compatible chains
+        # Check compatible chains - TCRT5 only supports H (beta) chains
         supported_chains = ["H"]
         if chain not in supported_chains:
             raise ValueError(
                 f"TCRT5 model only supports H chains (beta chains for TCR). Use --chain H instead of --chain {chain}."
             )
+
+        # TCRT5: Only CDR3, only supports H (beta) chains
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # Immune-specific models (BCR & TCR)
@@ -332,6 +508,12 @@ def embed_airr(
                 f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
                 UserWarning,
             )
+
+        # Process data for immune2vec
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     # Protein models
@@ -346,6 +528,12 @@ def embed_airr(
                 f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
                 UserWarning,
             )
+
+        # Process data for esm2
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "prott5":
@@ -359,6 +547,12 @@ def embed_airr(
                 f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
                 UserWarning,
             )
+
+        # Process data for prott5
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "custom":
@@ -374,6 +568,12 @@ def embed_airr(
             )
         if model_path is None or embedding_dimension is None or max_length is None:
             raise ValueError("For custom model, modelpath, embedding_dimension, and max_length must be provided.")
+
+        # Process data for custom model
+        X, dat = process_chain_data(
+            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+        )
+
         embedding = custommodel(
             sequences=X,
             model_path=model_path,
@@ -546,9 +746,9 @@ def check_deps():
     missing = check_tcr_dependencies()
 
     if not missing:
-        print("✓ All TCR embedding dependencies are installed!")
+        print("All TCR embedding dependencies are installed!")
     else:
-        print(f"\n❌ {len(missing)} dependencies are missing.")
+        print(f"\n{len(missing)} dependencies are missing.")
         print("AMULETY will raise ImportError with installation instructions when these models are used.")
         print("\nTo install missing dependencies:")
         for name, install_cmd in missing:

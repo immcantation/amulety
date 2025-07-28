@@ -22,36 +22,61 @@ logger = logging.getLogger(__name__)
 
 
 def antiberty(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
 ):
     """
-    Embeds sequences using the AntiBERTy model.\n
+    Embeds sequences using the AntiBERTy model.
     The maximum length of the sequences to be embedded is 510.
+
+    Parameters:
+        sequences: pd.Series for single chain or pd.DataFrame for H+L mode
     """
     from antiberty import AntiBERTyRunner
 
     max_seq_length = 510
 
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # H+L mode: DataFrame contains rows with 'chain' column indicating H or L
+        if "chain" in sequences.columns:
+            # Look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+
+            if sequence_col is None:
+                raise ValueError(
+                    f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
+                )
+
+            X = sequences[sequence_col].apply(lambda a: str(a)[:max_seq_length])
+        else:
+            raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
+    else:
+        # Single chain mode
+        X = sequences.apply(lambda a: str(a)[:max_seq_length])
+
     X = X.str.replace("<cls><cls>", "[CLS][CLS]")
     X = X.apply(insert_space_every_other_except_cls)
-    sequences = X.str.replace("  ", " ")
+    sequences_processed = X.str.replace("  ", " ")
 
     antiberty_runner = AntiBERTyRunner()
     model_size = sum(p.numel() for p in antiberty_runner.model.parameters())
     logger.info("AntiBERTy loaded. Size: %s M", round(model_size / 1e6, 2))
     start_time = time.time()
-    n_seqs = len(sequences)
+    n_seqs = len(sequences_processed)
     dim = max_seq_length + 2
 
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
 
     i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
+    for start, end, batch in batch_loader(sequences_processed, batch_size):
         logger.info("Batch %s/%s", i, n_batches)
         x = antiberty_runner.embed(batch)
         x = [a.mean(axis=0) for a in x]
@@ -64,7 +89,7 @@ def antiberty(
 
 
 def ablang(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
 ):
@@ -78,14 +103,39 @@ def ablang(
     This is a key capability for B-cell receptor repertoire sequencing data.
     Maximum sequence length: 160 amino acids.
     Reference: https://github.com/oxpig/AbLang
+
+    Parameters:
+        sequences: pd.Series for single chain or pd.DataFrame for H+L mode
     """
     # device = "cuda" if torch.cuda.is_available() else "cpu"  # Currently unused
     max_seq_length = 160
     # dim = 768  # Currently unused
 
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    sequences = X.values
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # H+L mode: DataFrame contains rows with 'chain' column indicating H or L
+        if "chain" in sequences.columns:
+            # Look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+
+            if sequence_col is None:
+                raise ValueError(
+                    f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
+                )
+
+            X = sequences[sequence_col].apply(lambda a: str(a)[:max_seq_length])
+            sequences_array = X.values
+        else:
+            raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
+    else:
+        # Single chain mode
+        X = sequences.apply(lambda a: str(a)[:max_seq_length])
+        sequences_array = X.values
 
     import ablang
 
@@ -102,7 +152,7 @@ def ablang(
     # We'll use seq-codings (768 values per sequence)
     embeddings_list = []
 
-    for seq in sequences:
+    for seq in sequences_array:
         # AbLang expects sequences as strings
         seq_embedding = heavy_ablang([seq], mode="seqcoding")
         embeddings_list.append(torch.tensor(seq_embedding[0]))
@@ -113,13 +163,16 @@ def ablang(
 
 
 def antiberta2(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
 ):
     """
-    Embeds sequences using the antiBERTa2 RoFormer model.\n
+    Embeds sequences using the antiBERTa2 RoFormer model.
     The maximum length of the sequences to be embedded is 256.
+
+    Parameters:
+        sequences: pd.Series for single chain or pd.DataFrame for H+L mode
     """
 
     from transformers import RoFormerForMaskedLM, RoFormerTokenizer
@@ -127,12 +180,34 @@ def antiberta2(
     max_seq_length = 256
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # H+L mode: DataFrame contains rows with 'chain' column indicating H or L
+        if "chain" in sequences.columns:
+            # Look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+
+            if sequence_col is None:
+                raise ValueError(
+                    f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
+                )
+
+            X = sequences[sequence_col].apply(lambda a: str(a)[:max_seq_length])
+        else:
+            raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
+    else:
+        # Single chain mode
+        X = sequences.apply(lambda a: str(a)[:max_seq_length])
+
     X = X.str.replace("<cls><cls>", "[CLS][CLS]")
     X = X.apply(insert_space_every_other_except_cls)
     X = X.str.replace("  ", " ")
-    sequences = X.values
+    sequences_array = X.values
 
     tokenizer = RoFormerTokenizer.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
     model = RoFormerForMaskedLM.from_pretrained("alchemab/antiberta2", cache_dir=cache_dir)
@@ -141,13 +216,13 @@ def antiberta2(
     logger.info("AntiBERTa2 loaded. Size: %s M", model_size / 1e6)
 
     start_time = time.time()
-    n_seqs = len(sequences)
+    n_seqs = len(sequences_array)
     dim = 1024
     n_batches = math.ceil(n_seqs / batch_size)
     embeddings = torch.empty((n_seqs, dim))
 
     i = 1
-    for start, end, batch in batch_loader(sequences, batch_size):
+    for start, end, batch in batch_loader(sequences_array, batch_size):
         logger.info("Batch %s/%s.", i, n_batches)
         x = torch.tensor(
             [

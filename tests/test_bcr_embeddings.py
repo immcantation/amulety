@@ -299,7 +299,7 @@ class TestAmulety(unittest.TestCase):
         assert os.path.exists("bulk_H_test.pt")
         embeddings = torch.load("bulk_H_test.pt")
         assert embeddings.shape[1] == 512  # AntiBERTy embedding dimension
-        assert embeddings.shape[0] == 4  # 4 H chains in bulk test data (2 BCR + 2 TCR)
+        assert embeddings.shape[0] == 2  # 2 BCR H chains in bulk test data (TCR chains filtered out)
         os.remove("bulk_H_test.pt")
 
     def test_antiberty_bulk_L_embedding(self):
@@ -308,7 +308,7 @@ class TestAmulety(unittest.TestCase):
         assert os.path.exists("bulk_L_test.pt")
         embeddings = torch.load("bulk_L_test.pt")
         assert embeddings.shape[1] == 512  # AntiBERTy embedding dimension
-        assert embeddings.shape[0] == 4  # 4 L chains in bulk test data (2 BCR + 2 TCR)
+        assert embeddings.shape[0] == 2  # 2 BCR L chains in bulk test data (TCR chains filtered out)
         os.remove("bulk_L_test.pt")
 
     def test_antiberta2_bulk_H_embedding(self):
@@ -317,7 +317,7 @@ class TestAmulety(unittest.TestCase):
         assert os.path.exists("bulk_H_test.pt")
         embeddings = torch.load("bulk_H_test.pt")
         assert embeddings.shape[1] == 1024  # AntiBERTa2 embedding dimension
-        assert embeddings.shape[0] == 4  # 4 H chains in bulk test data
+        assert embeddings.shape[0] == 2  # 2 BCR H chains in bulk test data (TCR chains filtered out)
         os.remove("bulk_H_test.pt")
 
     def test_ablang_bulk_H_embedding(self):
@@ -326,7 +326,7 @@ class TestAmulety(unittest.TestCase):
         assert os.path.exists("bulk_H_test.pt")
         embeddings = torch.load("bulk_H_test.pt")
         assert embeddings.shape[1] == 768  # AbLang embedding dimension
-        assert embeddings.shape[0] == 4  # 4 H chains in bulk test data
+        assert embeddings.shape[0] == 2  # 2 BCR H chains in bulk test data (TCR chains filtered out)
         os.remove("bulk_H_test.pt")
 
     def test_bulk_invalid_chain_types(self):

@@ -56,13 +56,13 @@ class TestChainValidation(unittest.TestCase):
                     _ = embed_airr(data, chain, model, output_type="pickle")
                     # For BALM-paired, result might be None due to download failure, but no exception should be raised
                     # The important thing is that the chain validation passes (no ValueError)
-                    print(f"✓ {model} accepts {chain} chains (validation passed)")
+                    print(f"{model} accepts {chain} chains (validation passed)")
                 except ValueError as e:
                     # This should not happen - paired-only models should accept HL/LH
                     self.fail(f"{model} should accept {chain} chains, but got validation error: {e}")
                 except Exception as e:
                     # Other exceptions (like download failures) are acceptable for this test
-                    print(f"✓ {model} accepts {chain} chains (validation passed, but model execution failed: {e})")
+                    print(f"{model} accepts {chain} chains (validation passed, but model execution failed: {e})")
 
     def test_paired_only_models_reject_individual_chains(self):
         """Test that paired-only models reject individual chains."""
@@ -147,7 +147,7 @@ class TestChainValidation(unittest.TestCase):
                         )
                     except ImportError as e:
                         # Skip models that require additional dependencies not installed in test environment
-                        print(f"⚠️ Skipping {model} with {chain} chains - missing dependencies: {e}")
+                        print(f"(warning) Skipping {model} with {chain} chains - missing dependencies: {e}")
                         continue
                     except Exception as e:
                         self.fail(f"{model} should accept {chain} chains with warning, but got error: {e}")
@@ -214,7 +214,7 @@ class TestChainValidation(unittest.TestCase):
                         )
                     except ImportError as e:
                         # Skip models that require additional dependencies not installed in test environment
-                        print(f"⚠️ Skipping {model} with {chain} chains - missing dependencies: {e}")
+                        print(f"(warning) Skipping {model} with {chain} chains - missing dependencies: {e}")
                         continue
                     except Exception as e:
                         self.fail(f"{model} should accept {chain} chains without warning, but got error: {e}")

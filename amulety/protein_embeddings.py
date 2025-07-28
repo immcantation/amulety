@@ -86,7 +86,7 @@ def custommodel(
 
 
 def esm2(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
     model_name: str = "facebook/esm2_t33_650M_UR50D",
@@ -95,18 +95,43 @@ def esm2(
     Embeds sequences using the ESM2 model. The maximum length of the sequences to be embedded is 512. The embedding dimension is 1280.
 
     Args:
-        sequences: Input protein sequences
+        sequences: Input protein sequences (pd.Series for single chain or pd.DataFrame for H+L mode)
         cache_dir: Directory to cache model files
         batch_size: Number of sequences to process in each batch
         model_name: HuggingFace model name or path to fine-tuned model
     """
     max_seq_length = 512
+
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # H+L mode: DataFrame contains rows with sequence data
+        if "chain" in sequences.columns:
+            # Look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+
+            if sequence_col is None:
+                raise ValueError(
+                    f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
+                )
+
+            X = sequences[sequence_col].apply(lambda a: str(a)[:max_seq_length])
+            sequences_array = X.values
+        else:
+            raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
+    else:
+        # Single chain mode
+        X = sequences.apply(lambda a: str(a)[:max_seq_length])
+        sequences_array = X.values
     dim = 1280
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    X = sequences
-    X = X.apply(lambda a: a[:max_seq_length])
-    sequences = X.values
+    # sequences_array is already processed above
+    sequences = sequences_array
 
     tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
     model = AutoModelForMaskedLM.from_pretrained(model_name, cache_dir=cache_dir)
@@ -156,21 +181,47 @@ def esm2(
 
 
 def prott5(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 32,
 ):
     """
-    Embeds BCR or TCR sequences using the ProtT5-XL protein language model (Rostlab/prot_t5_xl_uniref50). The maximum sequence length to embed is 1024 amino acids, and the generated embeddings have a dimension of 1024.
+    Embeds BCR or TCR sequences using the ProtT5-XL protein language model (Rostlab/prot_t5_xl_uniref50).
+    The maximum sequence length to embed is 1024 amino acids, and the generated embeddings have a dimension of 1024.
+
+    Args:
+        sequences: Input protein sequences (pd.Series for single chain or pd.DataFrame for H+L mode)
+        cache_dir: Directory to cache model files
+        batch_size: Number of sequences to process in each batch
     """
     max_seq_length = 1024  # ProtT5 can't handle longer sequences
     dim = 1024
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # bcr_chain = {"A": "L", "B": "H", "AB": "HL"}.get(chain, chain)
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # H+L mode: DataFrame contains rows with sequence data
+        if "chain" in sequences.columns:
+            # Look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
 
-    X = sequences
+            if sequence_col is None:
+                raise ValueError(
+                    f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
+                )
+
+            X = sequences[sequence_col].apply(lambda a: str(a)[:max_seq_length])
+        else:
+            raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
+    else:
+        # Single chain mode
+        X = sequences.apply(lambda a: str(a)[:max_seq_length])
     X = X.apply(lambda a: a[:max_seq_length])
 
     # ProtT5 expects space-separated amino acids
@@ -265,7 +316,7 @@ def prott5(
 
 
 def immune2vec(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
     n_dim: int = 100,
@@ -284,9 +335,8 @@ def immune2vec(
     immune receptor sequences (both BCR and TCR). It uses n-gram decomposition
     of amino acid sequences to learn vector representations.
 
-
     Args:
-        sequences: Input protein sequences
+        sequences: Input protein sequences (pd.Series for single chain or pd.DataFrame for H+L mode)
         cache_dir: Directory to cache model files
         batch_size: Number of sequences to process (not used for Immune2Vec but kept for consistency)
         n_dim: Embedding dimension (default: 100)
@@ -349,6 +399,27 @@ def immune2vec(
 
     logger.info("Starting Immune2Vec embedding...")
     logger.info("Parameters: n_dim=%d, n_gram=%d, window=%d", n_dim, n_gram, window)
+
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # H+L mode: DataFrame contains rows with sequence data
+        if "chain" in sequences.columns:
+            # Look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+
+            if sequence_col is None:
+                raise ValueError(
+                    f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
+                )
+
+            sequences = sequences[sequence_col]
+        else:
+            raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
 
     # Sequences are already cleaned by process_airr function
     if len(sequences) == 0:
