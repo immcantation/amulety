@@ -63,19 +63,13 @@ def process_chain_data(
             receptor_type=receptor_type,
             mode="concat",
         )
-        # Find the actual sequence column in the processed data
-        # For TCR data, sequence_vdj_aa might have been replaced with cdr3_aa
-        possible_seq_cols = [sequence_col, "cdr3_aa", "junction_aa"]
-        actual_seq_col = None
-        for col in possible_seq_cols:
-            if col in dat.columns:
-                actual_seq_col = col
-                break
-
-        if actual_seq_col:
-            return dat.loc[:, actual_seq_col], dat
+        # The sequence column should now be consistently named as sequence_col
+        if sequence_col in dat.columns:
+            return dat.loc[:, sequence_col], dat
         else:
-            raise ValueError(f"No sequence column found in processed data. Available columns: {list(dat.columns)}")
+            raise ValueError(
+                f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
+            )
 
     elif model_type == "special":
         # Special processing mode (e.g. TCREMP)
@@ -103,19 +97,13 @@ def process_chain_data(
                 receptor_type=receptor_type,
                 mode="concat",
             )
-            # Find the actual sequence column in the processed data
-            # For TCR data, sequence_vdj_aa might have been replaced with cdr3_aa
-            possible_seq_cols = [sequence_col, "cdr3_aa", "junction_aa"]
-            actual_seq_col = None
-            for col in possible_seq_cols:
-                if col in dat.columns:
-                    actual_seq_col = col
-                    break
-
-            if actual_seq_col:
-                return dat.loc[:, actual_seq_col], dat
+            # The sequence column should now be consistently named as sequence_col
+            if sequence_col in dat.columns:
+                return dat.loc[:, sequence_col], dat
             else:
-                raise ValueError(f"No sequence column found in processed data. Available columns: {list(dat.columns)}")
+                raise ValueError(
+                    f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
+                )
         elif chain == "H+L":
             # Separate chains: return DataFrame with H and L columns
             dat = process_airr(
@@ -139,19 +127,13 @@ def process_chain_data(
                 receptor_type=receptor_type,
                 mode="tab",
             )
-            # Find the actual sequence column in the processed data
-            # For TCR data, sequence_vdj_aa might have been replaced with cdr3_aa
-            possible_seq_cols = [sequence_col, "cdr3_aa", "junction_aa"]
-            actual_seq_col = None
-            for col in possible_seq_cols:
-                if col in dat.columns:
-                    actual_seq_col = col
-                    break
-
-            if actual_seq_col:
-                return dat.loc[:, actual_seq_col], dat
+            # The sequence column should now be consistently named as sequence_col
+            if sequence_col in dat.columns:
+                return dat.loc[:, sequence_col], dat
             else:
-                raise ValueError(f"No sequence column found in processed data. Available columns: {list(dat.columns)}")
+                raise ValueError(
+                    f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
+                )
 
 
 app = typer.Typer()

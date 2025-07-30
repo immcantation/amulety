@@ -138,7 +138,18 @@ def process_airr(
     # Use CDR3 sequences for TCR data if available and requested
     effective_sequence_col = sequence_col
     if use_cdr3_for_tcr and is_tcr_data:
-        effective_sequence_col = get_cdr3_sequence_column(data, sequence_col)
+        detected_cdr3_col = get_cdr3_sequence_column(data, sequence_col)
+        if detected_cdr3_col != sequence_col:
+            # Replace the original sequence_col with the detected CDR3 column for consistency
+            if sequence_col in data.columns:
+                # Drop the original sequence column to avoid duplicate column names
+                data = data.drop(columns=[sequence_col])
+            # Rename the detected CDR3 column to the expected sequence_col name
+            data = data.rename(columns={detected_cdr3_col: sequence_col})
+            logger.info(
+                f"Using CDR3 sequences from '{detected_cdr3_col}' column as '{sequence_col}' for consistent output"
+            )
+        effective_sequence_col = sequence_col
 
     # ===== RECEPTOR TYPE VALIDATION =====
     bcr_loci = {"IGH", "IGL", "IGK"}

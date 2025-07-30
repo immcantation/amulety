@@ -87,13 +87,15 @@ class TestAmulety(unittest.TestCase):
 
         # Check first pair
         if result.shape[0] > 0:
+            # The sequence column should now be consistently named as sequence_vdj_aa
             seq = result.iloc[0]["sequence_vdj_aa"]
             assert "<cls><cls>" in seq
 
             parts = seq.split("<cls><cls>")
             # First part should be beta (TRB), second part should be alpha (TRA)
-            beta_seq = data[data.locus == "TRB"].iloc[0]["sequence_vdj_aa"]
-            alpha_seq = data[data.locus == "TRA"].iloc[0]["sequence_vdj_aa"]
+            # Use cdr3_aa from original data since that's what gets concatenated for TCR
+            beta_seq = data[data.locus == "TRB"].iloc[0]["cdr3_aa"]
+            alpha_seq = data[data.locus == "TRA"].iloc[0]["cdr3_aa"]
 
             assert parts[0] == beta_seq  # Beta first
             assert parts[1] == alpha_seq  # Alpha second
@@ -180,6 +182,7 @@ class TestAmulety(unittest.TestCase):
         assert result_hl.shape[0] == 6  # 3 BCR + 3 TCR pairs
 
         # Verify that sequences contain both BCR and TCR data
+        # The sequence column should now be consistently named as sequence_vdj_aa
         assert any("EVQL" in seq for seq in result_h["sequence_vdj_aa"])  # BCR signature
         assert any("CASS" in seq for seq in result_h["sequence_vdj_aa"])  # TCR signature
 
@@ -231,6 +234,7 @@ class TestAmulety(unittest.TestCase):
         # Test TCR H chain processing (beta chains)
         result_tcr_h = process_airr(self.test_bulk_df, "H", receptor_type="TCR")
         assert result_tcr_h.shape[0] == 2  # 2 TCR beta chains
+        # The sequence column should now be consistently named as sequence_vdj_aa
         assert all(result_tcr_h["sequence_vdj_aa"].str.contains("CASS"))  # TCR beta chain signatures
 
         # Test unified processing (all H chains)
@@ -248,6 +252,7 @@ class TestAmulety(unittest.TestCase):
         # Test TCR L chain processing (alpha chains)
         result_tcr_l = process_airr(self.test_bulk_df, "L", receptor_type="TCR")
         assert result_tcr_l.shape[0] == 2  # 2 TCR alpha chains
+        # The sequence column should now be consistently named as sequence_vdj_aa
         assert all(result_tcr_l["sequence_vdj_aa"].str.contains("CAV"))  # TCR alpha chain signatures
 
         # Test unified processing (all L chains)
