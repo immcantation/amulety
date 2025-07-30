@@ -38,7 +38,7 @@ Different models have specific input chain requirements based on how they were t
 Custom Light Chain Selection
 =============================
 
-When using paired chains (``--chain HL``), AMULETY automatically selects the best light chain when multiple light chains exist for the same cell. By default, it uses the ``duplicate_count`` column, but you can specify a custom numeric column using the ``--selection-col`` parameter.  The column must contain numeric values (integers or floats), and AMULETY selects the chain with the highest value.
+When using paired chains (``--chain HL``), AMULETY automatically selects the best light chain when multiple light chains exist for the same cell. By default, it uses the ``duplicate_count`` column, but you can specify a custom numeric column using the ``--duplicate-col`` parameter.  The column must contain numeric values (integers or floats), and AMULETY selects the chain with the highest value.
 
 
 

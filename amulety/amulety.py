@@ -32,7 +32,7 @@ def process_chain_data(
     internal_chain: str,
     sequence_col: str,
     cell_id_col: str,
-    selection_col: str,
+    duplicate_col: str,
     receptor_type: str,
     model_type: str = "standard",
 ):
@@ -45,7 +45,7 @@ def process_chain_data(
         internal_chain: Internal chain identifier
         sequence_col: Sequence column name
         cell_id_col: Cell ID column name
-        selection_col: Selection column name
+        duplicate_col: Selection column name
         receptor_type: Receptor type
         model_type: Model type ("standard", "paired_only", "special")
 
@@ -59,11 +59,23 @@ def process_chain_data(
             internal_chain,
             sequence_col=sequence_col,
             cell_id_col=cell_id_col,
-            selection_col=selection_col,
+            duplicate_col=duplicate_col,
             receptor_type=receptor_type,
             mode="concat",
         )
-        return dat.loc[:, sequence_col], dat
+        # Find the actual sequence column in the processed data
+        # For TCR data, sequence_vdj_aa might have been replaced with cdr3_aa
+        possible_seq_cols = [sequence_col, "cdr3_aa", "junction_aa"]
+        actual_seq_col = None
+        for col in possible_seq_cols:
+            if col in dat.columns:
+                actual_seq_col = col
+                break
+
+        if actual_seq_col:
+            return dat.loc[:, actual_seq_col], dat
+        else:
+            raise ValueError(f"No sequence column found in processed data. Available columns: {list(dat.columns)}")
 
     elif model_type == "special":
         # Special processing mode (e.g. TCREMP)
@@ -72,7 +84,7 @@ def process_chain_data(
             internal_chain,
             sequence_col=sequence_col,
             cell_id_col=cell_id_col,
-            selection_col=selection_col,
+            duplicate_col=duplicate_col,
             receptor_type=receptor_type,
             mode="tab_locus_gene",
         )
@@ -87,11 +99,23 @@ def process_chain_data(
                 internal_chain,
                 sequence_col=sequence_col,
                 cell_id_col=cell_id_col,
-                selection_col=selection_col,
+                duplicate_col=duplicate_col,
                 receptor_type=receptor_type,
                 mode="concat",
             )
-            return dat.loc[:, sequence_col], dat
+            # Find the actual sequence column in the processed data
+            # For TCR data, sequence_vdj_aa might have been replaced with cdr3_aa
+            possible_seq_cols = [sequence_col, "cdr3_aa", "junction_aa"]
+            actual_seq_col = None
+            for col in possible_seq_cols:
+                if col in dat.columns:
+                    actual_seq_col = col
+                    break
+
+            if actual_seq_col:
+                return dat.loc[:, actual_seq_col], dat
+            else:
+                raise ValueError(f"No sequence column found in processed data. Available columns: {list(dat.columns)}")
         elif chain == "H+L":
             # Separate chains: return DataFrame with H and L columns
             dat = process_airr(
@@ -99,7 +123,7 @@ def process_chain_data(
                 internal_chain,
                 sequence_col=sequence_col,
                 cell_id_col=cell_id_col,
-                selection_col=selection_col,
+                duplicate_col=duplicate_col,
                 receptor_type=receptor_type,
                 mode="tab",
             )
@@ -111,11 +135,23 @@ def process_chain_data(
                 internal_chain,
                 sequence_col=sequence_col,
                 cell_id_col=cell_id_col,
-                selection_col=selection_col,
+                duplicate_col=duplicate_col,
                 receptor_type=receptor_type,
                 mode="tab",
             )
-            return dat.loc[:, sequence_col], dat
+            # Find the actual sequence column in the processed data
+            # For TCR data, sequence_vdj_aa might have been replaced with cdr3_aa
+            possible_seq_cols = [sequence_col, "cdr3_aa", "junction_aa"]
+            actual_seq_col = None
+            for col in possible_seq_cols:
+                if col in dat.columns:
+                    actual_seq_col = col
+                    break
+
+            if actual_seq_col:
+                return dat.loc[:, actual_seq_col], dat
+            else:
+                raise ValueError(f"No sequence column found in processed data. Available columns: {list(dat.columns)}")
 
 
 app = typer.Typer()
@@ -227,7 +263,7 @@ def embed_airr(
     max_length: int = None,
     model_path: str = None,
     output_type: str = "pickle",
-    selection_col: str = "duplicate_count",
+    duplicate_col: str = "duplicate_count",
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
@@ -250,7 +286,7 @@ def embed_airr(
         max_length (int): The maximum sequence length for custom models.
         model_path (str): The path to the custom model.
         output_type (str): The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
-        selection_col (str): The name of the numeric column used to select the best chain when
+        duplicate_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
 
     """
@@ -352,7 +388,7 @@ def embed_airr(
 
         # Process data with unified pattern
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -367,7 +403,7 @@ def embed_airr(
 
         # Process data with unified pattern
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -382,7 +418,7 @@ def embed_airr(
 
         # Process data for antiberty
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -407,7 +443,7 @@ def embed_airr(
             internal_chain,
             sequence_col,
             cell_id_col,
-            selection_col,
+            duplicate_col,
             receptor_type,
             model_type="paired_only",
         )
@@ -423,7 +459,7 @@ def embed_airr(
 
         # TCR-BERT: Only CDR3, supports H+L, H, L, HL/LH
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -457,7 +493,7 @@ def embed_airr(
 
         # TCREMP: All chain modes use tab_locus_gene to get CDR3 + V/J gene information
         raw_dat, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="special"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="special"
         )
 
         # Select necessary columns by the embedding tool and rename them according to TCREMP requirements
@@ -491,7 +527,7 @@ def embed_airr(
 
         # TCRT5: Only CDR3, only supports H (beta) chains
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -511,7 +547,7 @@ def embed_airr(
 
         # Process data for immune2vec
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -531,7 +567,7 @@ def embed_airr(
 
         # Process data for esm2
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -550,7 +586,7 @@ def embed_airr(
 
         # Process data for prott5
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -571,7 +607,7 @@ def embed_airr(
 
         # Process data for custom model
         X, dat = process_chain_data(
-            airr, chain, internal_chain, sequence_col, cell_id_col, selection_col, receptor_type, model_type="standard"
+            airr, chain, internal_chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
         )
 
         embedding = custommodel(
@@ -694,10 +730,11 @@ def embed(
         int,
         typer.Option(help="Maximum sequence length for custom model. Required for 'custom' model."),
     ] = None,
-    selection_col: Annotated[
+    duplicate_col: Annotated[
         str,
         typer.Option(
-            help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined."
+            "--duplicate-col",
+            help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined.",
         ),
     ] = "duplicate_count",
 ):
@@ -727,7 +764,7 @@ def embed(
         max_length=max_length,
         model_path=model_path,
         output_type=output_type,
-        selection_col=selection_col,
+        duplicate_col=duplicate_col,
     )
 
     if output_type == "pickle":

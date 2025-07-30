@@ -162,10 +162,10 @@ When using paired chains (`--chain HL`), AMULETY automatically selects the best 
 amulety embed --chain HL --model antiberta2 --output-file-path embeddings.pt input.tsv
 
 # Custom selection: use a quality score column
-amulety embed --chain HL --model antiberta2 --selection-col quality_score --output-file-path embeddings.pt input.tsv
+amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt input.tsv
 
 # Custom selection: use UMI count
-amulety embed --chain HL --model antiberta2 --selection-col umi_count --output-file-path embeddings.pt input.tsv
+amulety embed --chain HL --model antiberta2 --duplicate-col umi_count --output-file-path embeddings.pt input.tsv
 ```
 
 **Requirements for Custom Selection Columns:**
@@ -199,7 +199,7 @@ data.to_csv('enhanced_input.tsv', sep='\t', index=False)
 Then use with AMULETY:
 
 ```bash
-amulety embed --chain HL --model antiberta2 --selection-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
+amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
 ```
 
 ## Contact

@@ -83,7 +83,7 @@ def process_airr(
     sequence_col: str = "sequence_vdj_aa",
     cell_id_col: str = "cell_id",
     receptor_type: str = "all",
-    selection_col: str = "duplicate_count",
+    duplicate_col: str = "duplicate_count",
     use_cdr3_for_tcr: bool = True,
     mode: str = "concat",
 ):
@@ -103,7 +103,7 @@ def process_airr(
                            - "BCR": validates only BCR chains (IGH, IGL, IGK) are present
                            - "TCR": validates only TCR chains (TRA, TRB, TRG, TRD) are present
                            - "all": allows both BCR and TCR chains in the same file
-        selection_col (str): The name of the numeric column used to select the best chain when
+        duplicate_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
         use_cdr3_for_tcr (bool): Whether to automatically use CDR3 sequences for TCR data when available.
                                Default: True. Set to False to force use of sequence_col for all data.
@@ -211,26 +211,28 @@ def process_airr(
         if chain_mode == "HL":
             logging.info("Concatenating heavy and light chain per cell (HL order)...")
             data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, selection_col, order="HL", mode=mode
+                data, effective_sequence_col, cell_id_col, duplicate_col, order="HL", mode=mode
             )
         elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
             data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, selection_col, order="LH", mode=mode
+                data, effective_sequence_col, cell_id_col, duplicate_col, order="LH", mode=mode
             )
         elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need H+L in tab_locus_gene format
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need H+L in separate entries
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode="tab")
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode="tab")
         else:
             # For single-cell data with single chain (H or L)
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need single chains in tab_locus_gene format
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+                # First filter to only the requested chain type
+                data_filtered = data.loc[data.chain == chain_mode].copy()
+                data = process_h_plus_l(data_filtered, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need simple single chain processing
                 colnames = [cell_id_col, effective_sequence_col]
@@ -242,29 +244,29 @@ def process_airr(
             logger.info("Concatenating heavy and light chain per cell (HL order)...")
             data = data.loc[data[cell_id_col].notna(),]
             data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, selection_col, order="HL", mode=mode
+                data, effective_sequence_col, cell_id_col, duplicate_col, order="HL", mode=mode
             )
         elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
             data = data.loc[data[cell_id_col].notna(),]
             data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, selection_col, order="LH", mode=mode
+                data, effective_sequence_col, cell_id_col, duplicate_col, order="LH", mode=mode
             )
         elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             data = data.loc[data[cell_id_col].notna(),]
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need H+L in tab_locus_gene format
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need H+L in separate entries
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode="tab")
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode="tab")
         else:
             # For mixed data with single chain (H or L)
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need single chains in tab_locus_gene format
                 data = data.loc[data[cell_id_col].notna(),]
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, selection_col, mode=mode)
+                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need simple single chain processing
                 colnames = ["sequence_id", cell_id_col, effective_sequence_col]
@@ -277,7 +279,7 @@ def concatenate_heavylight(
     data: pd.DataFrame,
     sequence_col: str,
     cell_id_col: str,
-    selection_col: str = "duplicate_count",
+    duplicate_col: str = "duplicate_count",
     order: str = "HL",
     mode: str = "concat",
 ):
@@ -310,23 +312,23 @@ def concatenate_heavylight(
                          Format: HEAVY<cls><cls>LIGHT for each cell.
 
     Raises:
-        ValueError: If required columns are missing or selection_col is not numeric.
+        ValueError: If required columns are missing or duplicate_col is not numeric.
     """
-    colnames = [cell_id_col, "locus", selection_col, sequence_col]
+    colnames = [cell_id_col, "locus", duplicate_col, sequence_col]
     missing_cols = [col for col in colnames if col not in data.columns]
     if missing_cols:
         raise ValueError(
             f"Column(s) {missing_cols} is/are not present in the input data and are needed to concatenate heavy and light chains."
         )
 
-    # Check that selection_col is numeric
-    if not pd.api.types.is_numeric_dtype(data[selection_col]):
+    # Check that duplicate_col is numeric
+    if not pd.api.types.is_numeric_dtype(data[duplicate_col]):
         raise ValueError(
-            f"Selection column '{selection_col}' must be numeric. Found dtype: {data[selection_col].dtype}"
+            f"Selection column '{duplicate_col}' must be numeric. Found dtype: {data[duplicate_col].dtype}"
         )
 
-    # if tie in maximum selection_col value, return the first occurrence
-    data = data.loc[data.groupby([cell_id_col, "chain"])[selection_col].idxmax()]
+    # if tie in maximum duplicate_col value, return the first occurrence
+    data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
 
     # TODO: implement the case for all modes
     # First pivot dataframe according to chain column values (H and L)
@@ -372,9 +374,9 @@ def concatenate_heavylight(
         result = result.merge(data_jgene, on=cell_id_col, how="outer")
 
         # Remove columns ending with 'D' (D gene related) as TCREMP doesn't need them
-        d_columns = [col for col in result.columns if col.endswith("D")]
-        if d_columns:
-            result = result.drop(columns=d_columns)
+        # d_columns = [col for col in result.columns if col.endswith("D")]
+        # if d_columns:
+        #     result = result.drop(columns=d_columns)
 
         return result
     else:
@@ -382,7 +384,7 @@ def concatenate_heavylight(
 
 
 def process_h_plus_l(
-    data: pd.DataFrame, sequence_col: str, cell_id_col: str, selection_col: str = "duplicate_count", mode: str = "tab"
+    data: pd.DataFrame, sequence_col: str, cell_id_col: str, duplicate_col: str = "duplicate_count", mode: str = "tab"
 ):
     """
     Processes both heavy and light chains separately for H+L, H, or L formats.
@@ -398,7 +400,7 @@ def process_h_plus_l(
         data (pandas.DataFrame): Input data containing chain information.
         sequence_col (str): The name of the column containing the amino acid sequences.
         cell_id_col (str): The name of the column containing the single-cell barcode.
-        selection_col (str): The name of the numeric column used to select the best chain.
+        duplicate_col (str): The name of the numeric column used to select the best chain.
         mode (str): Output mode - "tab" for simple tabular format, "tab_locus_gene" for
                    extended format with V/J gene information.
 
@@ -406,16 +408,16 @@ def process_h_plus_l(
         pandas.DataFrame: Dataframe with processed chain sequences in the specified format.
     """
     # Validate selection column
-    if selection_col not in data.columns:
-        raise ValueError(f"Selection column '{selection_col}' not found in data.")
+    if duplicate_col not in data.columns:
+        raise ValueError(f"Selection column '{duplicate_col}' not found in data.")
 
-    if not pd.api.types.is_numeric_dtype(data[selection_col]):
+    if not pd.api.types.is_numeric_dtype(data[duplicate_col]):
         raise ValueError(
-            f"Selection column '{selection_col}' must be numeric. Found dtype: {data[selection_col].dtype}"
+            f"Selection column '{duplicate_col}' must be numeric. Found dtype: {data[duplicate_col].dtype}"
         )
 
     # Select best chain for each cell and chain type
-    data = data.loc[data.groupby([cell_id_col, "chain"])[selection_col].idxmax()]
+    data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
 
     # Ensure the sequence column is properly included in the output
     if sequence_col not in data.columns:
