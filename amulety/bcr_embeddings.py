@@ -41,7 +41,7 @@ def antiberty(
     if isinstance(sequences, pd.DataFrame):
         # H+L mode: DataFrame contains rows with 'chain' column indicating H or L
         if "chain" in sequences.columns:
-            # Look for common sequence column names
+            # Use the sequence column that the user provides
             sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
             sequence_col = None
             for col in sequence_col_candidates:
@@ -58,7 +58,7 @@ def antiberty(
         else:
             raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
     else:
-        # Single chain mode
+        # Single chain mode - sequences is a Series
         X = sequences.apply(lambda a: str(a)[:max_seq_length])
 
     X = X.str.replace("<cls><cls>", "[CLS][CLS]")
@@ -107,15 +107,18 @@ def ablang(
     Parameters:
         sequences: pd.Series for single chain or pd.DataFrame for H+L mode
     """
-    # device = "cuda" if torch.cuda.is_available() else "cpu"  # Currently unused
+    try:
+        import ablang
+    except ImportError as e:
+        raise ImportError("AbLang is not installed. Please install it using: pip install ablang") from e
+
     max_seq_length = 160
-    # dim = 768  # Currently unused
 
     # Handle both Series (single chain) and DataFrame (H+L) inputs
     if isinstance(sequences, pd.DataFrame):
         # H+L mode: DataFrame contains rows with 'chain' column indicating H or L
         if "chain" in sequences.columns:
-            # Look for common sequence column names
+            # Use the sequence column that the user provides
             sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
             sequence_col = None
             for col in sequence_col_candidates:
@@ -128,37 +131,71 @@ def ablang(
                     f"No recognized sequence column found in DataFrame. Expected one of: {sequence_col_candidates}"
                 )
 
-            X = sequences[sequence_col].apply(lambda a: str(a)[:max_seq_length])
-            sequences_array = X.values
+            # Process sequences and track chain types
+            sequences_data = []
+            for _, row in sequences.iterrows():
+                seq = str(row[sequence_col])[:max_seq_length]
+                chain_type = row["chain"]
+                sequences_data.append((seq, chain_type))
         else:
             raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
     else:
-        # Single chain mode
-        X = sequences.apply(lambda a: str(a)[:max_seq_length])
-        sequences_array = X.values
+        # Single chain mode - assume heavy chain as default
+        sequences_data = [(str(seq)[:max_seq_length], "H") for seq in sequences]
 
-    import ablang
+    # Initialize AbLang models
+    heavy_ablang = None
+    light_ablang = None
 
-    # Initialize AbLang model
-    # AbLang has separate models for heavy and light chains
-    # For simplicity, we'll use the heavy chain model as default
-    heavy_ablang = ablang.pretrained("heavy")
-    heavy_ablang.freeze()
+    # Load models based on chain types present
+    chain_types = set(chain_type for _, chain_type in sequences_data)
 
-    logger.info("AbLang model loaded successfully")
+    if "H" in chain_types:
+        heavy_ablang = ablang.pretrained("heavy")
+        heavy_ablang.freeze()
+        logger.info("AbLang heavy chain model loaded")
 
-    # Generate embeddings using AbLang
-    # AbLang can generate different types of embeddings
-    # We'll use seq-codings (768 values per sequence)
+    if "L" in chain_types:
+        light_ablang = ablang.pretrained("light")
+        light_ablang.freeze()
+        logger.info("AbLang light chain model loaded")
+
+    # Generate embeddings using appropriate models
     embeddings_list = []
+    start_time = time.time()
+    n_seqs = len(sequences_data)
+    n_batches = math.ceil(n_seqs / batch_size)
 
-    for seq in sequences_array:
-        # AbLang expects sequences as strings
-        seq_embedding = heavy_ablang([seq], mode="seqcoding")
-        embeddings_list.append(torch.tensor(seq_embedding[0]))
+    # Process in batches for efficiency
+    i = 1
+    for start_idx in range(0, n_seqs, batch_size):
+        end_idx = min(start_idx + batch_size, n_seqs)
+        batch_data = sequences_data[start_idx:end_idx]
+
+        logger.info("Batch %s/%s", i, n_batches)
+
+        for seq, chain_type in batch_data:
+            # Select appropriate model based on chain type
+            if chain_type == "H" and heavy_ablang is not None:
+                model = heavy_ablang
+            elif chain_type == "L" and light_ablang is not None:
+                model = light_ablang
+            else:
+                # Fallback to heavy model if light model not loaded or unknown chain type
+                if heavy_ablang is not None:
+                    model = heavy_ablang
+                else:
+                    model = light_ablang
+
+            # Generate embedding for single sequence
+            seq_embedding = model([seq], mode="seqcoding")
+            embeddings_list.append(torch.tensor(seq_embedding[0]))
+
+        i += 1
 
     embeddings = torch.stack(embeddings_list)
-    logger.info("AbLang embedding completed")
+    end_time = time.time()
+    logger.info("AbLang embedding completed. Took %s seconds", round(end_time - start_time, 2))
     return embeddings
 
 
@@ -184,7 +221,7 @@ def antiberta2(
     if isinstance(sequences, pd.DataFrame):
         # H+L mode: DataFrame contains rows with 'chain' column indicating H or L
         if "chain" in sequences.columns:
-            # Look for common sequence column names
+            # Use the sequence column that the user provides
             sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
             sequence_col = None
             for col in sequence_col_candidates:
@@ -201,7 +238,7 @@ def antiberta2(
         else:
             raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
     else:
-        # Single chain mode
+        # Single chain mode - sequences is a Series
         X = sequences.apply(lambda a: str(a)[:max_seq_length])
 
     X = X.str.replace("<cls><cls>", "[CLS][CLS]")
@@ -258,7 +295,7 @@ def antiberta2(
 
 
 def balm_paired(
-    sequences: pd.Series,
+    sequences,
     cache_dir: str = "/tmp/amulety",
     batch_size: int = 50,
 ):

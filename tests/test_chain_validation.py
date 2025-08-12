@@ -92,6 +92,10 @@ class TestChainValidation(unittest.TestCase):
                 try:
                     result = embed_airr(data, chain, model, output_type="pickle")
                     self.assertIsNotNone(result)
+                except ImportError as e:
+                    # Skip models that require additional dependencies not installed in test environment
+                    print(f"(warning) Skipping {model} with {chain} chains - missing dependencies: {e}")
+                    continue
                 except Exception as e:
                     self.fail(f"{model} should accept {chain} chains, but got error: {e}")
 
@@ -109,8 +113,8 @@ class TestChainValidation(unittest.TestCase):
             except Exception as e:
                 self.fail(f"{model} should accept H chains, but got error: {e}")
 
-    def test_h_chain_only_models_reject_other_chains(self):
-        """Test that H-chain-only models reject non-H chains."""
+    def test_h_chain_only_models_warn_for_other_chains(self):
+        """Test that H-chain-only models warn for non-H chains but continue processing."""
         h_chain_only_models = ["tcrt5"]  # TCRT5 only supports H chains (beta chains for TCR)
         invalid_chains = ["L", "HL", "LH", "H+L"]
 
@@ -118,12 +122,29 @@ class TestChainValidation(unittest.TestCase):
             data = self.tcr_data  # TCR data for TCR models
 
             for chain in invalid_chains:
-                with self.assertRaises(ValueError) as context:
-                    embed_airr(data, chain, model, output_type="pickle")
+                with warnings.catch_warnings(record=True) as w:
+                    warnings.simplefilter("always")
+                    try:
+                        embed_airr(data, chain, model, output_type="pickle")
+                        # Should issue a warning but not raise an error
+                        self.assertTrue(len(w) > 0, f"{model} should warn for {chain} chains")
 
-                error_msg = str(context.exception)
-                self.assertIn("only supports H chains", error_msg)
-                self.assertIn("beta chains for TCR", error_msg)
+                        # Find the specific warning about chain compatibility
+                        chain_warning_found = False
+                        for warning in w:
+                            warning_msg = str(warning.message)
+                            if "only supports H chains" in warning_msg and "beta chains for TCR" in warning_msg:
+                                chain_warning_found = True
+                                break
+
+                        self.assertTrue(
+                            chain_warning_found,
+                            f"{model} should warn about chain compatibility for {chain} chains. "
+                            f"Warnings found: {[str(warning.message) for warning in w]}",
+                        )
+                    except ImportError:
+                        # Skip if model is not installed
+                        pass
 
     def test_protein_language_models_warn_for_paired_chains(self):
         """Test that protein language models warn for paired chains."""

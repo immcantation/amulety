@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def custommodel(
-    sequences: pd.Series,
+    sequences,
     model_path: str,
     embedding_dimension: int,
     max_seq_length: int,

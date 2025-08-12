@@ -83,7 +83,7 @@ jobs:
             fi
             if [ $i -eq 3 ]; then
               echo "All attempts failed, skipping IgBlast test"
-              exit 0
+              exit 1
             fi
           done
 
@@ -99,7 +99,7 @@ jobs:
             fi
             if [ $i -eq 3 ]; then
               echo "Download failed, skipping IgBlast test"
-              exit 0
+              exit 1
             fi
           done
 

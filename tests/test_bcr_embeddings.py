@@ -330,11 +330,18 @@ class TestAmulety(unittest.TestCase):
         os.remove("bulk_H_test.pt")
 
     def test_bulk_invalid_chain_types(self):
-        """Test that bulk data rejects paired chain types."""
+        """Test that bulk data rejects paired chain types (HL, LH) but allows H+L."""
         # Test that HL is not allowed for bulk data - should fail on bulk mode check first
         with pytest.raises(ValueError, match='chain = "HL" invalid for bulk mode'):
             embed(self.test_bulk_path, "HL", "antiberty", "should_fail.pt")
 
-        # Test that H+L is not allowed for bulk data
-        with pytest.raises(ValueError, match='chain = "H\\+L" invalid for bulk mode'):
-            embed(self.test_bulk_path, "H+L", "antiberty", "should_fail.pt")
+        # Test that H+L is now allowed for bulk data (separate heavy and light chains)
+        try:
+            embed(self.test_bulk_path, "H+L", "antiberty", "bulk_H_plus_L_test.pt")
+            assert os.path.exists("bulk_H_plus_L_test.pt")
+            embeddings = torch.load("bulk_H_plus_L_test.pt")
+            assert embeddings.shape[1] == 512  # AntiBERTy embedding dimension
+            assert embeddings.shape[0] == 4  # 2 BCR H chains + 2 BCR L chains in bulk test data
+            os.remove("bulk_H_plus_L_test.pt")
+        except Exception as e:
+            pytest.fail(f"H+L should be allowed for bulk data, but got error: {e}")

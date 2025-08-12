@@ -260,7 +260,7 @@ class TestAmulety(unittest.TestCase):
         assert result_all_l.shape[0] == 4  # 2 BCR + 2 TCR light chains
 
     def test_bulk_data_invalid_chain_types(self):
-        """Test that bulk data rejects paired chain types (HL, LH, H+L)."""
+        """Test that bulk data rejects paired chain types (HL, LH) but allows H+L."""
         # Test that HL is not allowed for bulk data
         with pytest.raises(ValueError, match='chain = "HL" invalid for bulk mode'):
             process_airr(self.test_bulk_df, "HL")
@@ -269,9 +269,13 @@ class TestAmulety(unittest.TestCase):
         with pytest.raises(ValueError, match='chain = "LH" invalid for bulk mode'):
             process_airr(self.test_bulk_df, "LH")
 
-        # Test that H+L is not allowed for bulk data
-        with pytest.raises(ValueError, match='chain = "H\\+L" invalid for bulk mode'):
-            process_airr(self.test_bulk_df, "H+L")
+        # Test that H+L is now allowed for bulk data (separate heavy and light chains)
+        try:
+            result = process_airr(self.test_bulk_df, "H+L")
+            assert result.shape[0] > 0  # Should return some data
+            assert "chain" in result.columns  # Should have chain column
+        except Exception as e:
+            pytest.fail(f"H+L should be allowed for bulk data, but got error: {e}")
 
     def test_bulk_data_columns(self):
         """Test that bulk data processing returns correct columns."""

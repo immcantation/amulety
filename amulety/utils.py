@@ -1,5 +1,6 @@
 """Main module."""
 import logging
+import subprocess
 import warnings
 from typing import Iterable
 
@@ -42,39 +43,30 @@ def insert_space_every_other_except_cls(input_string: str):
     return result
 
 
-def get_cdr3_sequence_column(airr_df: pd.DataFrame, sequence_col: str = "sequence_vdj_aa"):
+def get_cdr3_sequence_column(airr: pd.DataFrame, default_sequence_col: str):
     """
-    Determines the appropriate CDR3 sequence column for TCR models.
-
-    TCR embedding models (TCR-BERT, TCRT5, TCREMP) require CDR3 sequences, not full VDJ sequences.
-    This function checks for standard AIRR CDR3 columns and falls back to the specified sequence column.
+    Get the best CDR3 sequence column for TCR data.
 
     Parameters:
-        airr_df (pandas.DataFrame): Input AIRR rearrangement table.
-        sequence_col (str): Default sequence column to use if no CDR3 column is found.
+        airr (pd.DataFrame): AIRR DataFrame
+        default_sequence_col (str): Default sequence column name
 
     Returns:
-        str: The name of the column to use for CDR3 sequences.
-
-    Note:
-        Priority order: junction_aa > cdr3_aa > sequence_col
-        For TCR models, using full VDJ sequences may reduce accuracy.
+        str: The best CDR3 sequence column name
     """
-    # Check for standard AIRR CDR3 columns in priority order
+    # Preferred CDR3 columns in order of preference
     cdr3_columns = ["junction_aa", "cdr3_aa"]
 
     for col in cdr3_columns:
-        if col in airr_df.columns and not airr_df[col].isna().all():
-            logger.info(f"Using CDR3 sequences from column '{col}' for TCR embedding")
-            return col
+        if col in airr.columns:
+            # Check if column has non-null values
+            if not airr[col].isna().all():
+                logger.info(f"Using CDR3 column: {col}")
+                return col
 
-    # Fall back to the specified sequence column with a warning
-    logger.warning(
-        f"No CDR3-specific columns (junction_aa, cdr3_aa) found. Using '{sequence_col}' column. "
-        f"Note: TCR models (TCR-BERT, TCRT5, TCREMP) are trained on CDR3 sequences, not full VDJ sequences. "
-        f"Using full sequences may reduce embedding accuracy."
-    )
-    return sequence_col
+    # If no CDR3 columns found, return the default
+    logger.warning(f"No CDR3 columns found, using default: {default_sequence_col}")
+    return default_sequence_col
 
 
 def process_airr(
@@ -84,7 +76,6 @@ def process_airr(
     cell_id_col: str = "cell_id",
     receptor_type: str = "all",
     duplicate_col: str = "duplicate_count",
-    use_cdr3_for_tcr: bool = True,
     mode: str = "concat",
 ):
     """
@@ -105,8 +96,6 @@ def process_airr(
                            - "all": allows both BCR and TCR chains in the same file
         duplicate_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
-        use_cdr3_for_tcr (bool): Whether to automatically use CDR3 sequences for TCR data when available.
-                               Default: True. Set to False to force use of sequence_col for all data.
 
     Returns:
         pandas.DataFrame: Dataframe with formatted sequences.
@@ -129,27 +118,6 @@ def process_airr(
     data = airr_df.copy()
     if "locus" not in data.columns:
         data.loc[:, "locus"] = data.loc[:, "v_call"].apply(lambda x: x[:3])
-
-    # Detect if this is TCR data and adjust sequence column for CDR3 if requested
-    tcr_loci = {"TRA", "TRB", "TRG", "TRD"}
-    present_loci = set(data["locus"].unique())
-    is_tcr_data = bool(present_loci & tcr_loci)
-
-    # Use CDR3 sequences for TCR data if available and requested
-    effective_sequence_col = sequence_col
-    if use_cdr3_for_tcr and is_tcr_data:
-        detected_cdr3_col = get_cdr3_sequence_column(data, sequence_col)
-        if detected_cdr3_col != sequence_col:
-            # Replace the original sequence_col with the detected CDR3 column for consistency
-            if sequence_col in data.columns:
-                # Drop the original sequence column to avoid duplicate column names
-                data = data.drop(columns=[sequence_col])
-            # Rename the detected CDR3 column to the expected sequence_col name
-            data = data.rename(columns={detected_cdr3_col: sequence_col})
-            logger.info(
-                f"Using CDR3 sequences from '{detected_cdr3_col}' column as '{sequence_col}' for consistent output"
-            )
-        effective_sequence_col = sequence_col
 
     # ===== RECEPTOR TYPE VALIDATION =====
     bcr_loci = {"IGH", "IGL", "IGK"}
@@ -209,11 +177,15 @@ def process_airr(
             "No %s column detected. Processing as bulk data. If the data is single-cell, please specify cell_id_col for the barcode column.",
             cell_id_col,
         )
-        if chain_mode in ["HL", "LH", "H+L"]:
+        if chain_mode in ["HL", "LH"]:
             raise ValueError(f'chain = "{chain_mode}" invalid for bulk mode')
+        elif chain_mode == "H+L":
+            # For bulk data with separate heavy and light chains
+            colnames = ["sequence_id", sequence_col, "chain"]
+            data = data.loc[data.chain.isin(["H", "L"]), colnames]
         else:
             # For bulk data with single chain (H or L)
-            colnames = ["sequence_id", effective_sequence_col]
+            colnames = ["sequence_id", sequence_col]
             data = data.loc[data.chain == chain_mode, colnames]
 
     # single-cell only
@@ -221,32 +193,28 @@ def process_airr(
         logger.info("Processing single-cell data...")
         if chain_mode == "HL":
             logging.info("Concatenating heavy and light chain per cell (HL order)...")
-            data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, duplicate_col, order="HL", mode=mode
-            )
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, duplicate_col, order="HL", mode=mode)
         elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
-            data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, duplicate_col, order="LH", mode=mode
-            )
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, duplicate_col, order="LH", mode=mode)
         elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need H+L in tab_locus_gene format
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need H+L in separate entries
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode="tab")
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode="tab")
         else:
             # For single-cell data with single chain (H or L)
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need single chains in tab_locus_gene format
                 # First filter to only the requested chain type
                 data_filtered = data.loc[data.chain == chain_mode].copy()
-                data = process_h_plus_l(data_filtered, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
+                data = process_h_plus_l(data_filtered, sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need simple single chain processing
-                colnames = [cell_id_col, effective_sequence_col]
+                colnames = [cell_id_col, sequence_col]
                 data = data.loc[data.chain == chain_mode, colnames]
     # mixed
     else:
@@ -254,33 +222,29 @@ def process_airr(
         if chain_mode == "HL":
             logger.info("Concatenating heavy and light chain per cell (HL order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, duplicate_col, order="HL", mode=mode
-            )
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, duplicate_col, order="HL", mode=mode)
         elif chain_mode == "LH":
             logger.info("Concatenating light and heavy chain per cell (LH order)...")
             data = data.loc[data[cell_id_col].notna(),]
-            data = concatenate_heavylight(
-                data, effective_sequence_col, cell_id_col, duplicate_col, order="LH", mode=mode
-            )
+            data = concatenate_heavylight(data, sequence_col, cell_id_col, duplicate_col, order="LH", mode=mode)
         elif chain_mode == "H+L":
             logger.info("Processing both heavy and light chains separately...")
             data = data.loc[data[cell_id_col].notna(),]
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need H+L in tab_locus_gene format
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need H+L in separate entries
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode="tab")
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode="tab")
         else:
             # For mixed data with single chain (H or L)
             if mode == "tab_locus_gene":
                 # For models like TCREMP that need single chains in tab_locus_gene format
                 data = data.loc[data[cell_id_col].notna(),]
-                data = process_h_plus_l(data, effective_sequence_col, cell_id_col, duplicate_col, mode=mode)
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
             else:
                 # For other models that need simple single chain processing
-                colnames = ["sequence_id", cell_id_col, effective_sequence_col]
+                colnames = ["sequence_id", cell_id_col, sequence_col]
                 data = data.loc[data.chain == chain_mode, colnames]
 
     return data
@@ -376,13 +340,21 @@ def concatenate_heavylight(
         data_vgene = data_full.pivot(index=cell_id_col, columns="locus_vgene", values="v_call")
         data_vgene = data_vgene.reset_index()
 
-        # Third pivot for J genes
-        data_jgene = data_full.pivot(index=cell_id_col, columns="locus_jgene", values="j_call")
-        data_jgene = data_jgene.reset_index()
+        # Third pivot for J genes (only if j_call column exists)
+        if "j_call" in data_full.columns:
+            data_jgene = data_full.pivot(index=cell_id_col, columns="locus_jgene", values="j_call")
+            data_jgene = data_jgene.reset_index()
 
-        # Merge all three pivoted dataframes
-        result = data_chain.merge(data_vgene, on=cell_id_col, how="outer")
-        result = result.merge(data_jgene, on=cell_id_col, how="outer")
+            # Merge all three pivoted dataframes
+            result = data_chain.merge(data_vgene, on=cell_id_col, how="outer")
+            result = result.merge(data_jgene, on=cell_id_col, how="outer")
+        else:
+            # Only merge chain and V gene data if J gene data is not available
+            result = data_chain.merge(data_vgene, on=cell_id_col, how="outer")
+            # Add placeholder J gene columns for consistency
+            for locus in data_full["locus"].unique():
+                j_col = f"{locus}J"
+                result[j_col] = "Unknown"
 
         # Remove columns ending with 'D' (D gene related) as TCREMP doesn't need them
         # d_columns = [col for col in result.columns if col.endswith("D")]
@@ -436,45 +408,45 @@ def process_h_plus_l(
 
     if mode == "tab":
         # Simple tabular format - keep chains as separate entries
-        # Add chain type identifier to sequence_id for tracking
-        data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
+        # Keep original sequence_id for metadata merging - chain info is preserved in 'chain' column
         return data
 
     elif mode == "tab_locus_gene":
         # Extended format with V/J gene information for models like TCREMP
         # This handles H+L, H, or L chains separately with gene information
 
-        # Add chain type identifier to sequence_id for tracking
-        data.loc[:, "sequence_id"] = data[cell_id_col] + "_" + data["chain"]
+        # Keep original sequence_id for metadata merging - chain info is preserved in 'chain' column
 
         # Create locus_vgene and locus_jgene columns
         data.loc[:, "locus_vgene"] = data["locus"] + "V"
         data.loc[:, "locus_jgene"] = data["locus"] + "J"
 
-        # For each row, create columns for the specific locus V and J genes
-        # This creates a wide format where each chain type gets its own V/J columns
-        result_rows = []
+        # Start with base columns
+        result = data[[cell_id_col, "sequence_id", sequence_col, "chain", "locus"]].copy()
 
-        for _, row in data.iterrows():
-            result_row = {
-                cell_id_col: row[cell_id_col],
-                "sequence_id": row["sequence_id"],
-                sequence_col: row[sequence_col],
-                "chain": row["chain"],
-                "locus": row["locus"],
-            }
+        # Use vectorized operations to create dynamic V and J gene columns
+        # Get unique loci to create the appropriate columns
+        unique_loci = data["locus"].unique()
 
-            # Add V gene column for this locus
-            v_col_name = row["locus_vgene"]
-            result_row[v_col_name] = row["v_call"]
+        # Initialize all possible V and J gene columns with NaN
+        for locus in unique_loci:
+            v_col = f"{locus}V"
+            j_col = f"{locus}J"
+            result[v_col] = pd.NA
+            result[j_col] = pd.NA
 
-            # Add J gene column for this locus
-            j_col_name = row["locus_jgene"]
-            result_row[j_col_name] = row["j_call"]
-
-            result_rows.append(result_row)
-
-        result = pd.DataFrame(result_rows)
+        # Use vectorized assignment to populate the appropriate columns
+        for locus in unique_loci:
+            v_col = f"{locus}V"
+            j_col = f"{locus}J"
+            mask = data["locus"] == locus
+            result.loc[mask, v_col] = data.loc[mask, "v_call"]
+            # Only populate J gene if j_call column exists
+            if "j_call" in data.columns:
+                result.loc[mask, j_col] = data.loc[mask, "j_call"]
+            else:
+                # Set placeholder values for missing J gene information
+                result.loc[mask, j_col] = "Unknown"
 
         # Remove any columns ending with 'D' (D gene related) as TCREMP doesn't need them
         d_columns = [col for col in result.columns if col.endswith("D")]
@@ -485,3 +457,113 @@ def process_h_plus_l(
 
     else:
         raise ValueError(f"Invalid mode parameter: {mode}. Must be 'tab' or 'tab_locus_gene'.")
+
+
+def check_dependencies():
+    """
+    Check if optional embedding dependencies are installed and provide installation instructions.
+
+    This function checks all model types (BCR, TCR, and protein language models) for missing dependencies.
+
+    Returns:
+        list: List of tuples (model_name, installation_command) for missing dependencies
+    """
+    missing_deps = []
+    available_models = []
+
+    # Check BCR models (included in requirements.txt but good to verify installation)
+    try:
+        from antiberty import AntiBERTyRunner  # noqa: F401
+
+        available_models.append("AntiBERTy")
+    except ImportError:
+        missing_deps.append(("AntiBERTy", "pip install antiberty"))
+
+    try:
+        import ablang  # noqa: F401
+
+        available_models.append("AbLang")
+    except ImportError:
+        missing_deps.append(("AbLang", "pip install ablang"))
+
+    # Check TCR models
+    try:
+        result = subprocess.run(["tcremp-run", "-h"], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            available_models.append("TCREMP")
+        else:
+            missing_deps.append(
+                (
+                    "TCREMP",
+                    "git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install . (requires Python 3.11+)",
+                )
+            )
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        missing_deps.append(
+            (
+                "TCREMP",
+                "git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install . (requires Python 3.11+)",
+            )
+        )
+
+    try:
+        from transformers import BertModel, BertTokenizer  # noqa: F401
+
+        available_models.append("TCR-BERT")
+    except ImportError:
+        missing_deps.append(("TCR-BERT", "pip install transformers"))
+
+    try:
+        from transformers import T5ForConditionalGeneration, T5Tokenizer  # noqa: F401
+
+        available_models.append("TCRT5")
+    except ImportError:
+        missing_deps.append(("TCRT5", "pip install transformers"))
+
+    # Check protein language models
+    try:
+        from transformers import EsmModel, EsmTokenizer  # noqa: F401
+
+        available_models.append("ESM2")
+    except ImportError:
+        missing_deps.append(("ESM2", "pip install transformers"))
+
+    try:
+        import sentencepiece  # noqa: F401
+        from transformers import T5EncoderModel, T5Tokenizer  # noqa: F401
+
+        available_models.append("ProtT5")
+    except ImportError as e:
+        if "sentencepiece" in str(e):
+            missing_deps.append(("ProtT5", "pip install transformers sentencepiece"))
+        else:
+            missing_deps.append(("ProtT5", "pip install transformers"))
+
+    try:
+        import gensim  # noqa: F401
+        from embedding import sequence_modeling  # noqa: F401
+
+        available_models.append("Immune2Vec")
+    except ImportError as e:
+        if "gensim" in str(e):
+            missing_deps.append(
+                (
+                    "Immune2Vec",
+                    "pip install gensim>=3.8.3 && git clone https://bitbucket.org/yaarilab/immune2vec_model.git",
+                )
+            )
+        else:
+            missing_deps.append(
+                ("Immune2Vec", "git clone https://bitbucket.org/yaarilab/immune2vec_model.git && add to Python path")
+            )
+
+    # Report results
+    if available_models:
+        logger.info("Available models: %s", ", ".join(available_models))
+
+    if missing_deps:
+        logger.warning("Missing model dependencies: %s", ", ".join([dep[0] for dep in missing_deps]))
+    else:
+        logger.info("All embedding dependencies are available!")
+
+    return missing_deps

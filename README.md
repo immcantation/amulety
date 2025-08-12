@@ -15,18 +15,6 @@ AMULETY supports different chain input formats based on model architecture and t
 - **LH**: Reverse paired chains - concatenated Light-Heavy (BCR) or Alpha-Beta/Gamma-Delta (TCR) sequences
 - **H+L**: Both chains separately - processes H and L chains individually without pairing
 
-### Model Chain Requirements:
-
-- **HL, LH only**: Paired-only models trained on concatenated sequences (BALM-paired)
-  - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
-- **H, L, HL, LH, H+L**: Flexible paired models understanding chain relationships (TCR-BERT, Trex)
-  - (warning) **Warning**: LH order may reduce accuracy as models are trained on HL order
-- **H, L, H+L**: Individual chain models, no paired understanding (AntiBERTy, AntiBERTa2)
-- **Not available**: Command-line tools not integrated as Python libraries (TCREMP)
-- **H only**: Specialized models for specific chain types (TCRT5 - TCR beta chain only)
-- **H, L, H+L + (warning) paired warning**: Protein language models, no paired chain mechanisms (ESM2, ProtT5, Immune2Vec, Custom)
-  - (warning) **Warning**: Cannot distinguish chain segments in paired sequences, results may be inaccurate
-
 ## BCR (B-Cell Receptor) Models
 
 | Model       | Command     | Embedding Dimension | Chain Support | Reference                                                                        |
@@ -75,27 +63,66 @@ pip install amulety
 Or install from source:
 
 ```bash
-git clone https://github.com/your-repo/amulety.git
+git clone https://github.com/immcantation/amulety.git
 cd amulety
 pip install -e .
 ```
 
 ### Optional Dependencies
 
-Most models work out-of-the-box. Some models require additional packages:
+Most models work out-of-the-box and do not require further tool installations. Some models require additional dependencies that are not installable with PyPI:
 
-**Included in requirements.txt:**
+**TCR Models:**
 
-- **antiberty** - BCR model (included)
-- **ablang** - BCR model (included)
+- **TCREMP** - TCR embedding via prototypes for repertoire-based representation learning. Install: `git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .` (requires Python 3.11+)
 
-**TCR Models (Require Manual Installation):**
+**Protein Language Models:**
 
-- **TCREMP** - TCR embedding via prototypes for repertoire-based representation learning. Install: `git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .` (requires Python 3.11+). Available through AMULETY as `tcremp` model.
+- **Immune2Vec** - Protein language model for immune receptor sequences. Install: `git clone https://bitbucket.org/yaarilab/immune2vec_model.git` and add to Python path
 
-### Troubleshooting TCR Models
+### Custom Light Chain Selection
 
-If you encounter errors about missing TCR packages, AMULETY will provide detailed installation instructions. To use the actual models:
+When using paired chains (`--chain HL`), AMULETY automatically selects the most abundant light chain when multiple light chains exist for the same cell. By default, it uses the `duplicate_count` column (sequence read count), but you can specify a custom numeric column:
+
+```bash
+# Default behavior: use duplicate_count
+amulety embed --chain HL --model antiberta2 --output-file-path embeddings.pt input.tsv
+
+# Custom selection: use a quality score column
+amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt input.tsv
+
+# Custom selection: use UMI count
+amulety embed --chain HL --model antiberta2 --duplicate-col umi_count --output-file-path embeddings.pt input.tsv
+```
+
+**Requirements for Custom Selection Columns:**
+
+The column must contain numeric values (integers or floats), AMULETY selects the chain with the highest value in that column.
+
+**Example: Adding a Custom Column**
+
+```python
+import pandas as pd
+
+# Read your AIRR data
+data = pd.read_csv('input.tsv', sep='\t')
+
+# Add a custom quality score (example calculation)
+data['quality_score'] = data['duplicate_count'] * data['sequence_length'] / 100
+
+# Save enhanced data
+data.to_csv('enhanced_input.tsv', sep='\t', index=False)
+```
+
+Then use with AMULETY:
+
+```bash
+amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
+```
+
+### Troubleshooting Models
+
+If you encounter errors about missing packages, AMULETY will provide detailed installation instructions. To use the actual models:
 
 1. **Check which packages are missing:**
 
@@ -106,8 +133,8 @@ amulety check-deps
 Or in Python:
 
 ```python
-from amulety.tcr_embeddings import check_tcr_dependencies
-check_tcr_dependencies()
+from amulety.utils import check_dependencies
+check_dependencies()
 ```
 
 2. **Install missing packages** following the instructions above
@@ -116,7 +143,7 @@ check_tcr_dependencies()
 
 ## Usage
 
-To print the usage help for the AMULETY package then type:
+To print the usage help for the AMULETY package type:
 
 ```bash
 amulety --help
@@ -152,55 +179,6 @@ amulety embed --chain HL --model custom --model-path "/path/to/local/model" --em
 - Fine-tuned versions of ESM2, ProtBERT, ProtT5, or similar models
 
 **Note**: AMULETY will attempt to load any model you specify, but compatibility depends on the model architecture and tokenizer. Transformer-based protein language models work best.
-
-### Custom Light Chain Selection
-
-When using paired chains (`--chain HL`), AMULETY automatically selects the best light chain when multiple light chains exist for the same cell. By default, it uses the `duplicate_count` column (sequence read count), but you can specify a custom numeric column:
-
-```bash
-# Default behavior: use duplicate_count
-amulety embed --chain HL --model antiberta2 --output-file-path embeddings.pt input.tsv
-
-# Custom selection: use a quality score column
-amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt input.tsv
-
-# Custom selection: use UMI count
-amulety embed --chain HL --model antiberta2 --duplicate-col umi_count --output-file-path embeddings.pt input.tsv
-```
-
-**Requirements for Custom Selection Columns:**
-
-1. **Numeric Type**: The column must contain numeric values (integers or floats)
-2. **Higher is Better**: AMULETY selects the chain with the highest value
-3. **User-Defined**: You need to add these columns to your AIRR data file yourself
-
-**Common Custom Columns:**
-
-- `quality_score`: Sequence quality metrics
-- `umi_count`: Unique molecular identifier counts
-- `expression_level`: Gene expression levels
-- `confidence_score`: Assembly confidence scores
-
-**Example: Adding a Custom Column**
-
-```python
-import pandas as pd
-
-# Read your AIRR data
-data = pd.read_csv('input.tsv', sep='\t')
-
-# Add a custom quality score (example calculation)
-data['quality_score'] = data['duplicate_count'] * data['sequence_length'] / 100
-
-# Save enhanced data
-data.to_csv('enhanced_input.tsv', sep='\t', index=False)
-```
-
-Then use with AMULETY:
-
-```bash
-amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
-```
 
 ## Contact
 

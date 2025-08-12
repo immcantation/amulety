@@ -96,7 +96,7 @@ def check_tcr_dependencies():
 
 
 def tcremp(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 32,
 ):
@@ -106,7 +106,7 @@ def tcremp(
     Note:\n
     TCREMP is a command-line tool for TCR sequence embedding via prototypes.
     It focuses on T-cell receptor repertoire-based representation learning using prototype-based
-    similarity calculations. This function provides a bridge to use TCREMP within AMULETY.
+    similarity calculations. TCREMP is trained on TCR sequences only (CDR3 + V/J genes).
 
     TCREMP supports all chain types including paired chains (HL/LH) and individual chains (H, L, H+L).
     Maximum sequence length: 30 amino acids.
@@ -240,12 +240,17 @@ def tcremp(
 
 
 def tcr_bert(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 32,
 ):
     """
     Embeds T-Cell Receptor (TCR) sequences using the TCR-BERT model.
+
+    Args:
+        sequences: Input TCR sequences (pd.Series for single chain or pd.DataFrame for H+L mode)
+        cache_dir: Directory to cache model files
+        batch_size: Number of sequences to process in each batch
 
     Note:\n
     Pretrained on 88,403 human TRA/TRB sequences from VDJdb and PIRD.
@@ -255,7 +260,28 @@ def tcr_bert(
     max_seq_length = 64
     dim = 768
 
-    X = sequences
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # DataFrame mode: Extract sequence data from the 'chain' column
+        if "chain" in sequences.columns:
+            X = sequences["chain"]
+        else:
+            # Fallback: look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+            if sequence_col is None:
+                raise ValueError(
+                    f"No sequence column found in DataFrame. Expected 'chain' or one of {sequence_col_candidates}"
+                )
+            X = sequences[sequence_col]
+    else:
+        # Series mode: direct sequence input
+        X = sequences
+
     X = X.apply(lambda a: a[:max_seq_length])
 
     # TCR-BERT expects space-separated amino acid sequences
@@ -334,12 +360,17 @@ def tcr_bert(
 
 
 def tcrt5(
-    sequences: pd.Series,
+    sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 32,
 ):
     """
     Embeds T-Cell Receptor (TCR) sequences using the TCRT5 model.
+
+    Args:
+        sequences: Input TCR sequences (pd.Series for single chain or pd.DataFrame for H+L mode)
+        cache_dir: Directory to cache model files
+        batch_size: Number of sequences to process in each batch
 
     Note:\n
     TCRT5 was pre-trained on masked span reconstruction using ~14M CDR3 β sequences from TCRdb
@@ -353,7 +384,27 @@ def tcrt5(
     max_seq_length = 20
     dim = 256
 
-    X = sequences
+    # Handle both Series (single chain) and DataFrame (H+L) inputs
+    if isinstance(sequences, pd.DataFrame):
+        # DataFrame mode: Extract sequence data from the 'chain' column
+        if "chain" in sequences.columns:
+            X = sequences["chain"]
+        else:
+            # Fallback: look for common sequence column names
+            sequence_col_candidates = ["sequence_vdj_aa", "sequence_aa", "sequence"]
+            sequence_col = None
+            for col in sequence_col_candidates:
+                if col in sequences.columns:
+                    sequence_col = col
+                    break
+            if sequence_col is None:
+                raise ValueError(
+                    f"No sequence column found in DataFrame. Expected 'chain' or one of {sequence_col_candidates}"
+                )
+            X = sequences[sequence_col]
+    else:
+        # Series mode: direct sequence input
+        X = sequences
     X = X.apply(lambda a: a[:max_seq_length])
     sequences = X.values
 
