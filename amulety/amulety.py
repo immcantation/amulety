@@ -232,6 +232,7 @@ def embed_airr(
     model_path: str = None,
     output_type: str = "pickle",
     duplicate_col: str = "duplicate_count",
+    skip_clustering: bool = True,
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
@@ -486,24 +487,68 @@ def embed_airr(
             airr, chain, effective_sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="tabular"
         )
 
-        # Select necessary columns by the embedding tool and rename them according to TCREMP requirements
-        # TCREMP expects: barcode_or_id, a_cdr3aa, TRAV, TRAJ, b_cdr3aa, TRBV, TRBJ
-        # Note: TCREMP is trained on TCR sequences only (CDR3 + V/J genes), not epitopes.
-        X = raw_dat[[cell_id_col]].copy()  # Start with cell ID
-        X.rename(columns={cell_id_col: "barcode_or_id"}, inplace=True)
+        # For TCREMP, raw_dat is in tab_locus_gene format with columns: cell_id, sequence_id, sequence_col, chain, locus, etc.
+        # We need to extract sequences based on the requested chain type
 
-        # Map H/L chains to alpha/beta CDR3 sequences based on available columns
-        if "L" in raw_dat.columns:  # Alpha chain (TRA)
-            X["a_cdr3aa"] = raw_dat["L"]  # L chain maps to alpha
-        if "H" in raw_dat.columns:  # Beta chain (TRB)
-            X["b_cdr3aa"] = raw_dat["H"]  # H chain maps to beta
+        # Filter data based on chain type
+        if chain == "H":
+            # H chain maps to TRB (beta) for TCR
+            chain_data = raw_dat[raw_dat["chain"] == "H"].copy()
+        elif chain == "L":
+            # L chain maps to TRA (alpha) for TCR
+            chain_data = raw_dat[raw_dat["chain"] == "L"].copy()
+        elif chain == "H+L":
+            # Both chains separately
+            chain_data = raw_dat.copy()
+        elif chain in ["HL", "LH"]:
+            # Paired chains - we need both H and L
+            chain_data = raw_dat.copy()
+        else:
+            raise ValueError(f"Unsupported chain type '{chain}' for TCREMP")
 
-        # Add V and J gene information if available
-        for gene_col in ["TRAV", "TRAJ", "TRBV", "TRBJ"]:
-            if gene_col in raw_dat.columns:
-                X[gene_col] = raw_dat[gene_col]
+        if len(chain_data) == 0:
+            raise ValueError(f"No sequences found for chain type '{chain}' in processed data")
 
-        embedding = tcremp(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        # Extract sequences based on chain type
+        if chain in ["H", "L"]:
+            # Single chain: extract sequences directly
+            sequences_series = chain_data[effective_sequence_col].dropna()
+        elif chain == "H+L":
+            # Separate chains: extract all sequences
+            sequences_series = chain_data[effective_sequence_col].dropna()
+        elif chain in ["HL", "LH"]:
+            # Paired chains: combine H and L sequences per cell
+            sequences_list = []
+            for cell_id in chain_data[cell_id_col].unique():
+                cell_data = chain_data[chain_data[cell_id_col] == cell_id]
+                h_seq = (
+                    cell_data[cell_data["chain"] == "H"][effective_sequence_col].iloc[0]
+                    if len(cell_data[cell_data["chain"] == "H"]) > 0
+                    else None
+                )
+                l_seq = (
+                    cell_data[cell_data["chain"] == "L"][effective_sequence_col].iloc[0]
+                    if len(cell_data[cell_data["chain"] == "L"]) > 0
+                    else None
+                )
+
+                if h_seq is not None and l_seq is not None:
+                    if chain == "LH":
+                        sequences_list.append(f"{l_seq}_{h_seq}")
+                    else:  # HL
+                        sequences_list.append(f"{h_seq}_{l_seq}")
+            sequences_series = pd.Series(sequences_list)
+
+        if len(sequences_series) == 0:
+            raise ValueError(f"No valid sequences found for chain type '{chain}' after filtering")
+
+        embedding = tcremp(
+            sequences=sequences_series,
+            cache_dir=cache_dir,
+            batch_size=batch_size,
+            chain=chain,
+            skip_clustering=skip_clustering,
+        )
 
     elif model == "tcrt5":
         # Check compatible chains - TCRT5 only supports H (beta) chains
@@ -714,6 +759,13 @@ def embed(
             help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined.",
         ),
     ] = "duplicate_count",
+    skip_clustering: Annotated[
+        bool,
+        typer.Option(
+            "--skip-clustering",
+            help="Skip clustering step for TCREMP model (default: True to avoid errors). Only applies to TCREMP model.",
+        ),
+    ] = True,
 ):
     """
     Embeds sequences from an AIRR rearrangement file using the specified model.
@@ -742,6 +794,7 @@ def embed(
         model_path=model_path,
         output_type=output_type,
         duplicate_col=duplicate_col,
+        skip_clustering=skip_clustering,
     )
 
     if output_type == "pickle":

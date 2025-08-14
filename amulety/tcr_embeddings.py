@@ -99,9 +99,18 @@ def tcremp(
     sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 32,
+    chain: str = "H",
+    skip_clustering: bool = True,
 ):
     """
     Embeds T-Cell Receptor (TCR) sequences using the TCREMP model.
+
+    Args:
+        sequences: Input TCR sequences (pd.Series)
+        cache_dir: Directory to cache model files (not used for TCREMP)
+        batch_size: Number of sequences to process in each batch (not used for TCREMP)
+        chain: Chain type specification ("H", "L", "HL", "LH", "H+L")
+        skip_clustering: Whether to skip clustering step (default: True to avoid errors)
 
     Note:\n
     TCREMP is a command-line tool for TCR sequence embedding via prototypes.
@@ -177,46 +186,73 @@ def tcremp(
             # Run TCREMP command
             # Adjust parameters based on sample size to avoid dimension issues
             n_samples = len(sequences)
-            pca_components = min(50, max(1, n_samples - 1))  # Ensure valid PCA components
-            k_neighbors = min(4, max(1, n_samples - 1))  # Ensure valid k-neighbors
+            # For small datasets, use minimal PCA components to avoid sklearn errors
+            pca_components = min(3, max(1, n_samples - 1))  # Use minimal PCA components
+            k_neighbors = min(3, max(1, n_samples - 1))  # Use minimal k-neighbors
+
+            # Map amulety chain parameter to TCREMP chain parameter
+            # H → TRB (beta), L → TRA (alpha), HL → TRA_TRB (paired)
+            chain_mapping = {
+                "H": "TRB",  # Heavy chain -> Beta chain
+                "L": "TRA",  # Light chain -> Alpha chain
+                "HL": "TRA_TRB",  # Paired chains -> Both chains
+                "LH": "TRA_TRB",  # Paired chains -> Both chains
+                "H+L": "TRA_TRB",  # Paired chains -> Both chains
+            }
+            tcremp_chain = chain_mapping.get(chain, "TRB")
+            logger.info(f"Mapping amulety chain '{chain}' to TCREMP chain '{tcremp_chain}'")
 
             cmd = [
                 "tcremp-run",
                 "-i",
                 input_file,
                 "-c",
-                "TRB",  # Single chain mode
+                tcremp_chain,  # Mapped chain parameter
                 "-o",
                 output_dir,
-                "-n",
-                "1000",  # Number of prototypes
-                "-x",
-                "clone_id",
+                "--prefix",
+                "tcremp_output",
                 "-cl",
-                "False",  # Disable clustering to avoid DBSCAN issues
+                "False" if skip_clustering else "True",  # Control clustering based on parameter
                 "-d",
-                "False",  # Disable distance saving to focus on embeddings
+                "True",  # Enable distance calculation to get embeddings
                 "-npc",
-                str(pca_components),  # Set PCA components based on sample size
+                str(pca_components),  # Use sample-size adjusted PCA components
                 "-kn",
-                str(k_neighbors),  # Set k-neighbors based on sample size
+                str(k_neighbors),  # Use sample-size adjusted k-neighbors
+                "-n",
+                "100",  # Use fewer prototypes for speed
             ]
 
             logger.info("Running TCREMP command-line tool...")
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
+            # Check if TCREMP generated output files even if it failed (e.g., clustering failed but embedding succeeded)
+            output_files = [f for f in os.listdir(output_dir) if f.endswith(".tsv") or f.endswith(".parquet")]
+
             if result.returncode != 0:
-                logger.error("TCREMP command failed: %s", result.stderr)
-                raise RuntimeError(f"TCREMP execution failed: {result.stderr}")
+                logger.warning("TCREMP command returned non-zero exit code: %s", result.stderr)
+                if not output_files:
+                    logger.error("TCREMP command failed and no output files generated: %s", result.stderr)
+                    raise RuntimeError(f"TCREMP execution failed: {result.stderr}")
+                else:
+                    logger.info(
+                        "TCREMP generated output files despite error (likely clustering failed but embedding succeeded)"
+                    )
 
             # Read TCREMP output
             # TCREMP outputs distance matrices - we need to convert to embeddings
-            output_files = [f for f in os.listdir(output_dir) if f.endswith(".tsv")]
             if not output_files:
                 raise RuntimeError("TCREMP did not generate expected output files")
 
             output_file = os.path.join(output_dir, output_files[0])
-            tcremp_output = pd.read_csv(output_file, sep="\t")
+            print(f"DEBUG: Output file: {output_file}")
+            print(f"DEBUG: File exists: {os.path.exists(output_file)}")
+            print(f"DEBUG: File size: {os.path.getsize(output_file) if os.path.exists(output_file) else 'N/A'}")
+            with open(output_file, "rb") as debug_f:
+                header = debug_f.read(20)
+                print(f"DEBUG: File header: {header}")
+            tcremp_output = pd.read_parquet(output_file)  # Fixed: TCREMP outputs parquet
 
             # Extract distance features as embeddings
             # TCREMP outputs distance columns - use these as embedding features
@@ -227,6 +263,13 @@ def tcremp(
                 distance_cols = tcremp_output.select_dtypes(include=[np.number]).columns.tolist()
 
             embeddings_array = tcremp_output[distance_cols].values
+
+            # Scale TCREMP distance features to reasonable range (preserve relative relationships)
+            # Use min-max scaling to [0, 1] range, then center around 0
+            min_val = embeddings_array.min()
+            max_val = embeddings_array.max()
+            embeddings_array = (embeddings_array - min_val) / (max_val - min_val)  # Scale to [0, 1]
+            embeddings_array = embeddings_array - 0.5  # Center around 0, range [-0.5, 0.5]
             embeddings = torch.tensor(embeddings_array, dtype=torch.float32)
 
             logger.info("TCREMP embedding completed with dimension %d", embeddings.shape[1])

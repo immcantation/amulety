@@ -415,7 +415,9 @@ def process_h_plus_l(
         # Extended format with V/J gene information for models like TCREMP
         # This handles H+L, H, or L chains separately with gene information
 
-        # Keep original sequence_id for metadata merging - chain info is preserved in 'chain' column
+        # Create sequence_id if it doesn't exist (for single-cell data)
+        if "sequence_id" not in data.columns:
+            data.loc[:, "sequence_id"] = range(len(data))
 
         # Create locus_vgene and locus_jgene columns
         data.loc[:, "locus_vgene"] = data["locus"] + "V"

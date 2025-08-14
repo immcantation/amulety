@@ -160,7 +160,7 @@ class TestAmulety(unittest.TestCase):
 
         # Most systems won't have tcremp-run installed, so this should raise ImportError
         try:
-            result = tcremp(test_sequences)
+            result = tcremp(test_sequences, chain="H")
             # If this succeeds, tcremp-run is available and working
             assert isinstance(result, torch.Tensor)
             assert result.shape[0] == len(test_sequences)
