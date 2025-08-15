@@ -487,57 +487,70 @@ def embed_airr(
             airr, chain, effective_sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="tabular"
         )
 
-        # For TCREMP, raw_dat is in tab_locus_gene format with columns: cell_id, sequence_id, sequence_col, chain, locus, etc.
-        # We need to extract sequences based on the requested chain type
-
-        # Filter data based on chain type
-        if chain == "H":
-            # H chain maps to TRB (beta) for TCR
-            chain_data = raw_dat[raw_dat["chain"] == "H"].copy()
-        elif chain == "L":
-            # L chain maps to TRA (alpha) for TCR
-            chain_data = raw_dat[raw_dat["chain"] == "L"].copy()
-        elif chain == "H+L":
-            # Both chains separately
-            chain_data = raw_dat.copy()
-        elif chain in ["HL", "LH"]:
-            # Paired chains - we need both H and L
-            chain_data = raw_dat.copy()
-        else:
-            raise ValueError(f"Unsupported chain type '{chain}' for TCREMP")
-
-        if len(chain_data) == 0:
-            raise ValueError(f"No sequences found for chain type '{chain}' in processed data")
+        # For TCREMP, raw_dat format depends on chain type:
+        # - For HL/LH: pivoted format with H, L columns
+        # - For H, L, H+L: non-pivoted format with 'chain' column
 
         # Extract sequences based on chain type
-        if chain in ["H", "L"]:
-            # Single chain: extract sequences directly
-            sequences_series = chain_data[effective_sequence_col].dropna()
+        if chain == "H":
+            # H chain: extract from chain column
+            if "chain" in raw_dat.columns:
+                # Non-pivoted format
+                h_data = raw_dat[raw_dat["chain"] == "H"]
+                sequences_series = h_data[effective_sequence_col].dropna()
+            elif "H" in raw_dat.columns:
+                # Pivoted format
+                sequences_series = raw_dat["H"].dropna()
+            else:
+                raise ValueError("No H chain sequences found in data")
+        elif chain == "L":
+            # L chain: extract from chain column
+            if "chain" in raw_dat.columns:
+                # Non-pivoted format
+                l_data = raw_dat[raw_dat["chain"] == "L"]
+                sequences_series = l_data[effective_sequence_col].dropna()
+            elif "L" in raw_dat.columns:
+                # Pivoted format
+                sequences_series = raw_dat["L"].dropna()
+            else:
+                raise ValueError("No L chain sequences found in data")
         elif chain == "H+L":
-            # Separate chains: extract all sequences
-            sequences_series = chain_data[effective_sequence_col].dropna()
+            # Both chains separately: combine H and L sequences
+            sequences_list = []
+            if "chain" in raw_dat.columns:
+                # Non-pivoted format
+                h_data = raw_dat[raw_dat["chain"] == "H"]
+                l_data = raw_dat[raw_dat["chain"] == "L"]
+                sequences_list.extend(h_data[effective_sequence_col].dropna().tolist())
+                sequences_list.extend(l_data[effective_sequence_col].dropna().tolist())
+            else:
+                # Pivoted format
+                if "H" in raw_dat.columns:
+                    h_sequences = raw_dat["H"].dropna()
+                    sequences_list.extend(h_sequences.tolist())
+                if "L" in raw_dat.columns:
+                    l_sequences = raw_dat["L"].dropna()
+                    sequences_list.extend(l_sequences.tolist())
+            sequences_series = pd.Series(sequences_list)
         elif chain in ["HL", "LH"]:
             # Paired chains: combine H and L sequences per cell
             sequences_list = []
-            for cell_id in chain_data[cell_id_col].unique():
-                cell_data = chain_data[chain_data[cell_id_col] == cell_id]
-                h_seq = (
-                    cell_data[cell_data["chain"] == "H"][effective_sequence_col].iloc[0]
-                    if len(cell_data[cell_data["chain"] == "H"]) > 0
-                    else None
-                )
-                l_seq = (
-                    cell_data[cell_data["chain"] == "L"][effective_sequence_col].iloc[0]
-                    if len(cell_data[cell_data["chain"] == "L"]) > 0
-                    else None
-                )
+            if "H" in raw_dat.columns and "L" in raw_dat.columns:
+                # Pivoted format
+                for _, row in raw_dat.iterrows():
+                    h_seq = row.get("H", None)
+                    l_seq = row.get("L", None)
 
-                if h_seq is not None and l_seq is not None:
-                    if chain == "LH":
-                        sequences_list.append(f"{l_seq}_{h_seq}")
-                    else:  # HL
-                        sequences_list.append(f"{h_seq}_{l_seq}")
+                    if pd.notna(h_seq) and pd.notna(l_seq):
+                        if chain == "LH":
+                            sequences_list.append(f"{l_seq}_{h_seq}")
+                        else:  # HL
+                            sequences_list.append(f"{h_seq}_{l_seq}")
+            else:
+                raise ValueError(f"Paired chain data not available for chain type '{chain}'")
             sequences_series = pd.Series(sequences_list)
+        else:
+            raise ValueError(f"Unsupported chain type '{chain}' for TCREMP")
 
         if len(sequences_series) == 0:
             raise ValueError(f"No valid sequences found for chain type '{chain}' after filtering")

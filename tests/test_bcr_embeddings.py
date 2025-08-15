@@ -70,7 +70,7 @@ class TestAmulety(unittest.TestCase):
         """Test that antiberty rejects HL chain (individual chain model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "HL", "antiberty", "should_fail.pt")
-        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("was trained on individual chains only", str(context.exception))
         self.assertIn("--chain H", str(context.exception))
         self.assertIn("--chain L", str(context.exception))
 
@@ -141,7 +141,7 @@ class TestAmulety(unittest.TestCase):
         """Test that AbLang rejects HL chains (individual chain model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "HL", "ablang", "should_fail.pt")
-        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("was trained on individual chains only", str(context.exception))
         self.assertIn("--chain H", str(context.exception))
         self.assertIn("--chain L", str(context.exception))
 
@@ -149,7 +149,7 @@ class TestAmulety(unittest.TestCase):
         """Test that AbLang rejects LH chains (individual chain model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "LH", "ablang", "should_fail.pt")
-        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("was trained on individual chains only", str(context.exception))
         self.assertIn("--chain H", str(context.exception))
         self.assertIn("--chain L", str(context.exception))
 
@@ -175,7 +175,7 @@ class TestAmulety(unittest.TestCase):
         """Test that antiberta2 rejects HL chain (individual chain model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "HL", "antiberta2", "should_fail.pt")
-        self.assertIn("supports individual chains only", str(context.exception))
+        self.assertIn("was trained on individual chains only", str(context.exception))
         self.assertIn("--chain H", str(context.exception))
         self.assertIn("--chain L", str(context.exception))
 
@@ -256,21 +256,21 @@ class TestAmulety(unittest.TestCase):
         """Test that balm-paired rejects individual H chains (paired-only model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "H", "balm-paired", "should_fail.pt")
-        self.assertIn("requires paired chains", str(context.exception))
+        self.assertIn("was trained on paired chains", str(context.exception))
         self.assertIn("--chain HL", str(context.exception))
 
     def test_balm_paired_L_chain_validation(self):
         """Test that balm-paired rejects individual L chains (paired-only model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "L", "balm-paired", "should_fail.pt")
-        self.assertIn("requires paired chains", str(context.exception))
+        self.assertIn("was trained on paired chains", str(context.exception))
         self.assertIn("--chain HL", str(context.exception))
 
     def test_balm_paired_H_plus_L_chain_validation(self):
         """Test that balm-paired rejects H+L chains (paired-only model)."""
         with self.assertRaises(ValueError) as context:
             embed(self.test_airr_sc_path, "H+L", "balm-paired", "should_fail.pt")
-        self.assertIn("requires paired chains", str(context.exception))
+        self.assertIn("was trained on paired chains", str(context.exception))
         self.assertIn("--chain HL", str(context.exception))
 
     @pytest.mark.needsigblast  # mark test as needing igblast installation and databases, run with pytest --needsigblast

@@ -132,23 +132,29 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
-    def test_tcrt5_L_embedding_should_fail(self):
-        """Test TCRT5 with L chains should fail (only supports H chains)."""
-        with self.assertRaises(ValueError) as context:
+    def test_tcrt5_L_embedding_should_warn(self):
+        """Test TCRT5 with L chains should warn (only supports H chains)."""
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             embed(self.test_airr_tcr_path, "L", "tcrt5", "tcrt5_L_test.pt", batch_size=2)
 
-        error_msg = str(context.exception)
-        assert "TCRT5 model only supports H chains" in error_msg
-        assert "beta chains for TCR" in error_msg
+            warning_msg = str(w[0].message)
+            assert "TCRT5 model was trained on" in warning_msg
+            assert "beta chains for TCR" in warning_msg
 
-    def test_tcrt5_HL_embedding_should_fail(self):
-        """Test TCRT5 with HL chains should fail (only supports H chains)."""
-        with self.assertRaises(ValueError) as context:
+    def test_tcrt5_HL_embedding_should_warn(self):
+        """Test TCRT5 with HL chains should warn (only supports H chains)."""
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             embed(self.test_airr_tcr_path, "HL", "tcrt5", "tcrt5_HL_test.pt", batch_size=2)
 
-        error_msg = str(context.exception)
-        assert "TCRT5 model only supports H chains" in error_msg
-        assert "beta chains for TCR" in error_msg
+            warning_msg = str(w[0].message)
+            assert "TCRT5 model was trained on" in warning_msg
+            assert "beta chains for TCR" in warning_msg
 
     def test_tcremp_command_not_available(self):
         """Test that TCREMP raises ImportError when command-line tool is not available."""
@@ -330,12 +336,12 @@ class TestAmulety(unittest.TestCase):
         )
 
         # Test standard AIRR columns are detected (priority: junction_aa > cdr3_aa)
-        result_junction = get_cdr3_sequence_column(test_data_standard)
+        result_junction = get_cdr3_sequence_column(test_data_standard, "sequence_vdj_aa")
         assert result_junction == "junction_aa", f"Expected 'junction_aa', got '{result_junction}'"
 
         # Test when only cdr3_aa exists
         test_data_cdr3_only = test_data_standard.drop(columns=["junction_aa"])
-        result_cdr3 = get_cdr3_sequence_column(test_data_cdr3_only)
+        result_cdr3 = get_cdr3_sequence_column(test_data_cdr3_only, "sequence_vdj_aa")
         assert result_cdr3 == "cdr3_aa", f"Expected 'cdr3_aa', got '{result_cdr3}'"
 
         # Test fallback to sequence_col when no standard CDR3 columns exist
@@ -353,7 +359,7 @@ class TestAmulety(unittest.TestCase):
         ), f"Expected 'junction_sequence', got '{result_custom_junction}'"
 
         # Test with process_airr function using custom CDR3 column
-        result_process = process_airr(test_data_custom, "H", sequence_col="cdr3_sequence", use_cdr3_for_tcr=True)
+        result_process = process_airr(test_data_custom, "H", sequence_col="cdr3_sequence")
         assert len(result_process) == 1  # Should have 1 H chain (TRB)
         assert result_process.iloc[0]["cdr3_sequence"] == "CASSLVGQGAYEQYF"
 

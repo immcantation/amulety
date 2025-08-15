@@ -61,7 +61,10 @@ class TestAmulety(unittest.TestCase):
                 # Check that protein language model warning was issued
                 assert len(w) > 0
                 warning_messages = [str(warning.message) for warning in w]
-                assert any("does not understand paired chain relationships" in msg for msg in warning_messages)
+                assert any(
+                    "does not have mechanisms to understand paired chain relationships" in msg
+                    for msg in warning_messages
+                )
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
@@ -115,7 +118,10 @@ class TestAmulety(unittest.TestCase):
                 assert len(w) >= 2
                 warning_messages = [str(warning.message) for warning in w]
                 assert any("LH (Light-Heavy) chain order detected" in msg for msg in warning_messages)
-                assert any("does not understand paired chain relationships" in msg for msg in warning_messages)
+                assert any(
+                    "does not have mechanisms to understand paired chain relationships" in msg
+                    for msg in warning_messages
+                )
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
@@ -283,8 +289,8 @@ class TestAmulety(unittest.TestCase):
                     "antiberta2",
                     batch_size=2,
                 )
-            self.assertIn("trained for BCR data", str(context.exception))
-            self.assertIn("TCR-only data", str(context.exception))
+            self.assertIn("is a BCR-specific model", str(context.exception))
+            self.assertIn("no BCR data", str(context.exception))
 
             # Test 5: BCR data with TCR model (should fail with clear error)
             with self.assertRaises(ValueError) as context:
@@ -294,8 +300,8 @@ class TestAmulety(unittest.TestCase):
                     "tcr-bert",
                     batch_size=2,
                 )
-            self.assertIn("trained for TCR data", str(context.exception))
-            self.assertIn("BCR-only data", str(context.exception))
+            self.assertIn("is a TCR-specific model", str(context.exception))
+            self.assertIn("no TCR data", str(context.exception))
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"Model loading failed (corrupted cache): {e}")
