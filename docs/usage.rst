@@ -125,6 +125,14 @@ TCR-specific embedding method trained for T-cell receptor repertoire-based repre
 - Manual installation: ``git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .``
 - Verify installation: ``tcremp-run -h``
 
+**Usage Note:**
+
+Use ``--skip-clustering`` for stability:
+
+.. code-block:: bash
+
+    amulety embed --chain H --model tcremp --skip-clustering --output-file-path embeddings.pt input.tsv
+
 Reference:
 Zhang H, Zeng T, Zhao Y, et al. TCREMP: T-cell receptor repertoire-based embedding for immunotherapy response prediction. Journal of Molecular Biology. 2025;437: 168712. `doi:10.1016/j.jmb.2025.168712 <https://www.sciencedirect.com/science/article/pii/S0022283625002712>`_
 

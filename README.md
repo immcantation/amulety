@@ -120,6 +120,14 @@ Then use with AMULETY:
 amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
 ```
 
+### TCREMP Usage
+
+TCREMP may require the `--skip-clustering` parameter for stability:
+
+```bash
+amulety embed --chain H --model tcremp --skip-clustering --output-file-path embeddings.pt input.tsv
+```
+
 ### Troubleshooting Models
 
 If you encounter errors about missing packages, AMULETY will provide detailed installation instructions. To use the actual models:
