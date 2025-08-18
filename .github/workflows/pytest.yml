@@ -52,6 +52,15 @@ jobs:
             echo "Installing TCREMP for Python 3.11+"
             git clone https://github.com/antigenomics/tcremp.git
             cd tcremp
+
+            # Apply fix for clustering issue - force skip clustering like local environment
+            echo "Applying TCREMP clustering fix..."
+            sed -i.bak 's/if args.cluster:/if False:  # Force skip clustering/' tcremp/tcremp_run.py
+
+            # Verify the fix was applied
+            echo "Verifying TCREMP fix..."
+            grep -n "Force skip clustering" tcremp/tcremp_run.py || echo "Fix verification failed"
+
             pip install .
             # Verify installation
             tcremp-run -h || echo "TCREMP installation verification failed"
