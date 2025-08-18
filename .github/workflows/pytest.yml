@@ -61,6 +61,9 @@ jobs:
             echo "Verifying TCREMP fix..."
             grep -n "Force skip clustering" tcremp/tcremp_run.py || echo "Fix verification failed"
 
+            # Install pyarrow for parquet support (required by TCREMP)
+            pip install pyarrow
+
             pip install .
             # Verify installation
             tcremp-run -h || echo "TCREMP installation verification failed"
