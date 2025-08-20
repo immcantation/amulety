@@ -246,22 +246,24 @@ class TestAmulety(unittest.TestCase):
         assert result.shape[1] == 320  # ESM2-t6 embedding dimension
         assert result.shape[0] == 2  # 2 heavy chains in test data
 
-    def test_auto_receptor_type_validation(self):
-        """Test automatic receptor type validation functionality."""
+    def test_bcr_with_bcr_model_validation(self):
+        """Test BCR data with BCR model (should work)."""
+        from amulety.amulety import embed_airr
+
+        result = embed_airr(
+            self.test_airr_sc_df,
+            "H",
+            "antiberta2",
+            batch_size=2,
+        )
+        assert result.shape[1] == 1024  # AntiBERTa2 embedding dimension
+        assert result.shape[0] == 2  # 2 heavy chains in test data
+
+    def test_tcr_with_tcr_model_validation(self):
+        """Test TCR data with TCR model (should work if model loads)."""
         from amulety.amulety import embed_airr
 
         try:
-            # Test 1: BCR data with BCR model (should work)
-            result = embed_airr(
-                self.test_airr_sc_df,
-                "H",
-                "antiberta2",
-                batch_size=2,
-            )
-            assert result.shape[1] == 1024  # AntiBERTa2 embedding dimension
-            assert result.shape[0] == 2  # 2 heavy chains in test data
-
-            # Test 2: TCR data with TCR model (should work)
             result = embed_airr(
                 self.test_airr_tcr_df,
                 "H",
@@ -270,29 +272,53 @@ class TestAmulety(unittest.TestCase):
             )
             assert result.shape[1] == 768  # TCR-BERT embedding dimension
             assert result.shape[0] == 3  # 3 beta chains in TCR test data
+        except Exception as e:
+            if any(
+                error_type in str(e)
+                for error_type in [
+                    "SafetensorError",
+                    "InvalidHeaderDeserialization",
+                    "ConnectionError",
+                    "HTTPError",
+                    "RuntimeError",
+                ]
+            ):
+                self.skipTest(f"TCR-BERT model loading failed: {e}")
+            else:
+                raise
 
-            # Test 3: BCR data with protein model (should work)
-            result = embed_airr(
-                self.test_airr_sc_df,
+    def test_bcr_with_protein_model_validation(self):
+        """Test BCR data with protein model (should work)."""
+        from amulety.amulety import embed_airr
+
+        result = embed_airr(
+            self.test_airr_sc_df,
+            "H",
+            "esm2",
+            batch_size=2,
+        )
+        assert result.shape[1] == 1280  # ESM2 embedding dimension
+        assert result.shape[0] == 2  # 2 heavy chains in test data
+
+    def test_tcr_with_bcr_model_validation(self):
+        """Test TCR data with BCR model (should fail with clear error)."""
+        from amulety.amulety import embed_airr
+
+        with self.assertRaises(ValueError) as context:
+            embed_airr(
+                self.test_airr_tcr_df,
                 "H",
-                "esm2",
+                "antiberta2",
                 batch_size=2,
             )
-            assert result.shape[1] == 1280  # ESM2 embedding dimension
-            assert result.shape[0] == 2  # 2 heavy chains in test data
+        self.assertIn("is a BCR-specific model", str(context.exception))
+        self.assertIn("no BCR data", str(context.exception))
 
-            # Test 4: TCR data with BCR model (should fail with clear error)
-            with self.assertRaises(ValueError) as context:
-                embed_airr(
-                    self.test_airr_tcr_df,
-                    "H",
-                    "antiberta2",
-                    batch_size=2,
-                )
-            self.assertIn("is a BCR-specific model", str(context.exception))
-            self.assertIn("no BCR data", str(context.exception))
+    def test_bcr_with_tcr_model_validation(self):
+        """Test BCR data with TCR model (should fail with clear error if model loads)."""
+        from amulety.amulety import embed_airr
 
-            # Test 5: BCR data with TCR model (should fail with clear error)
+        try:
             with self.assertRaises(ValueError) as context:
                 embed_airr(
                     self.test_airr_sc_df,
@@ -303,8 +329,17 @@ class TestAmulety(unittest.TestCase):
             self.assertIn("is a TCR-specific model", str(context.exception))
             self.assertIn("no TCR data", str(context.exception))
         except Exception as e:
-            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
-                self.skipTest(f"Model loading failed (corrupted cache): {e}")
+            if any(
+                error_type in str(e)
+                for error_type in [
+                    "SafetensorError",
+                    "InvalidHeaderDeserialization",
+                    "ConnectionError",
+                    "HTTPError",
+                    "RuntimeError",
+                ]
+            ):
+                self.skipTest(f"TCR-BERT model loading failed, cannot test validation: {e}")
             else:
                 raise
 

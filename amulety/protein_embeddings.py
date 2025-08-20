@@ -38,8 +38,8 @@ def custommodel(
     X = X.apply(lambda a: a[:max_seq_length])
     sequences = X.values
 
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModelForMaskedLM.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=cache_dir)
+    model = AutoModelForMaskedLM.from_pretrained(model_path, cache_dir=cache_dir)
     model = model.to(device)
     model_size = sum(p.numel() for p in model.parameters())
     logger.info("Model size: %sM", round(model_size / 1e6, 2))
