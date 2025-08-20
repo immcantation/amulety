@@ -127,11 +127,23 @@ stderr = Console(stderr=True)
 stdout = Console()
 
 
+def check_igblast_available():
+    """Check if IgBlast is available in the system."""
+    try:
+        subprocess.run(["igblastn", "-help"], capture_output=True, check=True)
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return False
+
+
 def translate_airr(
     airr: pd.DataFrame, tmpdir: str, reference_dir: str, keep_regions: bool = False, sequence_col: str = "sequence"
 ):
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
+
+    Requires IgBlast to be installed and available in PATH.
+    Install with: conda install -c bioconda igblast
     """
     data = airr.copy()
 
@@ -182,11 +194,27 @@ def translate_airr(
     ]
 
     logger.info("Calling IgBlast for running translation...")
-    pipes = subprocess.Popen(command_igblastn, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = pipes.communicate()
+    try:
+        pipes = subprocess.Popen(command_igblastn, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = pipes.communicate()
 
-    if pipes.returncode != 0:
-        raise Exception(f"IgBlast failed with error code {pipes.returncode}. {stderr.decode('utf-8')}")
+        if pipes.returncode != 0:
+            raise Exception(f"IgBlast failed with error code {pipes.returncode}. {stderr.decode('utf-8')}")
+    except FileNotFoundError:
+        raise Exception(
+            "IgBlast (igblastn) not found. Please install IgBlast:\n"
+            "  1. Add conda channels:\n"
+            "     conda config --add channels conda-forge\n"
+            "     conda config --add channels bioconda\n"
+            "  2. Install IgBlast:\n"
+            "     conda install -c bioconda igblast\n"
+            "  3. Or use mamba (faster):\n"
+            "     conda install mamba -n base -c conda-forge\n"
+            "     mamba install -c bioconda igblast\n"
+            "  4. Or download manually from:\n"
+            "     https://ftp.ncbi.nlm.nih.gov/blast/executables/igblast/release/\n"
+            "Make sure 'igblastn' is in your system PATH."
+        )
 
     keep_cols = ["sequence_id", "sequence_aa", "sequence_alignment_aa"]
     if keep_regions:
@@ -701,6 +729,22 @@ def translate_igblast(
     5. Removes gaps introduced by IgBlast from the sequence alignment.\n
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
+    # Check if IgBlast is available
+    if not check_igblast_available():
+        stderr.print(
+            "[red]Error: IgBlast (igblastn) not found![/red]\n"
+            "Please install IgBlast:\n"
+            "  1. Add conda channels:\n"
+            "     [cyan]conda config --add channels conda-forge[/cyan]\n"
+            "     [cyan]conda config --add channels bioconda[/cyan]\n"
+            "  2. Install IgBlast:\n"
+            "     [cyan]conda install -c bioconda igblast[/cyan]\n"
+            "  3. Or use mamba (faster):\n"
+            "     [cyan]mamba install -c bioconda igblast[/cyan]\n"
+            "  4. Or download from: https://ftp.ncbi.nlm.nih.gov/blast/executables/igblast/release/\n"
+            "Make sure 'igblastn' is in your system PATH."
+        )
+        raise typer.Exit(1)
 
     data = pd.read_csv(input_file_path, sep="\t")
 
@@ -819,20 +863,36 @@ def embed(
 
 @app.command()
 def check_deps():
-    """Check if optional embedding dependencies are installed."""
+    """Check if optional embedding dependencies and tools are installed."""
 
-    print("Checking embedding dependencies...")
+    print("Checking AMULETY dependencies...\n")
+
+    # Check IgBlast availability
+    print("🧬 IgBlast (for translate-igblast command):")
+    if check_igblast_available():
+        print("  ✅ IgBlast (igblastn) is available")
+    else:
+        print("  ❌ IgBlast (igblastn) not found")
+        print("     1. Add conda channels:")
+        print("        conda config --add channels conda-forge")
+        print("        conda config --add channels bioconda")
+        print("     2. Install IgBlast:")
+        print("        conda install -c bioconda igblast")
+        print("     3. Or use mamba: mamba install -c bioconda igblast")
+        print("     4. Or download from: https://ftp.ncbi.nlm.nih.gov/blast/executables/igblast/release/")
+
+    print("\n🤖 Embedding model dependencies:")
     missing = check_dependencies()
 
     if not missing:
-        print("All embedding dependencies are installed!")
+        print("  ✅ All embedding dependencies are installed!")
     else:
-        print(f"\n{len(missing)} dependencies are missing.")
-        print("AMULETY will raise ImportError with installation instructions when these models are used.")
-        print("\nTo install missing dependencies:")
+        print(f"  ❌ {len(missing)} dependencies are missing.")
+        print("  AMULETY will raise ImportError with installation instructions when these models are used.")
+        print("\n  To install missing dependencies:")
         for name, install_cmd in missing:
-            print(f"  • {name}: {install_cmd}")
-        print("\nNote: Models will provide detailed installation instructions when used.")
+            print(f"    • {name}: {install_cmd}")
+        print("\n  Note: Models will provide detailed installation instructions when used.")
 
 
 def main():
