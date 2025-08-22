@@ -77,7 +77,7 @@ class TestChainValidation(unittest.TestCase):
                     embed_airr(data, chain, model, output_type="pickle")
 
                 error_msg = str(context.exception)
-                self.assertIn("requires paired chains", error_msg)
+                self.assertIn("was trained on paired chains", error_msg)
                 self.assertIn("--chain HL", error_msg)
 
     def test_flexible_paired_models_accept_all_chains(self):
@@ -225,7 +225,7 @@ class TestChainValidation(unittest.TestCase):
                     embed_airr(data, chain, model, output_type="pickle")
 
                 error_msg = str(context.exception)
-                self.assertIn("supports individual chains only", error_msg)
+                self.assertIn("was trained on individual chains only", error_msg)
                 self.assertIn("--chain H", error_msg)
                 self.assertIn("--chain L", error_msg)
 
@@ -272,7 +272,7 @@ class TestChainValidation(unittest.TestCase):
                 warning_msg = str(lh_warnings[0].message)
                 self.assertIn("Most paired models are trained on HL (Heavy-Light) order", warning_msg)
                 self.assertIn("may result in reduced accuracy", warning_msg)
-                self.assertIn("Consider using --chain HL", warning_msg)
+                self.assertIn("Consider using --chain_mode HL", warning_msg)
             except Exception as e:
                 self.fail(f"ESM2 should accept LH chains with warning, but got error: {e}")
 
@@ -344,8 +344,7 @@ class TestChainValidation(unittest.TestCase):
             embed_airr(self.bcr_data, "HL", "antiberty", output_type="pickle")
 
         error_msg = str(context.exception)
-        self.assertIn("antiberty model supports individual chains only", error_msg)
-        self.assertIn("cannot understand paired sequences", error_msg)
+        self.assertIn("was trained on individual chains only", error_msg)
         self.assertIn("--chain H", error_msg)
         self.assertIn("--chain L", error_msg)
 
