@@ -180,11 +180,9 @@ def process_airr(
     if chain_mode in ["HL", "LH"]:
         # HL/LH modes: error for bulk, process for single-cell/mixed
         if is_bulk:
-            raise ValueError(f'chain = "{chain_mode}" invalid for bulk mode')
+            raise ValueError(f'Chain = "{chain_mode}" is invalid for bulk mode. Please use "H+L", "H" or "L" instead.')
 
-        # For single-cell and mixed data
-        order = "HL" if chain_mode == "HL" else "LH"
-
+        # If mixed data, filter to only sequences with
         if is_mixed:
             before_filter = len(data)
             data = data.loc[data[cell_id_col].notna(),]
@@ -193,90 +191,37 @@ def process_airr(
             if removed_count > 0:
                 logger.info("Removed %d sequences without cell_id for paired chain processing", removed_count)
 
-        data = concatenate_heavylight(data, sequence_col, cell_id_col, duplicate_col, order=order, mode=mode)
+        data = concatenate_heavylight(data, sequence_col, cell_id_col, duplicate_col, order=chain_mode, mode=mode)
 
     elif chain_mode == "H+L":
         # H+L mode: same processing for all data types
-        if is_bulk:
-            # For bulk data with separate heavy and light chains
-            before_filter = len(data)
-            colnames = ["sequence_id", sequence_col, "chain"]
-            data = data.loc[data.chain.isin(["H", "L"]), colnames]
-            after_filter = len(data)
-            removed_count = before_filter - after_filter
-            if removed_count > 0:
-                logger.info("Removed %d sequences not matching H or L chains", removed_count)
-        else:
-            # For single-cell and mixed data
-            if is_mixed:
-                before_filter = len(data)
-                data = data.loc[data[cell_id_col].notna(),]
-                after_filter = len(data)
-                removed_count = before_filter - after_filter
-                if removed_count > 0:
-                    logger.info("Removed %d sequences without cell_id", removed_count)
 
-            if mode == "tab_locus_gene":
-                # For models like TCREMP that need H+L in tab_locus_gene format
-                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
-            else:
-                # For other models that need H+L in separate entries
-                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode="tab")
+        # Add dummy cell_id col if bulk data
+        if is_bulk:
+            data[cell_id_col] = pd.NA
+
+        # For models like TCREMP that need H+L in tab_locus_gene format
+        if mode == "tab_locus_gene":
+            data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
+        else:
+            # For other models that need H+L in separate entries
+            data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode="tab")
 
     else:
         # Single chain mode (H or L): same processing for all data types
-        if is_bulk:
-            # For bulk data with single chain
-            before_filter = len(data)
-            colnames = ["sequence_id", sequence_col]
-            data = data.loc[data.chain == chain_mode, colnames]
-            after_filter = len(data)
-            removed_count = before_filter - after_filter
-            if removed_count > 0:
-                logger.info("Removed %d sequences not matching %s chain", removed_count, chain_mode)
-        elif is_single_cell:
-            # For single-cell data
-            if mode == "tab_locus_gene":
-                # For models like TCREMP that need single chains in tab_locus_gene format
-                # First filter to only the requested chain type
-                before_filter = len(data)
-                data_filtered = data.loc[data.chain == chain_mode].copy()
-                after_filter = len(data_filtered)
-                removed_count = before_filter - after_filter
-                if removed_count > 0:
-                    logger.info("Removed %d sequences not matching %s chain", removed_count, chain_mode)
-                data = process_h_plus_l(data_filtered, sequence_col, cell_id_col, duplicate_col, mode=mode)
-            else:
-                # For other models that need simple single chain processing
-                before_filter = len(data)
-                colnames = [cell_id_col, sequence_col]
-                data = data.loc[data.chain == chain_mode, colnames]
-                after_filter = len(data)
-                removed_count = before_filter - after_filter
-                if removed_count > 0:
-                    logger.info("Removed %d sequences not matching %s chain", removed_count, chain_mode)
-        else:
-            # For mixed data - process all matching chains (both bulk and single-cell)
-            if mode == "tab_locus_gene":
-                # For models like TCREMP that need single chains in tab_locus_gene format
-                # Only process sequences with cell_id for this mode
-                before_filter = len(data)
-                data = data.loc[data[cell_id_col].notna(),]
-                after_filter = len(data)
-                removed_count = before_filter - after_filter
-                if removed_count > 0:
-                    logger.info("Removed %d sequences without cell_id", removed_count)
-                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
-            else:
-                # For other models - include all matching chains regardless of cell_id
-                before_filter = len(data)
-                colnames = ["sequence_id", cell_id_col, sequence_col]
-                data = data.loc[data.chain == chain_mode, colnames]
-                after_filter = len(data)
-                removed_count = before_filter - after_filter
-                if removed_count > 0:
-                    logger.info("Removed %d sequences not matching %s chain", removed_count, chain_mode)
+        before_filter = len(data)
+        data = data.loc[data.chain == chain_mode]
+        after_filter = len(data)
+        removed_count = before_filter - after_filter
+        if removed_count > 0:
+            logger.info("Removed %d sequences not matching %s chain", removed_count, chain_mode)
 
+        if is_bulk:
+            data[cell_id_col] = pd.NA
+
+        elif is_single_cell:
+            # For models like TCREMP that need H+L in tab_locus_gene format
+            data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
     return data
 
 
@@ -419,17 +364,29 @@ def process_h_plus_l(
     Returns:
         pandas.DataFrame: Dataframe with processed chain sequences in the specified format.
     """
+    # Supports only single-cell or mixed data with cell_id_col
     # Validate selection column
     if duplicate_col not in data.columns:
         raise ValueError(f"Selection column '{duplicate_col}' not found in data.")
+
+    if cell_id_col not in data.columns:
+        raise ValueError(f"Cell ID column '{cell_id_col}' not found in data.")
 
     if not pd.api.types.is_numeric_dtype(data[duplicate_col]):
         raise ValueError(
             f"Selection column '{duplicate_col}' must be numeric. Found dtype: {data[duplicate_col].dtype}"
         )
 
-    # Select best chain for each cell and chain type
-    data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
+    # Check whether data is mixed single-cell and bulk
+    # For single-cell data select best chain per cell and chain type
+    is_mixed = data[cell_id_col].isna().any()
+    if is_mixed:
+        data_bulk = data.loc[data[cell_id_col].isna(),]
+        data_sc = data.loc[data[cell_id_col].notna(),]
+        data_sc = data_sc.loc[data_sc.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
+        data = pd.concat([data_sc, data_bulk], ignore_index=True)
+    else:
+        data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
 
     # Ensure the sequence column is properly included in the output
     if sequence_col not in data.columns:
@@ -443,10 +400,6 @@ def process_h_plus_l(
     elif mode == "tab_locus_gene":
         # Extended format with V/J gene information for models like TCREMP
         # This handles H+L, H, or L chains separately with gene information
-
-        # Create sequence_id if it doesn't exist (for single-cell data)
-        if "sequence_id" not in data.columns:
-            data.loc[:, "sequence_id"] = range(len(data))
 
         # Create locus_vgene and locus_jgene columns
         data.loc[:, "locus_vgene"] = data["locus"] + "V"
@@ -478,11 +431,6 @@ def process_h_plus_l(
             else:
                 # Set placeholder values for missing J gene information
                 result.loc[mask, j_col] = "Unknown"
-
-        # Remove any columns ending with 'D' (D gene related) as TCREMP doesn't need them
-        d_columns = [col for col in result.columns if col.endswith("D")]
-        if d_columns:
-            result = result.drop(columns=d_columns)
 
         return result
 
