@@ -23,8 +23,9 @@ keywords = [
 ]
 authors = [
     {name = "Mamie Wang", email = "mamie.wang@yale.edu"},
-    {name = "Gisela Gabernet", email = "gisela.gabernet@yale.edu"},
-    {name = "Steven Kleinstein", email = "steven.kleinstein@yale.edu"}
+    {name = "Wengyao Jiang", email = "wengyao.jiang@yale.edu"},
+    {name = "Steven Kleinstein", email = "steven.kleinstein@yale.edu"},
+    {name = "Gisela Gabernet", email = "gisela.gabernet@yale.edu"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
