@@ -125,7 +125,7 @@ jobs:
               sleep 5
             fi
             if [ $i -eq 3 ]; then
-              echo "Download failed, skipping IgBlast test"
+              echo "Download of IgBlast reference data failed"
               exit 1
             fi
           done
