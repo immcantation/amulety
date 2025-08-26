@@ -100,7 +100,7 @@ jobs:
               sleep 10
             fi
             if [ $i -eq 3 ]; then
-              echo "All attempts failed, skipping IgBlast test"
+              echo "All attempts to install IgBlast failed"
               exit 1
             fi
           done
