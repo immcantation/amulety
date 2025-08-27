@@ -66,11 +66,16 @@ class TestAmulety(unittest.TestCase):
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
         os.remove("H_plus_L_test.tsv")
 
-    def test_ablang_bulk_HL_embedding_fails(self):
-        """Test AbLang (bulk HL fails)."""
-        with self.assertRaises(ValueError) as context:
-            embed(self.test_bulk_path, "HL", "ablang", "should_fail.pt")
-        self.assertIn('chain = "HL" invalid for bulk mode', str(context.exception))
+    def test_ablang_mixed_H_embedding_tsv(self):
+        """Test AbLang H."""
+        embed(self.test_airr_mixed_path, "H", "ablang", "H_test.tsv")
+        assert os.path.exists("H_test.tsv")
+        embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
+        assert (
+            embeddings.shape[0] == 2
+        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        os.remove("H_test.tsv")
 
     # antiberty tests
     def test_antiberty_mixed_HL_embedding(self):
@@ -95,11 +100,16 @@ class TestAmulety(unittest.TestCase):
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
         os.remove("H_plus_L_test.tsv")
 
-    def test_antiberty_bulk_HL_embedding_fails(self):
-        """Test antiberty (bulk HL fails)."""
-        with self.assertRaises(ValueError) as context:
-            embed(self.test_bulk_path, "HL", "antiberty", "should_fail.pt")
-        self.assertIn('chain = "HL" invalid for bulk mode', str(context.exception))
+    def test_antiberty_mixed_H_embedding_tsv(self):
+        """Test antiberty (mixed bulk sc H)."""
+        embed(self.test_airr_mixed_path, "H", "antiberty", "H_test.tsv")
+        assert os.path.exists("H_test.tsv")
+        embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 515  # 512 + cell_id + chain + sequence_id
+        assert (
+            embeddings.shape[0] == 2
+        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        os.remove("H_test.tsv")
 
     # def test_antiBERTa2_sc_H_plus_L_embedding(self):
     #     """Test antiBERTa2 (single-cell H+L)."""
@@ -220,76 +230,3 @@ class TestAmulety(unittest.TestCase):
     #         embed(self.test_airr_sc_path, "H+L", "balm-paired", "should_fail.pt")
     #     self.assertIn("was trained on paired chains", str(context.exception))
     #     self.assertIn("--chain HL", str(context.exception))
-
-    # @pytest.mark.needsigblast  # mark test as needing igblast installation and databases, run with pytest --needsigblast
-    # def test_translation(self):
-    #     """Test translation for IgBLAST works."""
-    #     translate_igblast(
-    #         self.test_airr_translation_path,
-    #         self.this_dir,
-    #         # ugly hack to get to the igblast_base directory in GitHub actions
-    #         os.path.join(os.path.abspath(os.path.join(os.path.dirname(self.this_dir), os.pardir)), "igblast_base"),
-    #     )
-    #     igblast_outfile = os.path.join(self.this_dir, "AIRR_rearrangement_single-cell_testtranslation_translated.tsv")
-    #     data_out = pd.read_table(igblast_outfile, delimiter="\t")
-    #     assert (data_out["sequence_vdj_aa"] == data_out["sequence_vdj_aa_original"]).all()
-    #     assert (data_out["sequence_alignment_aa"] == data_out["sequence_alignment_aa_original"]).all()
-    #     assert (data_out["sequence_aa"] == data_out["sequence_aa_original"]).all()
-    #     os.remove(igblast_outfile)
-
-    # ##################
-    # # Bulk AIRR tests #
-    # ##################
-
-    # def test_antiberty_bulk_H_embedding(self):
-    #     """Test antiberty with bulk H chain data."""
-    #     embed(self.test_bulk_path, "H", "antiberty", "bulk_H_test.pt")
-    #     assert os.path.exists("bulk_H_test.pt")
-    #     embeddings = torch.load("bulk_H_test.pt")
-    #     assert embeddings.shape[1] == 512  # AntiBERTy embedding dimension
-    #     assert embeddings.shape[0] == 2  # 2 BCR H chains in bulk test data (TCR chains filtered out)
-    #     os.remove("bulk_H_test.pt")
-
-    # def test_antiberty_bulk_L_embedding(self):
-    #     """Test antiberty with bulk L chain data."""
-    #     embed(self.test_bulk_path, "L", "antiberty", "bulk_L_test.pt")
-    #     assert os.path.exists("bulk_L_test.pt")
-    #     embeddings = torch.load("bulk_L_test.pt")
-    #     assert embeddings.shape[1] == 512  # AntiBERTy embedding dimension
-    #     assert embeddings.shape[0] == 2  # 2 BCR L chains in bulk test data (TCR chains filtered out)
-    #     os.remove("bulk_L_test.pt")
-
-    # def test_antiberta2_bulk_H_embedding(self):
-    #     """Test antiberta2 with bulk H chain data."""
-    #     embed(self.test_bulk_path, "H", "antiberta2", "bulk_H_test.pt")
-    #     assert os.path.exists("bulk_H_test.pt")
-    #     embeddings = torch.load("bulk_H_test.pt")
-    #     assert embeddings.shape[1] == 1024  # AntiBERTa2 embedding dimension
-    #     assert embeddings.shape[0] == 2  # 2 BCR H chains in bulk test data (TCR chains filtered out)
-    #     os.remove("bulk_H_test.pt")
-
-    # def test_ablang_bulk_H_embedding(self):
-    #     """Test AbLang with bulk H chain data."""
-    #     embed(self.test_bulk_path, "H", "ablang", "bulk_H_test.pt")
-    #     assert os.path.exists("bulk_H_test.pt")
-    #     embeddings = torch.load("bulk_H_test.pt")
-    #     assert embeddings.shape[1] == 768  # AbLang embedding dimension
-    #     assert embeddings.shape[0] == 2  # 2 BCR H chains in bulk test data (TCR chains filtered out)
-    #     os.remove("bulk_H_test.pt")
-
-    # def test_bulk_invalid_chain_types(self):
-    #     """Test that bulk data rejects paired chain types (HL, LH) but allows H+L."""
-    #     # Test that HL is not allowed for bulk data - should fail on bulk mode check first
-    #     with pytest.raises(ValueError, match='chain = "HL" invalid for bulk mode'):
-    #         embed(self.test_bulk_path, "HL", "antiberty", "should_fail.pt")
-
-    #     # Test that H+L is now allowed for bulk data (separate heavy and light chains)
-    #     try:
-    #         embed(self.test_bulk_path, "H+L", "antiberty", "bulk_H_plus_L_test.pt")
-    #         assert os.path.exists("bulk_H_plus_L_test.pt")
-    #         embeddings = torch.load("bulk_H_plus_L_test.pt")
-    #         assert embeddings.shape[1] == 512  # AntiBERTy embedding dimension
-    #         assert embeddings.shape[0] == 4  # 2 BCR H chains + 2 BCR L chains in bulk test data
-    #         os.remove("bulk_H_plus_L_test.pt")
-    #     except Exception as e:
-    #         pytest.fail(f"H+L should be allowed for bulk data, but got error: {e}")
