@@ -74,8 +74,8 @@ def process_airr(
     chain_mode: str,
     sequence_col: str = "sequence_vdj_aa",
     cell_id_col: str = "cell_id",
-    receptor_type: str = "all",
     duplicate_col: str = "duplicate_count",
+    receptor_type: str = "all",
     mode: str = "concat",
 ):
     """
@@ -96,6 +96,8 @@ def process_airr(
                            - "all": allows both BCR and TCR chains in the same file
         duplicate_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
+        mode (str): Mode to use in concatenating sequences. By default it concatenates the sequences when the HL chain is provided (concat),
+                    it can also tabulate the sequences alone (tab) or together with the locus and segment (tab_locus_gene).
 
     Returns:
         pandas.DataFrame: Dataframe with formatted sequences.
@@ -105,7 +107,10 @@ def process_airr(
     """
     allowed_sequence_input = ["H", "L", "HL", "LH", "H+L"]
     if chain_mode not in allowed_sequence_input:
-        raise ValueError(f"Input x must be one of {allowed_sequence_input}")
+        raise ValueError(f"Input x must be one of {allowed_sequence_input}.")
+    allowed_modes = ["concat", "tab", "tab_locus_gene"]
+    if mode not in allowed_modes:
+        raise ValueError(f"Mode must be one of {allowed_modes}.")
 
     # Warning for LH order
     if chain_mode == "LH":
@@ -114,6 +119,12 @@ def process_airr(
             "Using LH order may result in reduced accuracy. Consider using --chain_mode HL for better performance.",
             UserWarning,
         )
+
+    # Check that required columns exist
+    required_cols = [sequence_col, "v_call"]
+    missing_cols = [col for col in required_cols if col not in airr_df.columns]
+    if missing_cols:
+        raise ValueError(f"Column(s) {missing_cols} are not present in the input data and are needed for processing.")
 
     data = airr_df.copy()
     if "locus" not in data.columns:
@@ -176,13 +187,20 @@ def process_airr(
     is_single_cell = not is_bulk and data[cell_id_col].notna().all()
     is_mixed = not is_bulk and not is_single_cell
 
+    if is_bulk:
+        logger.info("Bulk AIRR data detected (no cell_id column).")
+    elif is_single_cell:
+        logger.info("Single-cell AIRR data detected (all entries have cell_id).")
+    elif is_mixed:
+        logger.info("Mixed AIRR data detected (some entries have cell_id, others do not).")
+
     # Process based on chain_mode
     if chain_mode in ["HL", "LH"]:
         # HL/LH modes: error for bulk, process for single-cell/mixed
         if is_bulk:
             raise ValueError(f'Chain = "{chain_mode}" is invalid for bulk mode. Please use "H+L", "H" or "L" instead.')
 
-        # If mixed data, filter to only sequences with
+        # If mixed data, filter to only sequences with cell_id
         if is_mixed:
             before_filter = len(data)
             data = data.loc[data[cell_id_col].notna(),]
@@ -221,8 +239,11 @@ def process_airr(
 
         elif is_single_cell:
             # For models like TCREMP that need H+L in tab_locus_gene format
-            data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
-    return data
+            if mode == "concat":
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode="tab")
+            else:
+                data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
+    return data.loc[:, sequence_col], data
 
 
 def concatenate_heavylight(

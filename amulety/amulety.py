@@ -14,10 +14,9 @@ from typing_extensions import Annotated
 
 from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
 from amulety.protein_embeddings import custommodel, esm2, immune2vec, prott5
-from amulety.tcr_embeddings import tcr_bert, tcremp, tcrt5
+from amulety.tcr_embeddings import tcr_bert, tcrt5
 from amulety.utils import (
     check_dependencies,
-    get_cdr3_sequence_column,
     process_airr,
 )
 
@@ -27,99 +26,99 @@ __version__ = version("amulety")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+# #TODO: I think this function is superfluous now.
+# def process_chain_data(
+#     airr: pd.DataFrame,
+#     chain: str,
+#     sequence_col: str,
+#     cell_id_col: str,
+#     duplicate_col: str,
+#     receptor_type: str,
+#     model_type: str = "standard",
+# ):
+#     """
+#     Universal chain data processing function for different chain modes and model types.
 
-def process_chain_data(
-    airr: pd.DataFrame,
-    chain: str,
-    sequence_col: str,
-    cell_id_col: str,
-    duplicate_col: str,
-    receptor_type: str,
-    model_type: str = "standard",
-):
-    """
-    Universal chain data processing function for different chain modes and model types.
+#     Parameters:
+#         airr: AIRR DataFrame
+#         chain: Chain mode (H, L, HL, LH, H+L)
+#         sequence_col: Sequence column name
+#         cell_id_col: Cell ID column name
+#         duplicate_col: Selection column name
+#         receptor_type: Receptor type
+#         model_type: Model type ("standard", "tabular")
 
-    Parameters:
-        airr: AIRR DataFrame
-        chain: Chain mode (H, L, HL, LH, H+L)
-        sequence_col: Sequence column name
-        cell_id_col: Cell ID column name
-        duplicate_col: Selection column name
-        receptor_type: Receptor type
-        model_type: Model type ("standard", "tabular")
+#     Returns:
+#         tuple: (processed_data_for_embedding, full_processed_data_for_output)
+#     """
+#     # Check that the mode is supported
+#     allowed_model_types = ["standard", "tabular"]
+#     if model_type not in allowed_model_types:
+#         raise ValueError(f"Unsupported model_type '{model_type}'. Allowed values: {allowed_model_types}")
 
-    Returns:
-        tuple: (processed_data_for_embedding, full_processed_data_for_output)
-    """
-    # Check that the mode is supported
-    allowed_model_types = ["standard", "tabular"]
-    if model_type not in allowed_model_types:
-        raise ValueError(f"Unsupported model_type '{model_type}'. Allowed values: {allowed_model_types}")
+#     if model_type == "tabular":
+#         # Tabular processing mode (e.g. TCREMP)
+#         dat = process_airr(
+#             airr,
+#             chain,
+#             sequence_col=sequence_col,
+#             cell_id_col=cell_id_col,
+#             duplicate_col=duplicate_col,
+#             receptor_type=receptor_type,
+#             mode="tab_locus_gene",
+#         )
+#         return dat, dat
 
-    if model_type == "tabular":
-        # Tabular processing mode (e.g. TCREMP)
-        dat = process_airr(
-            airr,
-            chain,
-            sequence_col=sequence_col,
-            cell_id_col=cell_id_col,
-            duplicate_col=duplicate_col,
-            receptor_type=receptor_type,
-            mode="tab_locus_gene",
-        )
-        return dat, dat
-
-    else:
-        # Standard model processing mode
-        if chain in ["HL", "LH"]:
-            # Paired chains: concatenate sequences
-            dat = process_airr(
-                airr,
-                chain,
-                sequence_col=sequence_col,
-                cell_id_col=cell_id_col,
-                duplicate_col=duplicate_col,
-                receptor_type=receptor_type,
-                mode="concat",
-            )
-            # The sequence column should now be consistently named as sequence_col
-            if sequence_col in dat.columns:
-                return dat.loc[:, sequence_col], dat
-            else:
-                raise ValueError(
-                    f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
-                )
-        elif chain == "H+L":
-            # Separate chains: return DataFrame with H and L columns
-            dat = process_airr(
-                airr,
-                chain,
-                sequence_col=sequence_col,
-                cell_id_col=cell_id_col,
-                duplicate_col=duplicate_col,
-                receptor_type=receptor_type,
-                mode="tab",
-            )
-            return dat, dat  # Return complete DataFrame for both
-        else:  # H or L single chain
-            # Single chain: return single sequence column
-            dat = process_airr(
-                airr,
-                chain,
-                sequence_col=sequence_col,
-                cell_id_col=cell_id_col,
-                duplicate_col=duplicate_col,
-                receptor_type=receptor_type,
-                mode="tab",
-            )
-            # The sequence column should now be consistently named as sequence_col
-            if sequence_col in dat.columns:
-                return dat.loc[:, sequence_col], dat
-            else:
-                raise ValueError(
-                    f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
-                )
+#     else:
+#         # Standard model processing mode
+#         if chain in ["HL", "LH"]:
+#             # Paired chains: concatenate sequences
+#             dat = process_airr(
+#                 airr,
+#                 chain,
+#                 sequence_col=sequence_col,
+#                 cell_id_col=cell_id_col,
+#                 duplicate_col=duplicate_col,
+#                 receptor_type=receptor_type,
+#                 mode="concat",
+#             )
+#             # The sequence column should now be consistently named as sequence_col
+#             if sequence_col in dat.columns:
+#                 return dat.loc[:, sequence_col], dat
+#             else:
+#                 raise ValueError(
+#                     f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
+#                 )
+#         elif chain == "H+L":
+#             # Separate chains: return DataFrame with H and L columns
+#             dat = process_airr(
+#                 airr,
+#                 chain,
+#                 sequence_col=sequence_col,
+#                 cell_id_col=cell_id_col,
+#                 duplicate_col=duplicate_col,
+#                 receptor_type=receptor_type,
+#                 mode="tab",
+#             )
+#             return dat, dat  # Return complete DataFrame for both
+#         else:  # H or L single chain
+#             # Single chain: return single sequence column
+#             dat = process_airr(
+#                 airr,
+#                 chain,
+#                 sequence_col=sequence_col,
+#                 cell_id_col=cell_id_col,
+#                 duplicate_col=duplicate_col,
+#                 receptor_type=receptor_type,
+#                 mode="tab",
+#             )
+#             # The sequence column should now be consistently named as sequence_col
+#             if sequence_col in dat.columns:
+#                 return dat.loc[:, sequence_col], dat
+#             else:
+#                 raise ValueError(
+#                     f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
+#                 )
 
 
 app = typer.Typer()
@@ -414,14 +413,13 @@ def embed_airr(
     if model == "ablang":
         # Check chain compatibility - AbLang supports individual chains only
         if chain in ["HL", "LH"]:
-            raise ValueError(
-                f"Model 'ablang' was trained on individual chains only. Using --chain H, --chain L, or --chain H+L instead of --chain {chain} is recommended."
+            warnings.warn(
+                f"Model 'ablang' was trained on individual chains only. Using --chain H, --chain L, or --chain H+L instead of --chain {chain} is recommended.",
+                UserWarning,
             )
 
         # Process data with unified pattern
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
@@ -433,23 +431,20 @@ def embed_airr(
             )
 
         # Process data with unified pattern
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
     elif model == "antiberty":
         # Check chain compatibility - AntiBERTy supports individual chains only
         if chain in ["HL", "LH"]:
-            raise ValueError(
-                f"Model 'antiberty' was trained on individual chains only. Using --chain H, --chain L, or --chain H+L instead of --chain {chain} is recommended."
+            warnings.warn(
+                f"Model 'antiberty' was trained on individual chains only. Using --chain H, --chain L, or --chain H+L instead of --chain {chain} is recommended.",
+                UserWarning,
             )
 
         # Process data for antiberty
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
@@ -467,14 +462,14 @@ def embed_airr(
             )
 
         # Process data for BALM-paired - use standard mode for paired chains
-        X, dat = process_chain_data(
+        X, dat = process_airr(
             airr,
             chain,
             sequence_col,
             cell_id_col,
             duplicate_col,
             receptor_type,
-            model_type="standard",
+            mode="concat",
         )
 
         embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
@@ -484,112 +479,98 @@ def embed_airr(
         # TCR-BERT supports all chain types
 
         # TCR-BERT: Only CDR3, supports H+L, H, L, HL/LH
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
-    elif model == "tcremp":
-        # For TCR data, try to get the best CDR3 column
-        if has_tcr_data:
-            # For TCR data, try to get the best CDR3 column
-            effective_sequence_col = get_cdr3_sequence_column(airr, sequence_col)
-            if effective_sequence_col == sequence_col and sequence_col not in ["junction_aa", "cdr3_aa"]:
-                logger.warning(
-                    f"No CDR3-specific columns (junction_aa, cdr3_aa) found. Using '{sequence_col}' column. "
-                    f"Note: TCR models (TCR-BERT, TCRT5, TCREMP) were trained on CDR3 sequences, not full VDJ sequences. "
-                    f"Using full sequences may reduce embedding accuracy."
-                )
-        else:
-            # For non-TCR data, require explicit CDR3 column
-            if sequence_col not in ["CDR3_aa", "junction_aa", "cdr3_aa"]:
-                raise ValueError(
-                    "Model tcremp was trained on CDR3 aa sequences. For non-TCR data, please provide CDR3_aa, junction_aa, or cdr3_aa as sequence column."
-                )
-            effective_sequence_col = sequence_col
-        # TCREMP supports all chain types
+    # elif model == "tcremp":
+    #     # Warn about not using CDR3
+    #     if sequence_col not in ["CDR3_aa", "junction_aa", "cdr3_aa"]:
+    #         warnings.warn(
+    #             "Model tcremp was trained on CDR3 aa sequences. It is recommended to provide CDR3_aa, junction_aa, or cdr3_aa as sequence column.",
+    #             UserWarning
+    #         )
 
-        # TCREMP: All chain modes use tab_locus_gene to get CDR3 + V/J gene information
-        raw_dat, dat = process_chain_data(
-            airr, chain, effective_sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="tabular"
-        )
+    #     # TCREMP: All chain modes use tab_locus_gene to get CDR3 + V/J gene information
+    #     raw_dat, dat = process_airr(
+    #         airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="tabular"
+    #     )
 
-        # For TCREMP, raw_dat format depends on chain type:
-        # - For HL/LH: pivoted format with H, L columns
-        # - For H, L, H+L: non-pivoted format with 'chain' column
+    #     # For TCREMP, raw_dat format depends on chain type:
+    #     # - For HL/LH: pivoted format with H, L columns
+    #     # - For H, L, H+L: non-pivoted format with 'chain' column
 
-        # Extract sequences based on chain type
-        if chain == "H":
-            # H chain: extract from chain column
-            if "chain" in raw_dat.columns:
-                # Non-pivoted format
-                h_data = raw_dat[raw_dat["chain"] == "H"]
-                sequences_series = h_data[effective_sequence_col].dropna()
-            elif "H" in raw_dat.columns:
-                # Pivoted format
-                sequences_series = raw_dat["H"].dropna()
-            else:
-                raise ValueError("No H chain sequences found in data")
-        elif chain == "L":
-            # L chain: extract from chain column
-            if "chain" in raw_dat.columns:
-                # Non-pivoted format
-                l_data = raw_dat[raw_dat["chain"] == "L"]
-                sequences_series = l_data[effective_sequence_col].dropna()
-            elif "L" in raw_dat.columns:
-                # Pivoted format
-                sequences_series = raw_dat["L"].dropna()
-            else:
-                raise ValueError("No L chain sequences found in data")
-        elif chain == "H+L":
-            # Both chains separately: combine H and L sequences
-            sequences_list = []
-            if "chain" in raw_dat.columns:
-                # Non-pivoted format
-                h_data = raw_dat[raw_dat["chain"] == "H"]
-                l_data = raw_dat[raw_dat["chain"] == "L"]
-                sequences_list.extend(h_data[effective_sequence_col].dropna().tolist())
-                sequences_list.extend(l_data[effective_sequence_col].dropna().tolist())
-            else:
-                # Pivoted format
-                if "H" in raw_dat.columns:
-                    h_sequences = raw_dat["H"].dropna()
-                    sequences_list.extend(h_sequences.tolist())
-                if "L" in raw_dat.columns:
-                    l_sequences = raw_dat["L"].dropna()
-                    sequences_list.extend(l_sequences.tolist())
-            sequences_series = pd.Series(sequences_list)
-        elif chain in ["HL", "LH"]:
-            # Paired chains: combine H and L sequences per cell
-            sequences_list = []
-            if "H" in raw_dat.columns and "L" in raw_dat.columns:
-                # Pivoted format
-                for _, row in raw_dat.iterrows():
-                    h_seq = row.get("H", None)
-                    l_seq = row.get("L", None)
+    #     # Extract sequences based on chain type
+    #     if chain == "H":
+    #         # H chain: extract from chain column
+    #         if "chain" in raw_dat.columns:
+    #             # Non-pivoted format
+    #             h_data = raw_dat[raw_dat["chain"] == "H"]
+    #             sequences_series = h_data[sequence_col].dropna()
+    #         elif "H" in raw_dat.columns:
+    #             # Pivoted format
+    #             sequences_series = raw_dat["H"].dropna()
+    #         else:
+    #             raise ValueError("No H chain sequences found in data")
+    #     elif chain == "L":
+    #         # L chain: extract from chain column
+    #         if "chain" in raw_dat.columns:
+    #             # Non-pivoted format
+    #             l_data = raw_dat[raw_dat["chain"] == "L"]
+    #             sequences_series = l_data[sequence_col].dropna()
+    #         elif "L" in raw_dat.columns:
+    #             # Pivoted format
+    #             sequences_series = raw_dat["L"].dropna()
+    #         else:
+    #             raise ValueError("No L chain sequences found in data")
+    #     elif chain == "H+L":
+    #         # Both chains separately: combine H and L sequences
+    #         sequences_list = []
+    #         if "chain" in raw_dat.columns:
+    #             # Non-pivoted format
+    #             h_data = raw_dat[raw_dat["chain"] == "H"]
+    #             l_data = raw_dat[raw_dat["chain"] == "L"]
+    #             sequences_list.extend(h_data[sequence_col].dropna().tolist())
+    #             sequences_list.extend(l_data[sequence_col].dropna().tolist())
+    #         else:
+    #             # Pivoted format
+    #             if "H" in raw_dat.columns:
+    #                 h_sequences = raw_dat["H"].dropna()
+    #                 sequences_list.extend(h_sequences.tolist())
+    #             if "L" in raw_dat.columns:
+    #                 l_sequences = raw_dat["L"].dropna()
+    #                 sequences_list.extend(l_sequences.tolist())
+    #         sequences_series = pd.Series(sequences_list)
+    #     elif chain in ["HL", "LH"]:
+    #         # Paired chains: combine H and L sequences per cell
+    #         sequences_list = []
+    #         if "H" in raw_dat.columns and "L" in raw_dat.columns:
+    #             # Pivoted format
+    #             for _, row in raw_dat.iterrows():
+    #                 h_seq = row.get("H", None)
+    #                 l_seq = row.get("L", None)
 
-                    if pd.notna(h_seq) and pd.notna(l_seq):
-                        if chain == "LH":
-                            sequences_list.append(f"{l_seq}_{h_seq}")
-                        else:  # HL
-                            sequences_list.append(f"{h_seq}_{l_seq}")
-            else:
-                raise ValueError(f"Paired chain data not available for chain type '{chain}'")
-            sequences_series = pd.Series(sequences_list)
-        else:
-            raise ValueError(f"Unsupported chain type '{chain}' for TCREMP")
+    #                 if pd.notna(h_seq) and pd.notna(l_seq):
+    #                     if chain == "LH":
+    #                         sequences_list.append(f"{l_seq}_{h_seq}")
+    #                     else:  # HL
+    #                         sequences_list.append(f"{h_seq}_{l_seq}")
+    #         else:
+    #             raise ValueError(f"Paired chain data not available for chain type '{chain}'")
+    #         sequences_series = pd.Series(sequences_list)
+    #     else:
+    #         raise ValueError(f"Unsupported chain type '{chain}' for TCREMP")
 
-        if len(sequences_series) == 0:
-            raise ValueError(f"No valid sequences found for chain type '{chain}' after filtering")
+    #     if len(sequences_series) == 0:
+    #         raise ValueError(f"No valid sequences found for chain type '{chain}' after filtering")
 
-        embedding = tcremp(
-            sequences=sequences_series,
-            cache_dir=cache_dir,
-            batch_size=batch_size,
-            chain=chain,
-            skip_clustering=skip_clustering,
-        )
+    #     embedding = tcremp(
+    #         sequences=sequences_series,
+    #         cache_dir=cache_dir,
+    #         batch_size=batch_size,
+    #         chain=chain,
+    #         skip_clustering=skip_clustering,
+    #     )
 
     elif model == "tcrt5":
         # Check compatible chains - TCRT5 only supports H (beta) chains
@@ -601,9 +582,7 @@ def embed_airr(
             )
 
         # TCRT5: Only CDR3, only supports H (beta) chains
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
@@ -618,9 +597,7 @@ def embed_airr(
             )
 
         # Process data for immune2vec
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
@@ -635,9 +612,7 @@ def embed_airr(
             )
 
         # Process data for esm2
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
@@ -651,9 +626,7 @@ def embed_airr(
             )
 
         # Process data for prott5
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
 
@@ -669,9 +642,7 @@ def embed_airr(
             raise ValueError("For custom model, modelpath, embedding_dimension, and max_length must be provided.")
 
         # Process data for custom model
-        X, dat = process_chain_data(
-            airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, model_type="standard"
-        )
+        X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = custommodel(
             sequences=X,
