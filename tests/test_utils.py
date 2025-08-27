@@ -47,7 +47,7 @@ class TestAmulety(unittest.TestCase):
 
     def test_bulk_data_columns(self):
         """Test that bulk data processing returns correct columns."""
-        result = process_airr(self.test_bulk_df, "H")
+        _, result = process_airr(self.test_bulk_df, "H")
 
         # Verify sequence_id column is preserved
         assert "BCR_bulk_001" in result["sequence_id"].values
@@ -67,7 +67,7 @@ class TestAmulety(unittest.TestCase):
 
         # Test that H+L is now allowed for bulk data (separate heavy and light chains)
         try:
-            result = process_airr(self.test_bulk_df, "H+L")
+            _, result = process_airr(self.test_bulk_df, "H+L")
             assert result.shape[0] > 0  # Should return some data
             assert "chain" in result.columns  # Should have chain column
         except Exception as e:
@@ -76,35 +76,35 @@ class TestAmulety(unittest.TestCase):
     def test_bulk_data_processing_h_chain(self):
         """Test bulk data processing for H chains (heavy chains)."""
         # Test BCR H chain processing
-        result_bcr_h = process_airr(self.test_bulk_df, "H", receptor_type="BCR")
+        _, result_bcr_h = process_airr(self.test_bulk_df, "H", receptor_type="BCR")
         assert result_bcr_h.shape[0] == 2  # 2 BCR heavy chains
         assert all(result_bcr_h["v_call"].str.contains("IGH"))  # BCR heavy chain signatures
 
         # Test TCR H chain processing (beta chains)
-        result_tcr_h = process_airr(self.test_bulk_df, "H", receptor_type="TCR")
+        _, result_tcr_h = process_airr(self.test_bulk_df, "H", receptor_type="TCR")
         assert result_tcr_h.shape[0] == 2  # 2 TCR beta chains
         # The sequence column should now be consistently named as sequence_vdj_aa
         assert all(result_tcr_h["v_call"].str.contains("TRB"))  # TCR beta chain signatures
 
         # Test unified processing (all H chains)
-        result_all_h = process_airr(self.test_bulk_df, "H", receptor_type="all")
+        _, result_all_h = process_airr(self.test_bulk_df, "H", receptor_type="all")
         assert result_all_h.shape[0] == 4  # 2 BCR + 2 TCR heavy chains
 
     def test_bulk_data_processing_l_chain(self):
         """Test bulk data processing for L chains (light chains)."""
         # Test BCR L chain processing
-        result_bcr_l = process_airr(self.test_bulk_df, "L", receptor_type="BCR")
+        _, result_bcr_l = process_airr(self.test_bulk_df, "L", receptor_type="BCR")
         assert result_bcr_l.shape[0] == 2  # 2 BCR light chains
         assert all(result_bcr_l["v_call"].str.contains("IGL|IGK"))  # IGL signature
 
         # Test TCR L chain processing (alpha chains)
-        result_tcr_l = process_airr(self.test_bulk_df, "L", receptor_type="TCR")
+        _, result_tcr_l = process_airr(self.test_bulk_df, "L", receptor_type="TCR")
         assert result_tcr_l.shape[0] == 2  # 2 TCR alpha chains
         # The sequence column should now be consistently named as sequence_vdj_aa
         assert all(result_tcr_l["v_call"].str.contains("TRA"))  # TCR alpha chain signatures
 
         # Test unified processing (all L chains)
-        result_all_l = process_airr(self.test_bulk_df, "L", receptor_type="all")
+        _, result_all_l = process_airr(self.test_bulk_df, "L", receptor_type="all")
         assert result_all_l.shape[0] == 4  # 2 BCR + 2 TCR light chains
 
     def test_custom_selection_column(self):
@@ -149,7 +149,7 @@ class TestAmulety(unittest.TestCase):
         """Test processing mixed BCR and TCR data with different receptor_type settings."""
 
         # Test with receptor_type="all" (should work and include all sequences)
-        result_all = process_airr(self.test_mixed_df, "H", receptor_type="all")
+        _, result_all = process_airr(self.test_mixed_df, "H", receptor_type="all")
         assert result_all.shape[0] == 6  # 3 IGH + 3 TRB chains
 
         # # Test with receptor_type="BCR" (should warn and filter out TCR chains)
@@ -175,13 +175,13 @@ class TestAmulety(unittest.TestCase):
         # This tests the data processing pipeline without running expensive model inference
 
         # Test ProtT5 data processing (uses receptor_type="all")
-        result_h = process_airr(self.test_mixed_df, "H", receptor_type="all")
+        _, result_h = process_airr(self.test_mixed_df, "H", receptor_type="all")
         assert result_h.shape[0] == 6  # 3 BCR + 3 TCR heavy chains
 
-        result_l = process_airr(self.test_mixed_df, "L", receptor_type="all")
+        _, result_l = process_airr(self.test_mixed_df, "L", receptor_type="all")
         assert result_l.shape[0] == 6  # 2 IGL + 1 IGK + 3 TRA light chains
 
-        result_hl = process_airr(self.test_mixed_df, "HL", receptor_type="all")
+        _, result_hl = process_airr(self.test_mixed_df, "HL", receptor_type="all")
         assert result_hl.shape[0] == 6  # 3 BCR + 3 TCR pairs
 
         # Verify that sequences contain both BCR and TCR data
@@ -193,11 +193,11 @@ class TestAmulety(unittest.TestCase):
         """Test receptor type validation functionality."""
 
         # Test BCR file with correct receptor_type
-        result = process_airr(self.test_airr_sc_df, "H", receptor_type="BCR")
+        _, result = process_airr(self.test_airr_sc_df, "H", receptor_type="BCR")
         assert result.shape[0] == 2
 
         # Test TCR file with correct receptor_type
-        result = process_airr(self.test_airr_tcr_df, "H", receptor_type="TCR")
+        _, result = process_airr(self.test_airr_tcr_df, "H", receptor_type="TCR")
         assert result.shape[0] == 3
 
         # Test BCR file with wrong receptor_type (should fail)
@@ -209,8 +209,8 @@ class TestAmulety(unittest.TestCase):
             process_airr(self.test_airr_tcr_df, "H", receptor_type="BCR")
 
         # Test both files with receptor_type="all" (should work)
-        result_bcr = process_airr(self.test_airr_sc_df, "H", receptor_type="all")
-        result_tcr = process_airr(self.test_airr_tcr_df, "H", receptor_type="all")
+        _, result_bcr = process_airr(self.test_airr_sc_df, "H", receptor_type="all")
+        _, result_tcr = process_airr(self.test_airr_tcr_df, "H", receptor_type="all")
         assert result_bcr.shape[0] == 2
         assert result_tcr.shape[0] == 3
 
@@ -238,9 +238,9 @@ class TestAmulety(unittest.TestCase):
         """Test that adding TCR support doesn't break BCR functionality."""
 
         # Test with existing BCR data
-        result_bcr_h = process_airr(self.test_airr_sc_df, "H", receptor_type="BCR")
-        result_bcr_l = process_airr(self.test_airr_sc_df, "L", receptor_type="BCR")
-        result_bcr_hl = process_airr(self.test_airr_sc_df, "HL", receptor_type="BCR")
+        _, result_bcr_h = process_airr(self.test_airr_sc_df, "H", receptor_type="BCR")
+        _, result_bcr_l = process_airr(self.test_airr_sc_df, "L", receptor_type="BCR")
+        _, result_bcr_hl = process_airr(self.test_airr_sc_df, "HL", receptor_type="BCR")
 
         # Should still work as before
         assert result_bcr_h.shape[0] == 2  # 2 heavy chains
@@ -251,7 +251,7 @@ class TestAmulety(unittest.TestCase):
         """Test that TCR concatenation follows Beta+Alpha order."""
 
         # Get concatenated pairs
-        result = process_airr(self.test_airr_tcr_df, "HL", receptor_type="TCR")
+        _, result = process_airr(self.test_airr_tcr_df, "HL", receptor_type="TCR")
 
         # Read original data to verify order
         data = pd.read_table(self.test_airr_tcr_path)
@@ -275,13 +275,13 @@ class TestAmulety(unittest.TestCase):
         """Test that TCR chains are correctly mapped to BCR chain system."""
 
         # Test alpha chains (A -> L)
-        result_alpha = process_airr(self.test_airr_tcr_df, "L", receptor_type="TCR")
+        _, result_alpha = process_airr(self.test_airr_tcr_df, "L", receptor_type="TCR")
         assert result_alpha.shape[0] == 3  # 3 alpha chains
 
         # Test beta chains (B -> H)
-        result_beta = process_airr(self.test_airr_tcr_df, "H", receptor_type="TCR")
+        _, result_beta = process_airr(self.test_airr_tcr_df, "H", receptor_type="TCR")
         assert result_beta.shape[0] == 3  # 3 beta chains
 
         # Test alpha-beta pairs (AB -> HL)
-        result_pairs = process_airr(self.test_airr_tcr_df, "HL", receptor_type="TCR")
+        _, result_pairs = process_airr(self.test_airr_tcr_df, "HL", receptor_type="TCR")
         assert result_pairs.shape[0] == 3  # 3 alpha-beta pairs

@@ -112,14 +112,6 @@ def process_airr(
     if mode not in allowed_modes:
         raise ValueError(f"Mode must be one of {allowed_modes}.")
 
-    # Warning for LH order
-    if chain_mode == "LH":
-        warnings.warn(
-            "LH (Light-Heavy) chain order detected. Most paired models are trained on HL (Heavy-Light) order. "
-            "Using LH order may result in reduced accuracy. Consider using --chain_mode HL for better performance.",
-            UserWarning,
-        )
-
     # Check that required columns exist
     required_cols = [sequence_col, "v_call"]
     missing_cols = [col for col in required_cols if col not in airr_df.columns]
@@ -199,6 +191,14 @@ def process_airr(
         # HL/LH modes: error for bulk, process for single-cell/mixed
         if is_bulk:
             raise ValueError(f'Chain = "{chain_mode}" is invalid for bulk mode. Please use "H+L", "H" or "L" instead.')
+
+        # Warning for LH order
+        if chain_mode == "LH":
+            warnings.warn(
+                "LH (Light-Heavy) chain order detected. Most paired models are trained on HL (Heavy-Light) order. "
+                "Using LH order may result in reduced accuracy. Consider using --chain_mode HL for better performance.",
+                UserWarning,
+            )
 
         # If mixed data, filter to only sequences with cell_id
         if is_mixed:
