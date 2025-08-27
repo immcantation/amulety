@@ -40,7 +40,7 @@ AMULETY supports different chain input formats based on model architecture and t
 | ProtT5                | prott5  | 1024                | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554)                             |
 | Custom models         | custom  | Configurable        | H, L, H+L + (warning)HL/LH | depends on model | User-provided fine-tuned or custom models (requires --model-path, --embedding-dimension, --max-length) |
 
-## Immune-Specific Models (BCR & TCR)
+## Immune Receptor Specific Models (BCR & TCR)
 
 | Model      | Command    | Embedding Dimension | Chain Support              | TCR Type Support | Reference                                                                                                                |
 | ---------- | ---------- | ------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
