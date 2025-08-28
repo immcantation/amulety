@@ -111,122 +111,60 @@ class TestAmulety(unittest.TestCase):
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
         os.remove("H_test.tsv")
 
-    # def test_antiBERTa2_sc_H_plus_L_embedding(self):
-    #     """Test antiBERTa2 (single-cell H+L)."""
-    #     embed(self.test_airr_sc_path, "H+L", "antiberta2", "H_plus_L_test.pt")
-    #     assert os.path.exists("H_plus_L_test.pt")
-    #     embeddings = torch.load("H_plus_L_test.pt")
-    #     assert embeddings.shape[1] == 1024
-    #     assert embeddings.shape[0] == 4  # 2 H chains + 2 L chains
-    #     os.remove("H_plus_L_test.pt")
+    # antiberta2 tests
+    def test_antiberta2_mixed_HL_embedding(self):
+        """Test antiberta2 (mixed bulk sc H+L)."""
+        with self.assertWarns(UserWarning) as cm:
+            embed(input_airr=self.test_airr_mixed_path, chain="HL", model="antiberta2", output_file_path="HL_test.pt")
+            assert os.path.exists("HL_test.pt")
+            embeddings = torch.load("HL_test.pt")
+            assert embeddings.shape[1] == 1024  # antiberta2 embedding dimension
+            assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
+        self.assertIn("trained on individual chains only", str(cm.warning))
+        os.remove("HL_test.pt")
 
-    # def test_antiberta2_mixed_H_plus_L_embedding_tsv(self):
-    #     """Test antiberta2 (mixed BCR/TCR H+L)."""
-    #     embed(self.test_airr_mixed_path, "H+L", "antiberta2", "H_plus_L_test.tsv")
-    #     assert os.path.exists("H_plus_L_test.tsv")
-    #     embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-    #     assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
-    #     assert embeddings.shape[0] == 2  # 1 H chain + 1 L chain (only single-cell data processed)
-    #     os.remove("H_plus_L_test.tsv")
+    def test_antiberta2_mixed_H_plus_L_embedding_tsv(self):
+        """Test antiberta2 (mixed bulk sc H+L)."""
+        embed(self.test_airr_mixed_path, "H+L", "antiberta2", "H_plus_L_test.tsv")
+        assert os.path.exists("H_plus_L_test.tsv")
+        embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
+        assert (
+            embeddings.shape[0] == 4
+        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        os.remove("H_plus_L_test.tsv")
 
-    # def test_antiberta2_HL_chain_validation(self):
-    #     """Test that antiberta2 rejects HL chain (individual chain model)."""
-    #     with self.assertRaises(ValueError) as context:
-    #         embed(self.test_airr_sc_path, "HL", "antiberta2", "should_fail.pt")
-    #     self.assertIn("was trained on individual chains only", str(context.exception))
-    #     self.assertIn("--chain H", str(context.exception))
-    #     self.assertIn("--chain L", str(context.exception))
+    def test_antiberta2_mixed_H_embedding_tsv(self):
+        """Test antiberta2 (mixed bulk sc H)."""
+        embed(self.test_airr_mixed_path, "H", "antiberta2", "H_test.tsv")
+        assert os.path.exists("H_test.tsv")
+        embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
+        assert (
+            embeddings.shape[0] == 2
+        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        os.remove("H_test.tsv")
 
-    # def test_antiBERTa2_sc_H_embedding(self):
-    #     """Test antiBERTa2 (single-cell H)."""
-    #     embed(self.test_airr_sc_path, "H", "antiberta2", "H_test.pt")
-    #     assert os.path.exists("H_test.pt")
-    #     embeddings = torch.load("H_test.pt")
-    #     assert embeddings.shape[1] == 1024
-    #     assert embeddings.shape[0] == 2
-    #     os.remove("H_test.pt")
+    # balm-paired tests
+    def test_balm_paired_mixed_HL_embedding(self):
+        """Test balm-paired (mixed bulk sc HL)."""
+        embed(input_airr=self.test_airr_mixed_path, chain="HL", model="balm-paired", output_file_path="HL_test.pt")
+        assert os.path.exists("HL_test.pt")
+        embeddings = torch.load("HL_test.pt")
+        assert embeddings.shape[1] == 1024  # balm-paired embedding dimension
+        assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
+        os.remove("HL_test.pt")
 
-    # def test_antiberta2_mixed_H_embedding_tsv(self):
-    #     """Test antiberta2 (mixed BCR/TCR H)."""
-    #     embed(self.test_airr_mixed_path, "H", "antiberta2", "H_test.tsv")
-    #     assert os.path.exists("H_test.tsv")
-    #     embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-    #     assert embeddings.shape[1] == 1026
-    #     assert embeddings.shape[0] == 2
-    #     os.remove("H_test.tsv")
+    def test_balm_paired_mixed_H_plus_L_embedding_tsv(self):
+        """Test balm-paired (mixed bulk sc H+L)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_mixed_path, "H+L", "balm-paired", "H_plus_L_test.tsv")
+        self.assertIn("was trained on paired chains", str(context.exception))
+        self.assertIn("--chain HL", str(context.exception))
 
-    # def test_antiBERTa2_sc_L_embedding(self):
-    #     """Test antiBERTa2 (single-cell L)."""
-    #     embed(self.test_airr_sc_path, "L", "antiberta2", "L_test.pt")
-    #     assert os.path.exists("L_test.pt")
-    #     embeddings = torch.load("L_test.pt")
-    #     assert embeddings.shape[1] == 1024
-    #     assert embeddings.shape[0] == 2
-    #     os.remove("L_test.pt")
-
-    # def test_antiberta2_mixed_L_embedding_tsv(self):
-    #     """Test antiberta2 (mixed BCR/TCR L)."""
-    #     embed(self.test_airr_mixed_path, "L", "antiberta2", "L_test.tsv")
-    #     assert os.path.exists("L_test.tsv")
-    #     embeddings = pd.read_table("L_test.tsv", delimiter="\t")
-    #     assert embeddings.shape[1] == 1026
-    #     assert embeddings.shape[0] == 2
-    #     os.remove("L_test.tsv")
-
-    # def test_balm_paired_sc_HL_embedding(self):
-    #     """Test balm-paired (single-cell HL)."""
-    #     try:
-    #         embed(self.test_airr_sc_path, "HL", "balm-paired", "HL_test.pt")
-    #         assert os.path.exists("HL_test.pt")
-    #         embeddings = torch.load("HL_test.pt")
-    #         assert embeddings.shape[1] == 1024
-    #         assert embeddings.shape[0] == 2
-    #         os.remove("HL_test.pt")
-    #     except RuntimeError as e:
-    #         if "Error downloading or extracting BALM-paired model" in str(e):
-    #             self.skipTest(f"BALM-paired model download failed: {e}")
-    #         else:
-    #             raise
-
-    # def test_balm_paired_sc_LH_embedding(self):
-    #     """Test balm-paired (single-cell LH with warning)."""
-    #     import warnings
-
-    #     try:
-    #         with warnings.catch_warnings(record=True) as w:
-    #             warnings.simplefilter("always")
-    #             embed(self.test_airr_sc_path, "LH", "balm-paired", "LH_test.pt")
-    #             assert os.path.exists("LH_test.pt")
-    #             embeddings = torch.load("LH_test.pt")
-    #             assert embeddings.shape[1] == 1024
-    #             assert embeddings.shape[0] == 2
-    #             os.remove("LH_test.pt")
-    #             # Check that LH warning was issued
-    #             assert len(w) > 0
-    #             assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
-    #     except RuntimeError as e:
-    #         if "Error downloading or extracting BALM-paired model" in str(e):
-    #             self.skipTest(f"BALM-paired model download failed: {e}")
-    #         else:
-    #             raise
-
-    # def test_balm_paired_H_chain_validation(self):
-    #     """Test that balm-paired rejects individual H chains (paired-only model)."""
-    #     with self.assertRaises(ValueError) as context:
-    #         embed(self.test_airr_sc_path, "H", "balm-paired", "should_fail.pt")
-    #     self.assertIn("was trained on paired chains", str(context.exception))
-    #     self.assertIn("--chain HL", str(context.exception))
-
-    # def test_balm_paired_L_chain_validation(self):
-    #     """Test that balm-paired rejects individual L chains (paired-only model)."""
-    #     with self.assertRaises(ValueError) as context:
-    #         embed(self.test_airr_sc_path, "L", "balm-paired", "should_fail.pt")
-    #     self.assertIn("was trained on paired chains", str(context.exception))
-    #     self.assertIn("--chain HL", str(context.exception))
-
-    # def test_balm_paired_H_plus_L_chain_validation(self):
-    #     """Test that balm-paired rejects H+L chains (paired-only model)."""
-    #     with self.assertRaises(ValueError) as context:
-    #         embed(self.test_airr_sc_path, "H+L", "balm-paired", "should_fail.pt")
-    #     self.assertIn("was trained on paired chains", str(context.exception))
-    #     self.assertIn("--chain HL", str(context.exception))
+    def test_balm_paired_mixed_H_embedding_tsv(self):
+        """Test balm-paired (mixed bulk sc H)."""
+        with self.assertRaises(ValueError) as context:
+            embed(self.test_airr_mixed_path, "H", "balm-paired", "H_test.tsv")
+        self.assertIn("was trained on paired chains", str(context.exception))
+        self.assertIn("--chain HL", str(context.exception))

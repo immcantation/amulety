@@ -380,22 +380,49 @@ def immune2vec(
 
         logger.info("Immune2Vec package successfully imported")
     except ImportError as immune2vec_error:
-        detailed_instructions = (
-            "Immune2Vec package not available. Please follow these installation instructions:\n\n"
-            "STEP 1: Install gensim dependency (if not already installed)\n"
-            "   pip install gensim>=3.8.3\n\n"
-            "STEP 2: Clone the Immune2Vec repository\n"
-            "   git clone https://bitbucket.org/yaarilab/immune2vec_model.git\n\n"
-            "STEP 3: Add to Python path\n"
-            "   import sys\n"
-            "   sys.path.append('/path/to/immune2vec_model')\n\n"
-            "STEP 4: Verify installation\n"
-            "   python -c 'from embedding import sequence_modeling; print(\"Immune2Vec installed successfully\")'\n\n"
-            "Reference: https://bitbucket.org/yaarilab/immune2vec_model/src/master/"
-        )
-        raise ImportError(
-            f"Immune2Vec package is required but not installed.\n\n{detailed_instructions}"
-        ) from immune2vec_error
+        # Try to find and add immune2vec_model directory to path
+        import sys
+
+        # Common locations where immune2vec_model might be cloned
+        possible_paths = [
+            "immune2vec_model",  # Current directory (CI environment)
+            "../immune2vec_model",  # Parent directory
+            os.path.expanduser("~/immune2vec_model"),  # Home directory
+            "/tmp/immune2vec_model",  # Temporary directory
+        ]
+
+        immune2vec_found = False
+        for path in possible_paths:
+            if os.path.exists(path) and os.path.isdir(path):
+                logger.info("Found Immune2Vec repository at: %s", path)
+                sys.path.insert(0, path)
+                try:
+                    from embedding import sequence_modeling
+
+                    logger.info("Immune2Vec package successfully imported from: %s", path)
+                    immune2vec_found = True
+                    break
+                except ImportError:
+                    logger.debug("Failed to import from: %s", path)
+                    continue
+
+        if not immune2vec_found:
+            detailed_instructions = (
+                "Immune2Vec package not available. Please follow these installation instructions:\n\n"
+                "STEP 1: Install gensim dependency (if not already installed)\n"
+                "   pip install gensim>=3.8.3\n\n"
+                "STEP 2: Clone the Immune2Vec repository\n"
+                "   git clone https://bitbucket.org/yaarilab/immune2vec_model.git\n\n"
+                "STEP 3: Add to Python path\n"
+                "   import sys\n"
+                "   sys.path.append('/path/to/immune2vec_model')\n\n"
+                "STEP 4: Verify installation\n"
+                "   python -c 'from embedding import sequence_modeling; print(\"Immune2Vec installed successfully\")'\n\n"
+                "Reference: https://bitbucket.org/yaarilab/immune2vec_model/src/master/"
+            )
+            raise ImportError(
+                f"Immune2Vec package is required but not installed.\n\n{detailed_instructions}"
+            ) from immune2vec_error
 
     logger.info("Starting Immune2Vec embedding...")
     logger.info("Parameters: n_dim=%d, n_gram=%d, window=%d", n_dim, n_gram, window)

@@ -134,14 +134,17 @@ def ablang(
             # Process sequences and track chain types
             sequences_data = []
             for _, row in sequences.iterrows():
-                seq = str(row[sequence_col])[:max_seq_length]
+                seq = str(row[sequence_col])[:max_seq_length].upper()  # Convert to uppercase for AbLang
+                seq = seq.replace("<CLS><CLS>", "")  # Remove CLS tokens that AbLang doesn't understand
                 chain_type = row["chain"]
                 sequences_data.append((seq, chain_type))
         else:
             raise ValueError("DataFrame input must contain 'chain' column for H+L mode")
     else:
         # Single chain mode - assume heavy chain as default
-        sequences_data = [(str(seq)[:max_seq_length], "H") for seq in sequences]
+        sequences_data = [
+            (str(seq)[:max_seq_length].upper().replace("<CLS><CLS>", ""), "H") for seq in sequences
+        ]  # Convert to uppercase and remove CLS tokens for AbLang
 
     # Initialize AbLang models
     heavy_ablang = None
@@ -313,7 +316,7 @@ def balm_paired(
     if not os.path.exists(model_path):
         try:
             command = f"""
-                wget -O {os.path.join(cache_dir, "BALM-paired.tar.gz")} https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
+                curl -L -o {os.path.join(cache_dir, "BALM-paired.tar.gz")} https://zenodo.org/records/8237396/files/BALM-paired.tar.gz
                 tar -xzf {os.path.join(cache_dir, "BALM-paired.tar.gz")} -C {cache_dir}
                 rm {os.path.join(cache_dir, "BALM-paired.tar.gz")}
             """

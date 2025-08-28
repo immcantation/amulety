@@ -200,7 +200,7 @@ To receive alerts about Immcantation releases, news, events, and tutorials, join
 
 [Mamie Wang](https://github.com/mamie) (aut,cre)
 [Gisela Gabernet](https://github.com/ggabernet) (aut,cre)
-[Wengyao Jiang](https://github.com/wenggyaoo) (cont)
+[Wengyao Jiang](https://github.com/wenggyaoo) (aut,cre)
 [Steven Kleinstein](mailto:steven.kleinstein@yale.edu) (aut,cph)
 
 ## Citing

@@ -35,15 +35,16 @@ class TestAmulety(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_tcr_bert_L_embedding(self):
-        """Test TCR-BERT (alpha/gamma chains - L chains for TCR) - now supported."""
+    # TCR-BERT tests (mixed data)
+    def test_tcr_bert_mixed_HL_embedding(self):
+        """Test TCR-BERT (mixed bulk sc HL)."""
         try:
-            embed(self.test_airr_tcr_path, "L", "tcr-bert", "tcr_L_test.pt", batch_size=2)
-            assert os.path.exists("tcr_L_test.pt")
-            embeddings = torch.load("tcr_L_test.pt")
+            embed(input_airr=self.test_mixed_path, chain="HL", model="tcr-bert", output_file_path="HL_test.pt")
+            assert os.path.exists("HL_test.pt")
+            embeddings = torch.load("HL_test.pt")
             assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-            assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-            os.remove("tcr_L_test.pt")
+            assert embeddings.shape[0] == 3  # 3 TCR cells with paired H and L chains
+            os.remove("HL_test.pt")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -53,15 +54,15 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
-    def test_tcr_bert_H_embedding(self):
-        """Test TCR-BERT (beta/delta chains - H chains for TCR) - now supported."""
+    def test_tcr_bert_mixed_H_embedding_tsv(self):
+        """Test TCR-BERT (mixed bulk sc H)."""
         try:
-            embed(self.test_airr_tcr_path, "H", "tcr-bert", "tcr_H_test.pt", batch_size=2)
-            assert os.path.exists("tcr_H_test.pt")
-            embeddings = torch.load("tcr_H_test.pt")
-            assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-            assert embeddings.shape[0] == 3  # 3 beta chains in test data
-            os.remove("tcr_H_test.pt")
+            embed(self.test_mixed_path, "H", "tcr-bert", "H_test.tsv")
+            assert os.path.exists("H_test.tsv")
+            embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
+            assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
+            os.remove("H_test.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -71,15 +72,15 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
-    def test_tcr_bert_HL_embedding(self):
-        """Test TCR-BERT (alpha-beta/gamma-delta pairs - HL pairs for TCR)."""
+    def test_tcr_bert_mixed_H_plus_L_embedding_tsv(self):
+        """Test TCR-BERT (mixed bulk sc H+L)."""
         try:
-            embed(self.test_airr_tcr_path, "HL", "tcr-bert", "tcr_HL_test.pt", batch_size=2)
-            assert os.path.exists("tcr_HL_test.pt")
-            embeddings = torch.load("tcr_HL_test.pt")
-            assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-            assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-            os.remove("tcr_HL_test.pt")
+            embed(self.test_mixed_path, "H+L", "tcr-bert", "H_plus_L_test.tsv")
+            assert os.path.exists("H_plus_L_test.tsv")
+            embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
+            assert embeddings.shape[0] == 6  # 3 H chains (TRB) + 3 L chains (TRA) from 3 TCR cells
+            os.remove("H_plus_L_test.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -89,40 +90,16 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
-    def test_tcr_bert_LH_embedding(self):
-        """Test TCR-BERT (beta-alpha/delta-gamma pairs - LH pairs for TCR with warning)."""
-        import warnings
-
+    # TCRT5 tests (mixed data)
+    def test_tcrt5_mixed_H_embedding_tsv(self):
+        """Test TCRT5 (mixed bulk sc H)."""
         try:
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                embed(self.test_airr_tcr_path, "LH", "tcr-bert", "tcr_LH_test.pt", batch_size=2)
-                assert os.path.exists("tcr_LH_test.pt")
-                embeddings = torch.load("tcr_LH_test.pt")
-                assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
-                assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-                os.remove("tcr_LH_test.pt")
-                # Check that LH warning was issued
-                assert len(w) > 0
-                assert any("LH (Light-Heavy) chain order detected" in str(warning.message) for warning in w)
-        except Exception as e:
-            if any(
-                error_type in str(e)
-                for error_type in ["SafetensorError", "InvalidHeaderDeserialization", "ConnectionError", "HTTPError"]
-            ):
-                self.skipTest(f"TCR-BERT model loading failed: {e}")
-            else:
-                raise
-
-    def test_tcrt5_H_embedding(self):
-        """Test TCRT5 (beta chains only - H chains for TCR)."""
-        try:
-            embed(self.test_airr_tcr_path, "H", "tcrt5", "tcrt5_H_test.pt", batch_size=2)
-            assert os.path.exists("tcrt5_H_test.pt")
-            embeddings = torch.load("tcrt5_H_test.pt")
-            assert embeddings.shape[1] == 256  # TCRT5 embedding dimension
-            assert embeddings.shape[0] == 3  # 3 beta chains in test data
-            os.remove("tcrt5_H_test.pt")
+            embed(self.test_mixed_path, "H", "tcrt5", "tcrt5_H_test.tsv")
+            assert os.path.exists("tcrt5_H_test.tsv")
+            embeddings = pd.read_table("tcrt5_H_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 259  # 256 + cell_id + chain + sequence_id
+            assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
+            os.remove("tcrt5_H_test.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -132,25 +109,25 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
-    def test_tcrt5_L_embedding_should_warn(self):
+    def test_tcrt5_mixed_L_embedding_should_warn(self):
         """Test TCRT5 with L chains should warn (only supports H chains)."""
         import warnings
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            embed(self.test_airr_tcr_path, "L", "tcrt5", "tcrt5_L_test.pt", batch_size=2)
+            embed(self.test_mixed_path, "L", "tcrt5", "tcrt5_L_test.tsv")
 
             warning_msg = str(w[0].message)
             assert "TCRT5 model was trained on" in warning_msg
             assert "beta chains for TCR" in warning_msg
 
-    def test_tcrt5_HL_embedding_should_warn(self):
+    def test_tcrt5_mixed_HL_embedding_should_warn(self):
         """Test TCRT5 with HL chains should warn (only supports H chains)."""
         import warnings
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            embed(self.test_airr_tcr_path, "HL", "tcrt5", "tcrt5_HL_test.pt", batch_size=2)
+            embed(self.test_mixed_path, "HL", "tcrt5", "tcrt5_HL_test.tsv")
 
             warning_msg = str(w[0].message)
             assert "TCRT5 model was trained on" in warning_msg

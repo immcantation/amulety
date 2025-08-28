@@ -426,8 +426,9 @@ def embed_airr(
     elif model == "antiberta2":
         # Check chain compatibility - AntiBERTa2 supports individual chains only
         if chain in ["HL", "LH"]:
-            raise ValueError(
-                f"Model 'antiberta2' was trained on individual chains only. Using --chain H, --chain L, or --chain H+L instead of --chain {chain} is recommended."
+            warnings.warn(
+                f"Model 'antiberta2' was trained on individual chains only. Using --chain H, --chain L, or --chain H+L instead of --chain {chain} is recommended.",
+                UserWarning,
             )
 
         # Process data with unified pattern
