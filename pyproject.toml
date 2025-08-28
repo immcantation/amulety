@@ -66,6 +66,9 @@ Issues = "https://github.com/immcantation/amulety/issues"
 amulety = "amulety.amulety:main"
 
 
+[tool.setuptools]
+packages = ["amulety"]
+
 [tool.pytest.ini_options]
 markers = ["datafiles: load datafiles"]
 testpaths = ["tests"]
