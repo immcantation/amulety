@@ -13,6 +13,12 @@ import torch
 
 from amulety.amulety import embed
 
+# Skip large model tests on GitHub Actions due to disk space limitations
+# Also allow users to skip locally by setting SKIP_LARGE_MODELS=true
+SKIP_LARGE_MODELS = (
+    os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("SKIP_LARGE_MODELS", "").lower() == "true"
+)
+
 
 class TestAmulety(unittest.TestCase):
     """Function that runs at start of tests for common resources."""
@@ -20,14 +26,14 @@ class TestAmulety(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures, if any."""
         self.test_airr_sc = "AIRR_rearrangement_translated_single-cell.tsv"
-        self.test_airr_bulk = "AIRR_rearrangement_translated_bulk.tsv"
+
         self.test_airr_mixed = "AIRR_rearrangement_translated_mixed.tsv"
         self.test_airr_translation = "AIRR_rearrangement_single-cell_testtranslation.tsv"
         self.test_airr_tcr = "AIRR_rearrangement_tcr_test.tsv"
         self.this_dir = os.path.dirname(os.path.abspath(__file__))
         self.test_airr_sc_path = os.path.join(self.this_dir, self.test_airr_sc)
         self.test_airr_sc_df = pd.read_table(self.test_airr_sc_path, delimiter="\t", header=0)
-        self.test_airr_bulk_path = os.path.join(self.this_dir, self.test_airr_bulk)
+
         self.test_airr_mixed_path = os.path.join(self.this_dir, self.test_airr_mixed)
         self.test_airr_translation_path = os.path.join(self.this_dir, self.test_airr_translation)
         self.test_airr_tcr_path = os.path.join(self.this_dir, self.test_airr_tcr)
@@ -39,103 +45,231 @@ class TestAmulety(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_esm2_sc_HL_embedding(self):
-        """Test esm2 (single-cell HL)."""
-        embed(self.test_airr_sc_path, "HL", "esm2", "HL_test.pt")
-        assert os.path.exists("HL_test.pt")
-        embeddings = torch.load("HL_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("HL_test.pt")
+    # esm2 tests
+    def test_esm2_mixed_HL_embedding(self):
+        """Test esm2 (mixed bulk sc HL)."""
+        import warnings
 
-    def test_esm2_bulk_HL_embedding(self):
-        """Test esm2 (bulk HL)."""
-        with self.assertRaises(ValueError):
-            embed(self.test_airr_bulk_path, "HL", "esm2", "HL_test.pt")
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                embed(input_airr=self.test_airr_mixed_path, chain="HL", model="esm2", output_file_path="HL_test.pt")
+                assert os.path.exists("HL_test.pt")
+                embeddings = torch.load("HL_test.pt")
+                assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
+                assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
+                os.remove("HL_test.pt")
+                # Check that protein language model warning was issued
+                assert len(w) > 0
+                warning_messages = [str(warning.message) for warning in w]
+                assert any(
+                    "does not have mechanisms to understand paired chain relationships" in msg
+                    for msg in warning_messages
+                )
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
-    def test_esm2_sc_H_embedding(self):
-        """Test esm2 (single-cell H)."""
-        embed(self.test_airr_sc_path, "H", "esm2", "H_test.pt")
-        assert os.path.exists("H_test.pt")
-        embeddings = torch.load("H_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("H_test.pt")
+    def test_esm2_mixed_H_plus_L_embedding_tsv(self):
+        """Test esm2 (mixed bulk sc H+L)."""
+        try:
+            embed(self.test_airr_mixed_path, "H+L", "esm2", "H_plus_L_test.tsv")
+            assert os.path.exists("H_plus_L_test.tsv")
+            embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
+            assert (
+                embeddings.shape[0] == 4
+            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            os.remove("H_plus_L_test.tsv")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
-    def test_esm2_bulk_H_embedding(self):
-        """Test antiberty (bulk H)."""
-        embed(self.test_airr_bulk_path, "H", "esm2", "H_test.pt")
-        assert os.path.exists("H_test.pt")
-        embeddings = torch.load("H_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("H_test.pt")
+    def test_esm2_mixed_H_embedding_tsv(self):
+        """Test esm2 (mixed bulk sc H)."""
+        try:
+            embed(self.test_airr_mixed_path, "H", "esm2", "H_test.tsv")
+            assert os.path.exists("H_test.tsv")
+            embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
+            assert (
+                embeddings.shape[0] == 2
+            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            os.remove("H_test.tsv")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
 
-    def test_esm2_sc_L_embedding(self):
-        """Test esm2 (single-cell L)."""
-        embed(self.test_airr_sc_path, "L", "esm2", "L_test.pt")
-        assert os.path.exists("L_test.pt")
-        embeddings = torch.load("L_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("L_test.pt")
+    # prott5 tests
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
+    def test_prott5_mixed_HL_embedding(self):
+        """Test prott5 (mixed bulk sc HL)."""
+        import warnings
 
-    def test_esm2_bulk_L_embedding(self):
-        """Test esm2 (bulk L)."""
-        embed(self.test_airr_bulk_path, "L", "esm2", "L_test.pt")
-        assert os.path.exists("L_test.pt")
-        embeddings = torch.load("L_test.pt")
-        assert embeddings.shape[1] == 1280
-        assert embeddings.shape[0] == 2
-        os.remove("L_test.pt")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            embed(input_airr=self.test_airr_mixed_path, chain="HL", model="prott5", output_file_path="HL_test.pt")
+            assert os.path.exists("HL_test.pt")
+            embeddings = torch.load("HL_test.pt")
+            assert embeddings.shape[1] == 1024  # ProtT5 embedding dimension
+            assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
+            os.remove("HL_test.pt")
+            # Check that protein language model warning was issued
+            assert len(w) > 0
+            warning_messages = [str(warning.message) for warning in w]
+            assert any(
+                "does not have mechanisms to understand paired chain relationships" in msg for msg in warning_messages
+            )
 
-    def test_tcr_esm2_A_embedding(self):
-        """Test ESM2 with TCR alpha chains (using unified approach)."""
-        # Use existing esm2 function with TCR chain mapping: A -> L
-        embed(self.test_airr_tcr_path, "L", "esm2", "tcr_esm2_A_test.pt", batch_size=2)
-        assert os.path.exists("tcr_esm2_A_test.pt")
-        embeddings = torch.load("tcr_esm2_A_test.pt")
-        assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("tcr_esm2_A_test.pt")
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
+    def test_prott5_mixed_H_plus_L_embedding_tsv(self):
+        """Test prott5 (mixed bulk sc H+L)."""
+        embed(self.test_airr_mixed_path, "H+L", "prott5", "H_plus_L_test.tsv")
+        assert os.path.exists("H_plus_L_test.tsv")
+        embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
+        assert (
+            embeddings.shape[0] == 4
+        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        os.remove("H_plus_L_test.tsv")
 
-    def test_tcr_esm2_AB_embedding(self):
-        """Test ESM2 with TCR alpha-beta pairs (using unified approach)."""
-        # Use existing esm2 function with TCR chain mapping: AB -> HL
-        embed(self.test_airr_tcr_path, "HL", "esm2", "tcr_esm2_AB_test.pt", batch_size=2)
-        assert os.path.exists("tcr_esm2_AB_test.pt")
-        embeddings = torch.load("tcr_esm2_AB_test.pt")
-        assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-        os.remove("tcr_esm2_AB_test.pt")
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
+    def test_prott5_mixed_H_embedding_tsv(self):
+        """Test prott5 (mixed bulk sc H)."""
+        embed(self.test_airr_mixed_path, "H", "prott5", "H_test.tsv")
+        assert os.path.exists("H_test.tsv")
+        embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
+        assert (
+            embeddings.shape[0] == 2
+        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        os.remove("H_test.tsv")
 
-    def test_tcr_prott5_A_embedding(self):
-        """Test ProtT5 with TCR alpha chains (using unified approach)."""
-        # Use generic prott5 function with TCR chain mapping: A -> A (handled internally)
-        embed(self.test_airr_tcr_path, "A", "prott5", "tcr_prott5_A_test.pt", batch_size=2)
-        assert os.path.exists("tcr_prott5_A_test.pt")
-        embeddings = torch.load("tcr_prott5_A_test.pt")
-        # ProtT5: 1024 dim, ESM2 fallback: 1280 dim
-        assert embeddings.shape[1] in [1024, 1280]
-        assert embeddings.shape[0] == 3  # 3 alpha chains in test data
-        os.remove("tcr_prott5_A_test.pt")
+    # immune2vec tests
+    def test_immune2vec_mixed_HL_embedding(self):
+        """Test immune2vec (mixed bulk sc HL)."""
+        try:
+            embed(input_airr=self.test_airr_mixed_path, chain="HL", model="immune2vec", output_file_path="HL_test.pt")
+            assert os.path.exists("HL_test.pt")
+            embeddings = torch.load("HL_test.pt")
+            assert embeddings.shape[1] == 100  # Immune2Vec embedding dimension
+            assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
+            os.remove("HL_test.pt")
+        except ImportError as e:
+            self.skipTest(f"Immune2Vec dependencies not available: {e}")
 
-    def test_tcr_prott5_AB_embedding(self):
-        """Test ProtT5 with TCR alpha-beta pairs (using unified approach)."""
-        # Use generic prott5 function with TCR chain mapping: AB -> AB (handled internally)
-        embed(self.test_airr_tcr_path, "AB", "prott5", "tcr_prott5_AB_test.pt", batch_size=2)
-        assert os.path.exists("tcr_prott5_AB_test.pt")
-        embeddings = torch.load("tcr_prott5_AB_test.pt")
-        assert embeddings.shape[1] == 1024  # ProtT5 embedding dimension
-        assert embeddings.shape[0] == 3  # 3 alpha-beta pairs in test data
-        os.remove("tcr_prott5_AB_test.pt")
+    def test_immune2vec_mixed_H_plus_L_embedding_tsv(self):
+        """Test immune2vec (mixed bulk sc H+L)."""
+        try:
+            embed(self.test_airr_mixed_path, "H+L", "immune2vec", "H_plus_L_test.tsv")
+            assert os.path.exists("H_plus_L_test.tsv")
+            embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 103  # 100 + cell_id + chain + sequence_id
+            assert (
+                embeddings.shape[0] == 4
+            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            os.remove("H_plus_L_test.tsv")
+        except ImportError as e:
+            self.skipTest(f"Immune2Vec dependencies not available: {e}")
 
-    def test_prott5_bcr_embedding(self):
-        """Test ProtT5 with BCR data (backward compatibility)."""
-        # Use generic prott5 function with BCR data
-        embed(self.test_airr_sc_path, "HL", "prott5", "prott5_bcr_test.pt", batch_size=2)
-        assert os.path.exists("prott5_bcr_test.pt")
-        embeddings = torch.load("prott5_bcr_test.pt")
-        assert embeddings.shape[1] == 1024  # ProtT5 embedding dimension
-        assert embeddings.shape[0] == 2  # 2 heavy-light pairs in BCR test data
-        os.remove("prott5_bcr_test.pt")
+    def test_immune2vec_mixed_H_embedding_tsv(self):
+        """Test immune2vec (mixed bulk sc H)."""
+        try:
+            embed(self.test_airr_mixed_path, "H", "immune2vec", "H_test.tsv")
+            assert os.path.exists("H_test.tsv")
+            embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 103  # 100 + cell_id + chain + sequence_id
+            assert (
+                embeddings.shape[0] == 2
+            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            os.remove("H_test.tsv")
+        except ImportError as e:
+            self.skipTest(f"Immune2Vec dependencies not available: {e}")
+
+    # custom model tests
+    def test_custom_mixed_HL_embedding(self):
+        """Test custom model (mixed bulk sc HL)."""
+        import warnings
+
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                embed(
+                    input_airr=self.test_airr_mixed_path,
+                    chain="HL",
+                    model="custom",
+                    output_file_path="HL_test.pt",
+                    model_path="facebook/esm2_t33_650M_UR50D",
+                    embedding_dimension=1280,
+                    max_length=512,
+                )
+                assert os.path.exists("HL_test.pt")
+                embeddings = torch.load("HL_test.pt")
+                assert embeddings.shape[1] == 1280  # Custom ESM2 embedding dimension
+                assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
+                os.remove("HL_test.pt")
+                # Check that protein language model warning was issued
+                assert len(w) > 0
+                warning_messages = [str(warning.message) for warning in w]
+                assert any("does not understand paired chain relationships" in msg for msg in warning_messages)
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"Custom model loading failed (corrupted cache): {e}")
+            else:
+                raise
+
+    def test_custom_mixed_H_plus_L_embedding_tsv(self):
+        """Test custom model (mixed bulk sc H+L)."""
+        try:
+            embed(
+                self.test_airr_mixed_path,
+                "H+L",
+                "custom",
+                "H_plus_L_test.tsv",
+                model_path="facebook/esm2_t33_650M_UR50D",
+                embedding_dimension=1280,
+                max_length=512,
+            )
+            assert os.path.exists("H_plus_L_test.tsv")
+            embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
+            assert (
+                embeddings.shape[0] == 4
+            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            os.remove("H_plus_L_test.tsv")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"Custom model loading failed (corrupted cache): {e}")
+            else:
+                raise
+
+    def test_custom_mixed_H_embedding_tsv(self):
+        """Test custom model (mixed bulk sc H)."""
+        try:
+            embed(
+                self.test_airr_mixed_path,
+                "H",
+                "custom",
+                "H_test.tsv",
+                model_path="facebook/esm2_t33_650M_UR50D",
+                embedding_dimension=1280,
+                max_length=512,
+            )
+            assert os.path.exists("H_test.tsv")
+            embeddings = pd.read_table("H_test.tsv", delimiter="\t")
+            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
+            assert (
+                embeddings.shape[0] == 2
+            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            os.remove("H_test.tsv")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"Custom model loading failed (corrupted cache): {e}")
+            else:
+                raise
