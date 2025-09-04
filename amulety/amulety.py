@@ -260,6 +260,7 @@ def embed_airr(
     output_type: str = "pickle",
     duplicate_col: str = "duplicate_count",
     skip_clustering: bool = True,
+    immune2vec_path: str = None,
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
@@ -284,6 +285,7 @@ def embed_airr(
         output_type (str): The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
         duplicate_col (str): The name of the numeric column used to select the best chain when
                            multiple chains of the same type exist per cell. Default: "duplicate_count".
+        immune2vec_path (str): Custom path to Immune2Vec installation directory (optional).
 
     """
     # Check valid chain - unified interface for both BCR and TCR
@@ -600,7 +602,7 @@ def embed_airr(
         # Process data for immune2vec
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size, immune2vec_path=immune2vec_path)
 
     # Protein models
     elif model == "esm2":
@@ -795,6 +797,13 @@ def embed(
             help="Skip clustering step for TCREMP model (default: True to avoid errors). Only applies to TCREMP model.",
         ),
     ] = True,
+    immune2vec_path: Annotated[
+        str,
+        typer.Option(
+            "--immune2vec-path",
+            help="Custom path to Immune2Vec installation directory. Only applies to 'immune2vec' model.",
+        ),
+    ] = None,
 ):
     """
     Embeds sequences from an AIRR rearrangement file using the specified model.
@@ -824,6 +833,7 @@ def embed(
         output_type=output_type,
         duplicate_col=duplicate_col,
         skip_clustering=skip_clustering,
+        immune2vec_path=immune2vec_path,
     )
 
     if output_type == "pickle":

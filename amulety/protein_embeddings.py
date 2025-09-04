@@ -327,6 +327,7 @@ def immune2vec(
     min_count: int = 1,
     workers: int = 3,
     random_seed: int = 42,
+    immune2vec_path: Optional[str] = None,
 ):
     """
     Embeds sequences using Immune2Vec model.
@@ -347,6 +348,7 @@ def immune2vec(
         min_count: Minimum count for words to be included (default: 1)
         workers: Number of worker threads (default: 3)
         random_seed: Random seed for reproducibility (default: 42)
+        immune2vec_path: Custom path to Immune2Vec installation directory (optional)
 
     Returns:
         torch.Tensor: Embeddings of shape (n_sequences, n_dim)
@@ -383,13 +385,21 @@ def immune2vec(
         # Try to find and add immune2vec_model directory to path
         import sys
 
-        # Common locations where immune2vec_model might be cloned
-        possible_paths = [
-            "immune2vec_model",  # Current directory (CI environment)
-            "../immune2vec_model",  # Parent directory
-            os.path.expanduser("~/immune2vec_model"),  # Home directory
-            "/tmp/immune2vec_model",  # Temporary directory
-        ]
+        # Build list of paths to search, starting with user-provided path if available
+        possible_paths = []
+        if immune2vec_path:
+            possible_paths.append(immune2vec_path)
+            logger.info("Using user-provided Immune2Vec path: %s", immune2vec_path)
+
+        # Add common locations where immune2vec_model might be cloned
+        possible_paths.extend(
+            [
+                "immune2vec_model",  # Current directory (CI environment)
+                "../immune2vec_model",  # Parent directory
+                os.path.expanduser("~/immune2vec_model"),  # Home directory
+                "/tmp/immune2vec_model",  # Temporary directory
+            ]
+        )
 
         immune2vec_found = False
         for path in possible_paths:
@@ -413,9 +423,9 @@ def immune2vec(
                 "   pip install gensim>=3.8.3\n\n"
                 "STEP 2: Clone the Immune2Vec repository\n"
                 "   git clone https://bitbucket.org/yaarilab/immune2vec_model.git\n\n"
-                "STEP 3: Add to Python path\n"
-                "   import sys\n"
-                "   sys.path.append('/path/to/immune2vec_model')\n\n"
+                "STEP 3: Either add to Python path or specify custom path\n"
+                "   Option A: import sys; sys.path.append('/path/to/immune2vec_model')\n"
+                "   Option B: Use immune2vec_path parameter: immune2vec(..., immune2vec_path='/path/to/immune2vec_model')\n\n"
                 "STEP 4: Verify installation\n"
                 "   python -c 'from embedding import sequence_modeling; print(\"Immune2Vec installed successfully\")'\n\n"
                 "Reference: https://bitbucket.org/yaarilab/immune2vec_model/src/master/"
