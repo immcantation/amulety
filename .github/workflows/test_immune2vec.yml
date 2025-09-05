@@ -146,12 +146,6 @@ jobs:
           echo "Current working directory: $(pwd)"
           echo "Checking if path exists: $(ls -la $IMMUNE2VEC_PATH 2>/dev/null || echo 'Path not found')"
 
-          # Run the original immune2vec tests from test_protein_embeddings.py
-          pytest -v tests/test_protein_embeddings.py::TestProteinEmbeddings::test_immune2vec_mixed_HL_embedding \
-                    tests/test_protein_embeddings.py::TestProteinEmbeddings::test_immune2vec_mixed_H_plus_L_embedding_tsv \
-                    tests/test_protein_embeddings.py::TestProteinEmbeddings::test_immune2vec_mixed_H_embedding_tsv \
-                    --junitxml=junit/test-results-immune2vec-original-${{ matrix.python-version }}.xml
-
           # Run the dedicated integration tests from test_immune2vec_integration.py
           pytest -v tests/test_immune2vec_integration.py \
                     --junitxml=junit/test-results-immune2vec-integration-${{ matrix.python-version }}.xml
