@@ -1,8 +1,3 @@
-"""
-Integration tests for Immune2Vec with custom installation path.
-These tests are designed to run in CI environments where Immune2Vec is installed.
-"""
-
 import os
 import tempfile
 import unittest

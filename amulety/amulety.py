@@ -13,7 +13,7 @@ from rich.console import Console
 from typing_extensions import Annotated
 
 from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
-from amulety.protein_embeddings import custommodel, esm2, immune2vec, prott5
+from amulety.protein_embeddings import custommodel, esm2, prott5
 from amulety.tcr_embeddings import tcr_bert, tcrt5
 from amulety.utils import (
     check_dependencies,
@@ -591,6 +591,9 @@ def embed_airr(
 
     # Immune-specific models (BCR & TCR)
     elif model == "immune2vec":
+        # Lazy import to avoid dependency issues in main tests
+        from amulety.protein_embeddings import immune2vec
+
         # Warn about paired chain compatibility
         if chain in ["HL", "LH"]:
             warnings.warn(

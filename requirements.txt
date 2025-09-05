@@ -1,5 +1,14 @@
-# In order to use Immune2Vec
-# Prerequisites: python3.* with gensim package version 3.8.3 installed (use "python3 -m pip install gensim==3.8.3") and ray package installed (use "pip3 install ray")
+# Note: Immune2Vec dependencies are not included in main requirements
+# To use Immune2Vec functionality, you need:
+# 1. Python 3.8 (gensim 3.8.3 is not compatible with Python 3.9+)
+# 2. Install dependencies manually:
+#    pip install gensim==3.8.3 ray
+# 3. Clone the repository:
+#    git clone https://bitbucket.org/yaarilab/immune2vec_model.git
+#
+# Uncomment the following lines if you want to install Immune2Vec dependencies:
+# gensim==3.8.3  # Only compatible with Python 3.8
+# ray            # Required by Immune2Vec
 numpy
 pandas
 torch
@@ -13,5 +22,4 @@ protobuf
 sentencepiece
 pytest-workflow>=1.6.0
 pytest>=7.0.0
-gensim==3.8.3
-ray
+

@@ -43,6 +43,15 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --upgrade setuptools wheel
           pip install -r requirements.txt
+
+          # Install Immune2Vec dependencies only for Python 3.8
+          if [[ "${{ matrix.python-version }}" == "3.8" ]]; then
+            echo "Installing Immune2Vec dependencies for Python 3.8..."
+            pip install gensim==3.8.3 ray
+          else
+            echo "Skipping Immune2Vec dependencies for Python ${{ matrix.python-version }}"
+          fi
+
           pip install -e . --verbose
       # Install TCREMP for testing
       - name: Install TCREMP
