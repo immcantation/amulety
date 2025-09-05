@@ -385,21 +385,22 @@ def immune2vec(
         # Try to find and add immune2vec_model directory to path
         import sys
 
-        # Build list of paths to search, starting with user-provided path if available
+        # Build list of paths to search
         possible_paths = []
         if immune2vec_path:
+            # If user provided a specific path, only use that path
             possible_paths.append(immune2vec_path)
             logger.info("Using user-provided Immune2Vec path: %s", immune2vec_path)
-
-        # Add common locations where immune2vec_model might be cloned
-        possible_paths.extend(
-            [
-                "immune2vec_model",  # Current directory (CI environment)
-                "../immune2vec_model",  # Parent directory
-                os.path.expanduser("~/immune2vec_model"),  # Home directory
-                "/tmp/immune2vec_model",  # Temporary directory
-            ]
-        )
+        else:
+            # Only search default locations if no specific path was provided
+            possible_paths.extend(
+                [
+                    "immune2vec_model",  # Current directory (CI environment)
+                    "../immune2vec_model",  # Parent directory
+                    os.path.expanduser("~/immune2vec_model"),  # Home directory
+                    "/tmp/immune2vec_model",  # Temporary directory
+                ]
+            )
 
         immune2vec_found = False
         for path in possible_paths:
