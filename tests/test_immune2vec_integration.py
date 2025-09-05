@@ -156,7 +156,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
                 cache_dir=self.temp_dir,
                 batch_size=1,
                 n_dim=50,
-                immune2vec_path="/nonexistent/path/to/immune2vec",
+                immune2vec_path="/invalid/immune2vec/installation/path",
             )
 
         # Verify error message mentions both installation options
