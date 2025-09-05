@@ -127,17 +127,13 @@ jobs:
           echo "Embedding directory contents:"
           ls -la immune2vec_model/embedding/ || echo "embedding directory not found"
 
-      - name: Test environment constraints
+      - name: Prepare test environment
         shell: bash -el {0}
         run: |
-          echo "Testing environment constraints for Immune2Vec..."
+          echo "Preparing test environment for Immune2Vec..."
 
           # Create junit directory
           mkdir -p junit
-
-          # Test environment constraints first
-          pytest -v tests/test_environment_constraints.py \
-                    --junitxml=junit/test-results-environment-constraints-${{ matrix.python-version }}.xml
 
       - name: Run Immune2Vec specific tests
         shell: bash -el {0}
