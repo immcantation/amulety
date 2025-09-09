@@ -76,7 +76,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         self.assertEqual(embeddings.shape[1], 50)
         self.assertEqual(embeddings.dtype, torch.float32)
 
-        print(f"✓ Programmatic test passed: {embeddings.shape}")
+        print(f"Programmatic test passed: {embeddings.shape}")
 
     def test_immune2vec_cli_with_custom_path_H_chain(self):
         """Test CLI interface with custom path for H chain."""
@@ -98,7 +98,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         self.assertEqual(embeddings.shape[0], 2)  # 2 H chains
         self.assertEqual(embeddings.shape[1], 100)  # Default dimension
 
-        print(f"✓ CLI H chain test passed: {embeddings.shape}")
+        print(f"CLI H chain test passed: {embeddings.shape}")
 
     def test_immune2vec_cli_with_custom_path_HL_pairs(self):
         """Test CLI interface with custom path for HL pairs."""
@@ -119,7 +119,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         self.assertEqual(embeddings.shape[0], 2)  # 2 cells with HL pairs
         self.assertEqual(embeddings.shape[1], 100)  # Default dimension
 
-        print(f"✓ CLI HL pairs test passed: {embeddings.shape}")
+        print(f"CLI HL pairs test passed: {embeddings.shape}")
 
     def test_immune2vec_cli_with_custom_path_H_plus_L(self):
         """Test CLI interface with custom path for H+L separate chains."""
@@ -140,7 +140,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         self.assertEqual(embeddings.shape[0], 4)  # 2H + 2L chains
         self.assertEqual(embeddings.shape[1], 100)  # Default dimension
 
-        print(f"✓ CLI H+L test passed: {embeddings.shape}")
+        print(f"CLI H+L test passed: {embeddings.shape}")
 
     def test_immune2vec_error_handling_invalid_path(self):
         """Test error handling with invalid path."""
@@ -165,7 +165,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         self.assertIn("Option B", error_msg)
         self.assertIn("immune2vec_path", error_msg)
 
-        print("✓ Error handling test passed")
+        print("Error handling test passed")
 
     def test_immune2vec_without_custom_path(self):
         """Test immune2vec without custom path (should use default search)."""
@@ -189,7 +189,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         self.assertEqual(embeddings.shape[0], 1)
         self.assertEqual(embeddings.shape[1], 50)
 
-        print(f"✓ Default path test passed: {embeddings.shape}")
+        print(f"Default path test passed: {embeddings.shape}")
 
 
 if __name__ == "__main__":

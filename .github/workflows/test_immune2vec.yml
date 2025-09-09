@@ -65,10 +65,10 @@ jobs:
           echo "Verifying installations..."
           python -c "
           import gensim
-          print(f'✅ gensim version: {gensim.__version__}')
+          print(f'gensim version: {gensim.__version__}')
           assert gensim.__version__ == '3.8.3', f'Expected 3.8.3, got {gensim.__version__}'
           "
-          python -c "import ray; print('✅ ray installed successfully')"
+          python -c "import ray; print('ray installed successfully')"
 
           echo "Cloning Immune2Vec repository..."
           git clone https://bitbucket.org/yaarilab/immune2vec_model.git
@@ -85,7 +85,7 @@ jobs:
           sys.path.insert(0, '.')
           try:
               from embedding import sequence_modeling
-              print('✅ Immune2Vec successfully imported')
+              print('Immune2Vec successfully imported')
 
               # Test basic functionality
               import pandas as pd
@@ -103,10 +103,10 @@ jobs:
                   random_seed=42
               )
               result = model.to_vecs(sequences.iloc[0])
-              print(f'✅ Basic functionality test passed, embedding shape: {result.shape}')
+              print(f'Basic functionality test passed, embedding shape: {result.shape}')
 
           except Exception as e:
-              print(f'❌ Failed to import or test Immune2Vec: {e}')
+              print(f'Failed to import or test Immune2Vec: {e}')
               import traceback
               traceback.print_exc()
               sys.exit(1)
@@ -174,10 +174,10 @@ jobs:
           python -c "
           import torch
           embeddings = torch.load('test_immune2vec_output.pt')
-          print(f'✓ CLI test successful! Generated embeddings with shape: {embeddings.shape}')
+          print(f'CLI test successful! Generated embeddings with shape: {embeddings.shape}')
           assert embeddings.shape[0] == 1, f'Expected 1 sequence, got {embeddings.shape[0]}'
           assert embeddings.shape[1] == 100, f'Expected 100 dimensions, got {embeddings.shape[1]}'
-          print('✓ All CLI tests passed!')
+          print('All CLI tests passed!')
           "
 
           # Clean up test files
@@ -212,10 +212,10 @@ jobs:
               immune2vec_path=os.environ.get('IMMUNE2VEC_PATH', os.path.join(os.getcwd(), 'immune2vec_model'))
           )
 
-          print(f'✓ Programmatic test successful! Generated embeddings with shape: {result.shape}')
+          print(f'Programmatic test successful! Generated embeddings with shape: {result.shape}')
           assert result.shape[0] == 2, f'Expected 2 sequences, got {result.shape[0]}'
           assert result.shape[1] == 50, f'Expected 50 dimensions, got {result.shape[1]}'
-          print('✓ All programmatic tests passed!')
+          print('All programmatic tests passed!')
           "
 
       - name: Clean up temporary files
@@ -226,7 +226,7 @@ jobs:
           find . -name "*_corpus.txt" -type f -delete || true
           find . -name "*.model" -type f -delete || true
           find /tmp -name "*immune2vec*" -type d -exec rm -rf {} + 2>/dev/null || true
-          echo "✅ Cleanup completed"
+          echo "Cleanup completed"
         if: ${{ always() }}
 
       - name: Upload test results

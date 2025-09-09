@@ -853,11 +853,11 @@ def check_deps():
     print("Checking AMULETY dependencies...\n")
 
     # Check IgBlast availability
-    print("🧬 IgBlast (for translate-igblast command):")
+    print("IgBlast (for translate-igblast command):")
     if check_igblast_available():
-        print("  ✅ IgBlast (igblastn) is available")
+        print("  IgBlast (igblastn) is available")
     else:
-        print("  ❌ IgBlast (igblastn) not found")
+        print("  IgBlast (igblastn) not found")
         print("     1. Add conda channels:")
         print("        conda config --add channels conda-forge")
         print("        conda config --add channels bioconda")
@@ -866,13 +866,13 @@ def check_deps():
         print("     3. Or use mamba: mamba install -c bioconda igblast")
         print("     4. Or download from: https://ftp.ncbi.nlm.nih.gov/blast/executables/igblast/release/")
 
-    print("\n🤖 Embedding model dependencies:")
+    print("\nEmbedding model dependencies:")
     missing = check_dependencies()
 
     if not missing:
-        print("  ✅ All embedding dependencies are installed!")
+        print("  All embedding dependencies are installed!")
     else:
-        print(f"  ❌ {len(missing)} dependencies are missing.")
+        print(f"  {len(missing)} dependencies are missing.")
         print("  AMULETY will raise ImportError with installation instructions when these models are used.")
         print("\n  To install missing dependencies:")
         for name, install_cmd in missing:
