@@ -7,6 +7,7 @@
   installation
   usage
   tutorial
+  ML_tutorial
   contributing
   history
 
