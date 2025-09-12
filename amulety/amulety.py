@@ -265,27 +265,40 @@ def embed_airr(
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
     Parameters:
-        airr (pd.DataFrame): Input AIRR rearrangement table as a pandas DataFrame.
-        chain (str): The input chain, which can be one of ["H", "L", "HL", "LH", "H+L"].
-                    For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs, LH=Light-Heavy pairs, H+L=Both chains separately
-                    For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately
-        model (str): The embedding model to use.
-                    BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired"]
-                    TCR models: ["tcr-bert", "tcremp", "tcrt5"]
-                    Immune models (BCR & TCR): ["immune2vec"]
-                    Protein models: ["esm2", "prott5", "custom"]
-                    Use "custom" for fine-tuned models (requires model_path, embedding_dimension, max_length)
-        sequence_col (str): The name of the column containing the amino acid sequences to embed.
-        cell_id_col (str): The name of the column containing the single-cell barcode.
-        cache_dir (Optional[str]): Cache dir for storing the pre-trained model weights.
-        batch_size (int): The batch size of sequences to embed.
-        embedding_dimension (int): The embedding dimension for custom models.
-        max_length (int): The maximum sequence length for custom models.
-        model_path (str): The path to the custom model.
-        output_type (str): The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
-        duplicate_col (str): The name of the numeric column used to select the best chain when
-                           multiple chains of the same type exist per cell. Default: "duplicate_count".
-        immune2vec_path (str): Custom path to Immune2Vec installation directory (optional).
+        airr (pd.DataFrame):
+            Input AIRR rearrangement table as a pandas DataFrame.
+        chain (str):
+            The input chain, which can be one of ["H", "L", "HL", "LH", "H+L"].
+            For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs, LH=Light-Heavy pairs, H+L=Both chains separately
+            For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately
+        model (str):
+            The embedding model to use.
+            BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired"]
+            TCR models: ["tcr-bert", "tcremp", "tcrt5"]
+            Immune models (BCR & TCR): ["immune2vec"]
+            Protein models: ["esm2", "prott5", "custom"]
+            Use "custom" for fine-tuned models (requires model_path, embedding_dimension, max_length)
+        sequence_col (str):
+            The name of the column containing the amino acid sequences to embed.
+        cell_id_col (str):
+            The name of the column containing the single-cell barcode.
+        cache_dir (Optional[str]):
+            Cache dir for storing the pre-trained model weights.
+        batch_size (int):
+            The batch size of sequences to embed.
+        embedding_dimension (int):
+            The embedding dimension for custom models.
+        max_length (int):
+            The maximum sequence length for custom models.
+        model_path (str):
+            The path to the custom model.
+        output_type (str):
+            The type of output to return. Can be "df" for a pandas DataFrame or "pickle" for a serialized torch object.
+        duplicate_col (str):
+            The name of the numeric column used to select the best chain when
+            multiple chains of the same type exist per cell. Default: "duplicate_count".
+        immune2vec_path (str):
+            Custom path to Immune2Vec installation directory (optional).
 
     """
     # Check valid chain - unified interface for both BCR and TCR
