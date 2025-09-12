@@ -1,30 +1,14 @@
-# AMULET-Y
-
 ```{toctree}
-.. toctree::
+  :hidden:
   :maxdepth: 2
   :caption: About
 
-  installation
-  usage
+  Installation <installation>
+  Usage <usage>
   Release notes <history>
-  contributing
-
-
-.. toctree::
-  :maxdepth: 2
-  :caption: Tutorials
-
-  tutorials/amulety_cli
-  tutorials/ML_tutorial
-
-.. toctree::
-  :maxdepth: 2
-  :caption: API reference
-  api
+  Contributing <contributing>
 ```
 
 ```{include} ../README.md
-:relative-docs:
-:relative-images:
+
 ```

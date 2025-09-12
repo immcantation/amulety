@@ -26,18 +26,18 @@ AMULETY supports different chain input formats based on model architecture and t
 
 ## TCR (T-Cell Receptor) Models
 
-| Model    | Command  | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                    |
-| -------- | -------- | ------------------- | ----------------- | ---------------- | -------------------------------------------------------------------------------------------- | --- |
-| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |     |
-| TCRT5    | tcrt5    | 256                 | H only            | β only           | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
+| Model    | Command  | Embedding Dimension | Chain Support     | Reference                                                                                    |
+| -------- | -------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
+| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
+| TCRT5    | tcrt5    | 256                 | H only            | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
 
 ## General Protein Models
 
-| Model                 | Command | Embedding Dimension | Chain Support              | TCR Type Support | Reference                                                                                              |
-| --------------------- | ------- | ------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
-| ESM2 (650M parameter) | esm2    | 1280                | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)                                 |
-| ProtT5                | prott5  | 1024                | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554)                             |
-| Custom models         | custom  | Configurable        | H, L, H+L + (warning)HL/LH | depends on model | User-provided fine-tuned or custom models (requires --model-path, --embedding-dimension, --max-length) |
+| Model                 | Command | Embedding Dimension | Chain Support    | Reference                                                                                              |
+| --------------------- | ------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
+| ESM2 (650M parameter) | esm2    | 1280                | H, L, H+L, HL/LH | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)                                 |
+| ProtT5                | prott5  | 1024                | H, L, H+L, HL/LH | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554)                             |
+| Custom models         | custom  | Configurable        | H, L, H+L, HL/LH | User-provided fine-tuned or custom models (requires --model-path, --embedding-dimension, --max-length) |
 
 ## Immune Receptor Specific Models (BCR & TCR)
 
