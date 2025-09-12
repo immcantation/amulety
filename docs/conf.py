@@ -35,12 +35,26 @@ import amulety
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinxcontrib.googleanalytics",
     "sphinxcontrib.typer",
     "sphinx_mdinclude",
     "nbsphinx",
 ]
+autosummary_generate = True
+autodoc_default_options = {
+    "members": True,
+    "undoc-members": False,
+    "show-inheritance": True,
+}
+add_module_names = False  # cleaner headings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_use_param = True
+napoleon_use_rtype = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -92,6 +106,12 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", {}),
+    "numpy": ("https://numpy.org/doc/stable/", {}),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", {}),
+}
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

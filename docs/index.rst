@@ -1,13 +1,14 @@
 .. mdinclude:: ../README.md
 
 .. toctree::
-  :maxdepth: 1
+  :maxdepth: 2
   :caption: Contents:
 
   installation
   usage
-  tutorial
-  ML_tutorial
+  tutorials/amulety_cli
+  tutorials/ML_tutorial
+  api
   contributing
   history
 

@@ -17,7 +17,6 @@ typer
 antiberty
 ablang
 rjieba
-pre-commit
 protobuf
 sentencepiece
 pytest-workflow>=1.6.0
