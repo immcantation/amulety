@@ -42,7 +42,6 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.googleanalytics",
     "sphinxcontrib.typer",
-    "sphinx_mdinclude",
     "nbsphinx",
 ]
 
