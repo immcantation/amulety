@@ -26,11 +26,10 @@ AMULETY supports different chain input formats based on model architecture and t
 
 ## TCR (T-Cell Receptor) Models
 
-| Model    | Command  | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                            |
-| -------- | -------- | ------------------- | ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------- |
-| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1)         |
-| TCREMP   | tcremp   | 3000                | H, L, HL, LH, H+L | α/β, γ/δ         | [doi:10.1016/j.jmb.2025.168712](https://www.sciencedirect.com/science/article/pii/S0022283625002712) |
-| TCRT5    | tcrt5    | 256                 | H only            | β only           | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)                       |
+| Model    | Command  | Embedding Dimension | Chain Support     | TCR Type Support | Reference                                                                                    |
+| -------- | -------- | ------------------- | ----------------- | ---------------- | -------------------------------------------------------------------------------------------- | --- |
+| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | α/β only         | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |     |
+| TCRT5    | tcrt5    | 256                 | H only            | β only           | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
 
 ## General Protein Models
 
@@ -72,13 +71,40 @@ pip install -e .
 
 Most models work out-of-the-box and do not require further tool installations. Some models require additional dependencies that are not installable with PyPI:
 
-**TCR Models:**
-
-- **TCREMP** - TCR embedding via prototypes for repertoire-based representation learning. Install: `git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .` (requires Python 3.11+)
-
 **Protein Language Models:**
 
-- **Immune2Vec** - Protein language model for immune receptor sequences. Install: `git clone https://bitbucket.org/yaarilab/immune2vec_model.git` and add to Python path
+- **Immune2Vec** - Protein language model for immune receptor sequences. Requires specific setup:
+
+  **Prerequisites:**
+
+  ```bash
+  # Install required dependencies
+  python3 -m pip install gensim==3.8.3
+  pip3 install ray
+  ```
+
+  **Setup:**
+
+  ```bash
+  # Clone the Immune2Vec repository
+  git clone https://bitbucket.org/yaarilab/immune2vec_model.git
+  ```
+
+  **Usage:**
+
+  ```bash
+  # Use with custom path parameter
+  amulety embed --model immune2vec --immune2vec-path /path/to/immune2vec_model --input-airr data.tsv --chain H --output-file-path output.pt
+  ```
+
+  **Python API:**
+
+  ```python
+  from amulety.protein_embeddings import immune2vec
+  embeddings = immune2vec(sequences, immune2vec_path='/path/to/immune2vec_model')
+  ```
+
+  **Note:** Immune2Vec requires gensim version 3.8.3 specifically. If installation fails due to compilation issues, ensure you have compatible Python version (3.8-3.9 recommended).
 
 ### Custom Light Chain Selection
 
@@ -118,14 +144,6 @@ Then use with AMULETY:
 
 ```bash
 amulety embed --chain HL --model antiberta2 --duplicate-col quality_score --output-file-path embeddings.pt enhanced_input.tsv
-```
-
-### TCREMP Usage
-
-TCREMP may require the `--skip-clustering` parameter for stability:
-
-```bash
-amulety embed --chain H --model tcremp --skip-clustering --output-file-path embeddings.pt input.tsv
 ```
 
 ### Troubleshooting Models

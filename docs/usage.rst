@@ -113,29 +113,6 @@ Reference:
 Lu T, Zhang Z, Zhu J, et al. Deep learning-based prediction of the T cell receptor–antigen binding specificity. bioRxiv. 2021. `doi:10.1101/2021.11.18.469186 <https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1>`_
 
 
-
-TCREMP
-------
-
-TCR-specific embedding method trained for T-cell receptor repertoire-based representation learning (H, L, HL, LH, H+L chains). Focuses on repertoire-level prediction tasks with specialized TCR sequence understanding. This model supports all chain types including paired chains and individual chains.
-
-**Installation Requirements:**
-
-- Python 3.11+ required
-- Manual installation: ``git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install .``
-- Verify installation: ``tcremp-run -h``
-
-**Usage Note:**
-
-Use ``--skip-clustering`` for stability:
-
-.. code-block:: bash
-
-    amulety embed --chain H --model tcremp --skip-clustering --output-file-path embeddings.pt input.tsv
-
-Reference:
-Zhang H, Zeng T, Zhao Y, et al. TCREMP: T-cell receptor repertoire-based embedding for immunotherapy response prediction. Journal of Molecular Biology. 2025;437: 168712. `doi:10.1016/j.jmb.2025.168712 <https://www.sciencedirect.com/science/article/pii/S0022283625002712>`_
-
 TCRT5
 -----
 

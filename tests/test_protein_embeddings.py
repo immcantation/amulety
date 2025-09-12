@@ -151,46 +151,8 @@ class TestAmulety(unittest.TestCase):
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
         os.remove("H_test.tsv")
 
-    # immune2vec tests
-    def test_immune2vec_mixed_HL_embedding(self):
-        """Test immune2vec (mixed bulk sc HL)."""
-        try:
-            embed(input_airr=self.test_airr_mixed_path, chain="HL", model="immune2vec", output_file_path="HL_test.pt")
-            assert os.path.exists("HL_test.pt")
-            embeddings = torch.load("HL_test.pt")
-            assert embeddings.shape[1] == 100  # Immune2Vec embedding dimension
-            assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
-            os.remove("HL_test.pt")
-        except ImportError as e:
-            self.skipTest(f"Immune2Vec dependencies not available: {e}")
-
-    def test_immune2vec_mixed_H_plus_L_embedding_tsv(self):
-        """Test immune2vec (mixed bulk sc H+L)."""
-        try:
-            embed(self.test_airr_mixed_path, "H+L", "immune2vec", "H_plus_L_test.tsv")
-            assert os.path.exists("H_plus_L_test.tsv")
-            embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 103  # 100 + cell_id + chain + sequence_id
-            assert (
-                embeddings.shape[0] == 4
-            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
-            os.remove("H_plus_L_test.tsv")
-        except ImportError as e:
-            self.skipTest(f"Immune2Vec dependencies not available: {e}")
-
-    def test_immune2vec_mixed_H_embedding_tsv(self):
-        """Test immune2vec (mixed bulk sc H)."""
-        try:
-            embed(self.test_airr_mixed_path, "H", "immune2vec", "H_test.tsv")
-            assert os.path.exists("H_test.tsv")
-            embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 103  # 100 + cell_id + chain + sequence_id
-            assert (
-                embeddings.shape[0] == 2
-            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
-            os.remove("H_test.tsv")
-        except ImportError as e:
-            self.skipTest(f"Immune2Vec dependencies not available: {e}")
+    # Note: immune2vec tests have been moved to tests/test_immune2vec_integration.py
+    # to avoid duplication and provide better organization
 
     # custom model tests
     def test_custom_mixed_HL_embedding(self):

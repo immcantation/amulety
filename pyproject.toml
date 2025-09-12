@@ -54,7 +54,6 @@ dependencies = [
     "sentencepiece",
     "pytest-workflow>=1.6.0",
     "pytest>=7.0.0",
-    "gensim>=3.8.3",
 ]
 
 [project.urls]
