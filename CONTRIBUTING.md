@@ -105,15 +105,9 @@ Before you submit a pull request, check that it meets these guidelines:
 ## Deploying
 
 A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed (including an entry in HISTORY.rst).
-Then run:
+Make sure all your changes are committed (including an entry in `CHANGELOG.md`).
 
-```
-$ bump2version patch # possible: major / minor / patch
-$ git push
-$ git push --tags
-```
-
+Then update the package version e.g. by using `bump2version` or manually and open a PR to the `main` branch.
 GitHub actions will then deploy to PyPI if tests pass.
 
 ## Code of Conduct
