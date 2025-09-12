@@ -7,5 +7,6 @@ sphinx-mdinclude
 sphinx-rtd-theme
 sphinxcontrib-googleanalytics
 sphinxcontrib-typer
+myst-parser
 nbsphinx
 -e .
