@@ -2,12 +2,12 @@
 
 ## B-Cell Receptor (BCR) Models
 
-| Model       | Command     | Embedding Dimension | Chain Support | Reference                                                                        |
-| ----------- | ----------- | ------------------- | ------------- | -------------------------------------------------------------------------------- |
-| AbLang      | ablang      | 768                 | H, L, H+L     | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)   |
-| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L     | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
-| AntiBERTy   | antiberty   | 512                 | H, L, H+L     | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
-| BALM-paired | balm-paired | 1024                | HL, LH        | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
+| Model       | Command     | Embedding Dimension | Trained on | Reference                                                                        |
+| ----------- | ----------- | ------------------- | ---------- | -------------------------------------------------------------------------------- |
+| AbLang      | ablang      | 768                 | H, L, H+L  | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)   |
+| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L  | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
+| AntiBERTy   | antiberty   | 512                 | H, L, H+L  | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
+| BALM-paired | balm-paired | 1024                | HL, LH     | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
 
 ### AntiBERTa2
 
@@ -39,7 +39,7 @@ Burbach SM, Briney B. Improving antibody language models with native pairing. Pa
 
 ## T-Cell Receptor (TCR) Models
 
-| Model    | Command  | Embedding Dimension | Chain Support     | Reference                                                                                    |
+| Model    | Command  | Embedding Dimension | Trained on        | Reference                                                                                    |
 | -------- | -------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
 | TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
 | TCRT5    | tcrt5    | 256                 | H only            | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
@@ -60,7 +60,7 @@ Deng K, Guan R, Liu Z, et al. TCRT5: T-cell receptor sequence modeling with T5. 
 
 ## General Protein Models
 
-| Model                 | Command | Embedding Dimension | Chain Support    | Reference                                                                                              |
+| Model                 | Command | Embedding Dimension | Trained on       | Reference                                                                                              |
 | --------------------- | ------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------ |
 | ESM2 (650M parameter) | esm2    | 1280                | H, L, H+L, HL/LH | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)                                 |
 | ProtT5                | prott5  | 1024                | H, L, H+L, HL/LH | [doi:10.1101/2020.07.12.199554](https://doi.org/10.1101/2020.07.12.199554)                             |
@@ -82,9 +82,9 @@ Elnaggar A, Heinzinger M, Dallago C, et al. ProtTrans: Towards Cracking the Lang
 
 ## Immune Receptor Specific Models (BCR & TCR)
 
-| Model      | Command    | Embedding Dimension | Chain Support              | TCR Type Support | Reference                                                                                                                |
-| ---------- | ---------- | ------------------- | -------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Immune2Vec | immune2vec | 100 (configurable)  | H, L, H+L + (warning)HL/LH | α/β + γ/δ        | [doi:10.3389/fimmu.2021.680687](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2021.680687/full) |
+| Model      | Command    | Embedding Dimension | Trained on                 | Reference                                                                                                                |
+| ---------- | ---------- | ------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Immune2Vec | immune2vec | 100 (configurable)  | H, L, H+L + (warning)HL/LH | [doi:10.3389/fimmu.2021.680687](https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2021.680687/full) |
 
 ### Immune2vec
 

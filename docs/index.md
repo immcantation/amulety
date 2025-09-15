@@ -51,7 +51,7 @@ Immcantation Portal <https://immcantation.readthedocs.io>
 
 Introduction <self>
 installation
-Included models <included_models>
+included_models
 Release Notes <history>
 contributing
 ```
