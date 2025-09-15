@@ -264,6 +264,7 @@ def embed_airr(
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
+
     Parameters:
         airr (pd.DataFrame):
             Input AIRR rearrangement table as a pandas DataFrame.

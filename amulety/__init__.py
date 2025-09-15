@@ -1,5 +1,3 @@
-"""Top-level package for AMULETY."""
-
 from .amulety import embed_airr, translate_airr
 
 __version__ = "1.1"

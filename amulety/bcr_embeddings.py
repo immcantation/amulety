@@ -1,7 +1,7 @@
 """
 BCR embedding functions using various models.
-Please order alphabetically by function name.
 """
+# Please order alphabetically by function name.
 # ruff: noqa: N806
 
 import logging
