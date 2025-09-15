@@ -1,5 +1,5 @@
-API reference
-=============
+AMULETY API reference
+======================
 
 .. autosummary::
     :toctree: api

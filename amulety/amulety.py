@@ -903,7 +903,9 @@ def main():
 ██   ██ ██      ██  ██████  ███████ ███████    ██           ██
 """
     stderr.print(asci_art)
-    stderr.print(f"AMULETY: Adaptive imMUne receptor Language model Embedding Tool\n version {__version__}\n")
+    stderr.print(
+        f"AMULETY: Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY\n version {__version__}\n"
+    )
 
     app()
 

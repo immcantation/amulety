@@ -1,17 +1,18 @@
 # AMULETY
 
-Amulety stands for Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY.
-Amulety is a Python command line tool to embed B-cell receptor (BCR), also termed antibodies in their secreted form, and T-cell receptor (TCR) amino acid sequences using pre-trained general protein or specific immune receptor language models. The package supports both BCR and TCR embeddings. The package also has functionality to translate nucleotide sequences to amino acids with IgBlast.
+AMULETY stands for Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY.
+AMULETY is a Python command line tool to embed B-cell receptor (BCR), also termed antibodies in
+their secreted form, and T-cell receptor (TCR) amino acid sequences using pre-trained general
+protein or specific immune receptor language models. The package supports both BCR and TCR embeddings.
+The package also has functionality to translate nucleotide sequences to amino acids with IgBlast.
 
-## Installation
+AMULETY is part of the [Immcantation](http://immcantation.readthedocs.io)
+analysis framework for Adaptive Immune Receptor Repertoire sequencing
+(AIRR-seq) data analysis.
 
-### Requirements
+## Quick start
 
-- **Python 3.8 or higher**
-
-### Install AMULETY
-
-You can install AMULETY using pip:
+You can install AMULETY using pip (it requires python 3.8 or higher):
 
 ```bash
 pip install amulety
@@ -25,9 +26,8 @@ cd amulety
 pip install -e .
 ```
 
-## Usage
-
-The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
+The full usage documentation can also be found on the readthedocs
+[usage page](https://amulety.readthedocs.io/en/latest/usage.html).
 
 To print the usage help for the AMULETY package type:
 
@@ -37,7 +37,8 @@ amulety --help
 
 ## Contact
 
-If you need help or have any questions, please contact the [Immcantation Group](mailto:immcantation@googlegroups.com).
+If you need help or have any questions, please contact the
+[Immcantation Group](mailto:immcantation@googlegroups.com).
 
 If you have discovered a bug or have a feature request, you can open an issue using the [issue tracker](https://github.com/immcantation/amulety/issues).
 
@@ -66,4 +67,4 @@ To cite the paper comparing the embedding methods on BCR sequences, please cite:
 
 ## License
 
-This project is licensed under the terms of the GPL v3 license. See the LICENSE file for details.
+This project is licensed under the terms of the GPL v3 license.
