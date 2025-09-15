@@ -51,7 +51,7 @@ Immcantation Portal <https://immcantation.readthedocs.io>
 
 Introduction <self>
 installation
-usage
+Included models <included_models>
 Release Notes <history>
 contributing
 ```
@@ -68,8 +68,15 @@ tutorials/ML_tutorial
 ```{toctree}
 :hidden:
 :maxdepth: 2
+:caption: CLI reference
+
+cli
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 2
 :caption: API reference
 
 api
-
 ```

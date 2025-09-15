@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
+    "sphinx_click",
     "sphinxcontrib.googleanalytics",
     "sphinxcontrib.typer",
     "nbsphinx",
