@@ -1,3 +1,5 @@
+# Amulety Documentation
+
 ```{toctree}
   :hidden:
   :maxdepth: 2
@@ -10,5 +12,6 @@
 ```
 
 ```{include} ../README.md
-
+:relative-docs:
+:relative-images:
 ```
