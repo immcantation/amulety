@@ -824,6 +824,7 @@ def embed(
 ):
     """
     Embeds sequences from an AIRR rearrangement file using the specified model.
+
     Example usage:\n
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """

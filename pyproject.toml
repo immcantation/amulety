@@ -49,11 +49,7 @@ dependencies = [
     "antiberty",
     "ablang",
     "rjieba",
-    "pre-commit",
-    "protobuf",
-    "sentencepiece",
-    "pytest-workflow>=1.6.0",
-    "pytest>=7.0.0",
+    "sentencepiece"
 ]
 
 [project.urls]
@@ -63,7 +59,6 @@ Issues = "https://github.com/immcantation/amulety/issues"
 
 [project.scripts]
 amulety = "amulety.amulety:main"
-
 
 [tool.setuptools]
 packages = ["amulety"]
@@ -82,7 +77,11 @@ norecursedirs = [
     "src",
     "docs",
 ]
+python_files = ["test_*.py"]
 
+[tool.mypy.overrides]
+warn_unused_configs = true
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
