@@ -309,16 +309,20 @@ def concatenate_heavylight(
     data_chain = data_chain.reset_index(level=cell_id_col)
     n_cells = data_chain.shape[0]
     data_chain = data_chain.dropna(axis=0)
-    n_dropped = n_cells - data.shape[0]
+    n_dropped = n_cells - data_chain.shape[0]
     if n_dropped > 0:
         logging.info("Dropping %s cells with missing heavy or light chain...", n_dropped)
+
+    # Throw error if no rows left after dropping
+    if data_chain.shape[0] == 0:
+        raise ValueError("No cells with both heavy and light chains found.")
 
     if mode == "concat":
         # Concatenate based on order parameter
         if order == "HL":
-            data_chain.loc[:, sequence_col] = data_chain.H + "<cls><cls>" + data_chain.L
+            data_chain.loc[:, sequence_col] = data_chain["H"] + "<cls><cls>" + data_chain["L"]
         elif order == "LH":
-            data_chain.loc[:, sequence_col] = data_chain.L + "<cls><cls>" + data_chain.H
+            data_chain.loc[:, sequence_col] = data_chain["L"] + "<cls><cls>" + data_chain["H"]
         else:
             raise ValueError(f"Invalid order parameter: {order}. Must be 'HL' or 'LH'.")
         return data_chain
