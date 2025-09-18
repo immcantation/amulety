@@ -26,101 +26,6 @@ __version__ = version("amulety")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# #TODO: I think this function is superfluous now.
-# def process_chain_data(
-#     airr: pd.DataFrame,
-#     chain: str,
-#     sequence_col: str,
-#     cell_id_col: str,
-#     duplicate_col: str,
-#     receptor_type: str,
-#     model_type: str = "standard",
-# ):
-#     """
-#     Universal chain data processing function for different chain modes and model types.
-
-#     Parameters:
-#         airr: AIRR DataFrame
-#         chain: Chain mode (H, L, HL, LH, H+L)
-#         sequence_col: Sequence column name
-#         cell_id_col: Cell ID column name
-#         duplicate_col: Selection column name
-#         receptor_type: Receptor type
-#         model_type: Model type ("standard", "tabular")
-
-#     Returns:
-#         tuple: (processed_data_for_embedding, full_processed_data_for_output)
-#     """
-#     # Check that the mode is supported
-#     allowed_model_types = ["standard", "tabular"]
-#     if model_type not in allowed_model_types:
-#         raise ValueError(f"Unsupported model_type '{model_type}'. Allowed values: {allowed_model_types}")
-
-#     if model_type == "tabular":
-#         # Tabular processing mode (e.g. TCREMP)
-#         dat = process_airr(
-#             airr,
-#             chain,
-#             sequence_col=sequence_col,
-#             cell_id_col=cell_id_col,
-#             duplicate_col=duplicate_col,
-#             receptor_type=receptor_type,
-#             mode="tab_locus_gene",
-#         )
-#         return dat, dat
-
-#     else:
-#         # Standard model processing mode
-#         if chain in ["HL", "LH"]:
-#             # Paired chains: concatenate sequences
-#             dat = process_airr(
-#                 airr,
-#                 chain,
-#                 sequence_col=sequence_col,
-#                 cell_id_col=cell_id_col,
-#                 duplicate_col=duplicate_col,
-#                 receptor_type=receptor_type,
-#                 mode="concat",
-#             )
-#             # The sequence column should now be consistently named as sequence_col
-#             if sequence_col in dat.columns:
-#                 return dat.loc[:, sequence_col], dat
-#             else:
-#                 raise ValueError(
-#                     f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
-#                 )
-#         elif chain == "H+L":
-#             # Separate chains: return DataFrame with H and L columns
-#             dat = process_airr(
-#                 airr,
-#                 chain,
-#                 sequence_col=sequence_col,
-#                 cell_id_col=cell_id_col,
-#                 duplicate_col=duplicate_col,
-#                 receptor_type=receptor_type,
-#                 mode="tab",
-#             )
-#             return dat, dat  # Return complete DataFrame for both
-#         else:  # H or L single chain
-#             # Single chain: return single sequence column
-#             dat = process_airr(
-#                 airr,
-#                 chain,
-#                 sequence_col=sequence_col,
-#                 cell_id_col=cell_id_col,
-#                 duplicate_col=duplicate_col,
-#                 receptor_type=receptor_type,
-#                 mode="tab",
-#             )
-#             # The sequence column should now be consistently named as sequence_col
-#             if sequence_col in dat.columns:
-#                 return dat.loc[:, sequence_col], dat
-#             else:
-#                 raise ValueError(
-#                     f"Sequence column '{sequence_col}' not found in processed data. Available columns: {list(dat.columns)}"
-#                 )
-
-
 app = typer.Typer()
 stderr = Console(stderr=True)
 stdout = Console()
@@ -259,8 +164,8 @@ def embed_airr(
     model_path: str = None,
     output_type: str = "pickle",
     duplicate_col: str = "duplicate_count",
-    skip_clustering: bool = True,
     immune2vec_path: str = None,
+    residue_level: bool = False,
 ):
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
@@ -275,7 +180,7 @@ def embed_airr(
         model (str):
             The embedding model to use.
             BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired"]
-            TCR models: ["tcr-bert", "tcremp", "tcrt5"]
+            TCR models: ["tcr-bert", "tcrt5"]
             Immune models (BCR & TCR): ["immune2vec"]
             Protein models: ["esm2", "prott5", "custom"]
             Use "custom" for fine-tuned models (requires model_path, embedding_dimension, max_length)
@@ -300,6 +205,9 @@ def embed_airr(
             multiple chains of the same type exist per cell. Default: "duplicate_count".
         immune2vec_path (str):
             Custom path to Immune2Vec installation directory (optional).
+        residue_level (bool):
+            If True, returns residue-level embeddings of dimension sequence length x embedding dimension (L x D)
+            instead of sequence-level (1 x D).
 
     """
     # Check valid chain - unified interface for both BCR and TCR
@@ -312,6 +220,12 @@ def embed_airr(
         raise ValueError("Output type must be one of ['df', 'pickle']")
     if sequence_col not in airr.columns:
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
+
+    if residue_level and output_type not in ["pickle"]:
+        warnings.warn(
+            "residue_level=True is only supported with output_type='pickle'. Overriding output_type to 'pickle'."
+        )
+        output_type = "pickle"
 
     # ===== BASIC CHAIN VALIDATION =====
     # Check if requested chains are available in the data based on locus information
@@ -357,7 +271,7 @@ def embed_airr(
     # ===== DETERMINE RECEPTOR TYPE FOR VALIDATION =====
     # Automatically determine receptor type based on model
     bcr_models = {"ablang", "antiberty", "antiberta2", "balm-paired"}
-    tcr_models = {"tcr-bert", "tcremp", "tcrt5"}
+    tcr_models = {"tcr-bert", "tcrt5"}
     protein_models = {"esm2", "prott5", "immune2vec", "custom"}
 
     if model in bcr_models:
@@ -437,7 +351,7 @@ def embed_airr(
         # Process data with unified pattern
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = ablang(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = ablang(sequences=X, batch_size=batch_size, residue_level=residue_level)
 
     elif model == "antiberta2":
         # Check chain compatibility - AntiBERTa2 supports individual chains only
@@ -463,7 +377,7 @@ def embed_airr(
         # Process data for antiberty
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = antiberty(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     elif model == "balm-paired":
         # Check compatible chains - BALM-paired ONLY supports paired chains
@@ -499,95 +413,6 @@ def embed_airr(
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
         embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
-
-    # elif model == "tcremp":
-    #     # Warn about not using CDR3
-    #     if sequence_col not in ["CDR3_aa", "junction_aa", "cdr3_aa"]:
-    #         warnings.warn(
-    #             "Model tcremp was trained on CDR3 aa sequences. It is recommended to provide CDR3_aa, junction_aa, or cdr3_aa as sequence column.",
-    #             UserWarning
-    #         )
-
-    #     # TCREMP: All chain modes use tab_locus_gene to get CDR3 + V/J gene information
-    #     raw_dat, dat = process_airr(
-    #         airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="tabular"
-    #     )
-
-    #     # For TCREMP, raw_dat format depends on chain type:
-    #     # - For HL/LH: pivoted format with H, L columns
-    #     # - For H, L, H+L: non-pivoted format with 'chain' column
-
-    #     # Extract sequences based on chain type
-    #     if chain == "H":
-    #         # H chain: extract from chain column
-    #         if "chain" in raw_dat.columns:
-    #             # Non-pivoted format
-    #             h_data = raw_dat[raw_dat["chain"] == "H"]
-    #             sequences_series = h_data[sequence_col].dropna()
-    #         elif "H" in raw_dat.columns:
-    #             # Pivoted format
-    #             sequences_series = raw_dat["H"].dropna()
-    #         else:
-    #             raise ValueError("No H chain sequences found in data")
-    #     elif chain == "L":
-    #         # L chain: extract from chain column
-    #         if "chain" in raw_dat.columns:
-    #             # Non-pivoted format
-    #             l_data = raw_dat[raw_dat["chain"] == "L"]
-    #             sequences_series = l_data[sequence_col].dropna()
-    #         elif "L" in raw_dat.columns:
-    #             # Pivoted format
-    #             sequences_series = raw_dat["L"].dropna()
-    #         else:
-    #             raise ValueError("No L chain sequences found in data")
-    #     elif chain == "H+L":
-    #         # Both chains separately: combine H and L sequences
-    #         sequences_list = []
-    #         if "chain" in raw_dat.columns:
-    #             # Non-pivoted format
-    #             h_data = raw_dat[raw_dat["chain"] == "H"]
-    #             l_data = raw_dat[raw_dat["chain"] == "L"]
-    #             sequences_list.extend(h_data[sequence_col].dropna().tolist())
-    #             sequences_list.extend(l_data[sequence_col].dropna().tolist())
-    #         else:
-    #             # Pivoted format
-    #             if "H" in raw_dat.columns:
-    #                 h_sequences = raw_dat["H"].dropna()
-    #                 sequences_list.extend(h_sequences.tolist())
-    #             if "L" in raw_dat.columns:
-    #                 l_sequences = raw_dat["L"].dropna()
-    #                 sequences_list.extend(l_sequences.tolist())
-    #         sequences_series = pd.Series(sequences_list)
-    #     elif chain in ["HL", "LH"]:
-    #         # Paired chains: combine H and L sequences per cell
-    #         sequences_list = []
-    #         if "H" in raw_dat.columns and "L" in raw_dat.columns:
-    #             # Pivoted format
-    #             for _, row in raw_dat.iterrows():
-    #                 h_seq = row.get("H", None)
-    #                 l_seq = row.get("L", None)
-
-    #                 if pd.notna(h_seq) and pd.notna(l_seq):
-    #                     if chain == "LH":
-    #                         sequences_list.append(f"{l_seq}_{h_seq}")
-    #                     else:  # HL
-    #                         sequences_list.append(f"{h_seq}_{l_seq}")
-    #         else:
-    #             raise ValueError(f"Paired chain data not available for chain type '{chain}'")
-    #         sequences_series = pd.Series(sequences_list)
-    #     else:
-    #         raise ValueError(f"Unsupported chain type '{chain}' for TCREMP")
-
-    #     if len(sequences_series) == 0:
-    #         raise ValueError(f"No valid sequences found for chain type '{chain}' after filtering")
-
-    #     embedding = tcremp(
-    #         sequences=sequences_series,
-    #         cache_dir=cache_dir,
-    #         batch_size=batch_size,
-    #         chain=chain,
-    #         skip_clustering=skip_clustering,
-    #     )
 
     elif model == "tcrt5":
         # Check compatible chains - TCRT5 only supports H (beta) chains
@@ -675,6 +500,11 @@ def embed_airr(
     else:
         raise ValueError(f"Model {model} not supported.")
 
+    if residue_level:
+        logger.info(
+            "Residue level embeddings have been zero padded to a maximum predetermined sequence length with dimensions (N sequences, max_seq_length, embedding_dimension)"
+        )
+    logger.info("Generated embeddings with dimensions %s", embedding.shape)
     if output_type == "pickle":
         return embedding
     elif output_type == "df":
@@ -767,7 +597,7 @@ def embed(
         str,
         typer.Option(
             default=...,
-            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['tcr-bert', 'tcremp', 'tcrt5']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters. Note: TCREMP may require --skip-clustering=True for stability.",
+            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['tcr-bert', 'tcrt5']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
         ),
     ],
     output_file_path: Annotated[
@@ -807,13 +637,6 @@ def embed(
             help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined.",
         ),
     ] = "duplicate_count",
-    skip_clustering: Annotated[
-        bool,
-        typer.Option(
-            "--skip-clustering",
-            help="Skip clustering step for TCREMP model (default: True to avoid errors). Only applies to TCREMP model.",
-        ),
-    ] = True,
     immune2vec_path: Annotated[
         str,
         typer.Option(
@@ -821,6 +644,13 @@ def embed(
             help="Custom path to Immune2Vec installation directory. Only applies to 'immune2vec' model.",
         ),
     ] = None,
+    residue_level: Annotated[
+        bool,
+        typer.Option(
+            "--residue-level",
+            help="If True, returns residue-level embeddings of dimension sequence length x embedding dimension (L x D) instead of sequence-level (1 x D).",
+        ),
+    ] = False,
 ):
     """
     Embeds sequences from an AIRR rearrangement file using the specified model.
@@ -834,6 +664,12 @@ def embed(
         raise ValueError("Output suffix must be one of ['tsv', 'csv', 'pt']")
 
     output_type = "pickle" if out_extension == "pt" else "df"
+
+    if residue_level and output_type not in ["pickle"]:
+        warnings.warn(
+            "residue_level=True is only supported with output_type='pickle'. Overriding output_type to 'pickle'."
+        )
+        output_type = "pickle"
 
     airr = pd.read_csv(input_airr, sep="\t")
 
@@ -850,11 +686,15 @@ def embed(
         model_path=model_path,
         output_type=output_type,
         duplicate_col=duplicate_col,
-        skip_clustering=skip_clustering,
         immune2vec_path=immune2vec_path,
+        residue_level=residue_level,
     )
 
     if output_type == "pickle":
+        logger.info("Saving embedding as a pickled torch object.")
+        # Change file ending to .pt if not already
+        if not output_file_path.endswith(".pt"):
+            output_file_path += ".pt"
         torch.save(embedding, output_file_path)
     else:
         embedding.to_csv(output_file_path, sep="\t" if out_extension == "tsv" else ",", index=False)
