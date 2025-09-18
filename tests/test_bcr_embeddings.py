@@ -45,7 +45,7 @@ class TestAmulety(unittest.TestCase):
 
     # ablang tests
     def test_ablang_mixed_HL_embedding(self):
-        """Test AbLang (mixed bulk sc H+L)."""
+        """Test AbLang (mixed bulk sc HL)."""
         with self.assertWarns(UserWarning) as cm:
             embed(input_airr=self.test_airr_mixed_path, chain="HL", model="ablang", output_file_path="HL_test.pt")
             assert os.path.exists("HL_test.pt")
@@ -60,10 +60,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "ablang", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 4
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
     def test_ablang_mixed_H_embedding_tsv(self):
@@ -71,10 +69,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "ablang", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 2
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
     # antiberty tests
@@ -94,10 +90,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "antiberty", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 515  # 512 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 4
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 512  # 512 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
     def test_antiberty_mixed_H_embedding_tsv(self):
@@ -105,10 +99,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "antiberty", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 515  # 512 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 2
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 512  # 512 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
     # antiberta2 tests
@@ -128,10 +120,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "antiberta2", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 4
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 1024  # 1024 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
     def test_antiberta2_mixed_H_embedding_tsv(self):
@@ -139,10 +129,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "antiberta2", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 2
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 1024  # 1024 + cell_id + chain + sequence_id
+        assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
     # balm-paired tests
