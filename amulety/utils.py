@@ -297,6 +297,9 @@ def concatenate_heavylight(
         raise ValueError(
             f"Selection column '{duplicate_col}' must be numeric. Found dtype: {data[duplicate_col].dtype}"
         )
+    # Check that duplicate_col does not contain NaN values
+    if data[duplicate_col].isna().any():
+        raise ValueError(f"Selection column '{duplicate_col}' contains NaN values. Please remove them or fix them.")
 
     # if tie in maximum duplicate_col value, return the first occurrence
     data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
@@ -306,16 +309,20 @@ def concatenate_heavylight(
     data_chain = data_chain.reset_index(level=cell_id_col)
     n_cells = data_chain.shape[0]
     data_chain = data_chain.dropna(axis=0)
-    n_dropped = n_cells - data.shape[0]
+    n_dropped = n_cells - data_chain.shape[0]
     if n_dropped > 0:
         logging.info("Dropping %s cells with missing heavy or light chain...", n_dropped)
+
+    # Throw error if no rows left after dropping
+    if data_chain.shape[0] == 0:
+        raise ValueError("No cells with both heavy and light chains found.")
 
     if mode == "concat":
         # Concatenate based on order parameter
         if order == "HL":
-            data_chain.loc[:, sequence_col] = data_chain.H + "<cls><cls>" + data_chain.L
+            data_chain.loc[:, sequence_col] = data_chain["H"] + "<cls><cls>" + data_chain["L"]
         elif order == "LH":
-            data_chain.loc[:, sequence_col] = data_chain.L + "<cls><cls>" + data_chain.H
+            data_chain.loc[:, sequence_col] = data_chain["L"] + "<cls><cls>" + data_chain["H"]
         else:
             raise ValueError(f"Invalid order parameter: {order}. Must be 'HL' or 'LH'.")
         return data_chain
@@ -400,14 +407,16 @@ def process_h_plus_l(
 
     # Check whether data is mixed single-cell and bulk
     # For single-cell data select best chain per cell and chain type
-    is_mixed = data[cell_id_col].isna().any()
-    if is_mixed:
-        data_bulk = data.loc[data[cell_id_col].isna(),]
-        data_sc = data.loc[data[cell_id_col].notna(),]
-        data_sc = data_sc.loc[data_sc.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
-        data = pd.concat([data_sc, data_bulk], ignore_index=True)
-    else:
-        data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
+
+    # TODO this is not needed I think remove
+    # is_mixed = data[cell_id_col].isna().any()
+    # if is_mixed:
+    #     data_bulk = data.loc[data[cell_id_col].isna(),]
+    #     data_sc = data.loc[data[cell_id_col].notna(),]
+    #     data_sc = data_sc.loc[data_sc.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
+    #     data = pd.concat([data_sc, data_bulk], ignore_index=True)
+    # else:
+    #     data = data.loc[data.groupby([cell_id_col, "chain"])[duplicate_col].idxmax()]
 
     # Ensure the sequence column is properly included in the output
     if sequence_col not in data.columns:

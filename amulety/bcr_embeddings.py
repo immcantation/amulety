@@ -1,7 +1,7 @@
 """
 BCR embedding functions using various models.
-Please order alphabetically by function name.
 """
+# Please order alphabetically by function name.
 # ruff: noqa: N806
 
 import logging
@@ -13,6 +13,7 @@ from typing import Optional
 
 import pandas as pd
 import torch
+from torch.nn.functional import pad
 
 from amulety.protein_embeddings import custommodel
 from amulety.utils import batch_loader, insert_space_every_other_except_cls
@@ -25,6 +26,7 @@ def antiberty(
     sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
+    residue_level: bool = False,
 ):
     """
     Embeds sequences using the AntiBERTy model.
@@ -73,25 +75,37 @@ def antiberty(
     dim = max_seq_length + 2
 
     n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
+
+    if residue_level:
+        embeddings = torch.empty((n_seqs, max_seq_length, dim))
+    else:
+        embeddings = torch.empty((n_seqs, dim))
 
     i = 1
     for start, end, batch in batch_loader(sequences_processed, batch_size):
         logger.info("Batch %s/%s", i, n_batches)
         x = antiberty_runner.embed(batch)
-        x = [a.mean(axis=0) for a in x]
-        embeddings[start:end] = torch.stack(x)
+        if not residue_level:
+            x_keep = [a.mean(axis=0) for a in x]
+        if residue_level:
+            x_keep = []
+            for a in x:
+                if a.shape[0] < max_seq_length:
+                    a_pad = pad(a.clone().detach(), (0, 0, 0, max_seq_length - a.shape[0]))
+                    x_keep.append(a_pad)
+        embeddings[start:end] = torch.stack(x_keep)
         i += 1
 
     end_time = time.time()
+    print(embeddings.shape)
     logger.info("Took %s seconds", round(end_time - start_time, 2))
     return embeddings
 
 
 def ablang(
     sequences,
-    cache_dir: Optional[str] = None,
     batch_size: int = 50,
+    residue_level: bool = False,
 ):
     """
     Embeds antibody sequences using the AbLang model.
@@ -106,6 +120,8 @@ def ablang(
 
     Parameters:
         sequences: pd.Series for single chain or pd.DataFrame for H+L mode
+        batch_size: int: Number of sequences to process in each batch.
+        residue_level: bool: If True, returns residue-level embeddings.
     """
     try:
         import ablang
@@ -190,11 +206,18 @@ def ablang(
                 else:
                     model = light_ablang
 
-            # Generate embedding for single sequence
-            seq_embedding = model([seq], mode="seqcoding")
-            # seq_embedding.shape = (1, 768)
-            # “Seq-codings: These encodings are 768 values for each sequence, useful for sequence specific predictions.”
-            embeddings_list.append(torch.tensor(seq_embedding[0]))
+            if residue_level:
+                # Generate embedding for residue-level sequences
+                seq_embedding = model([seq], mode="rescoding")
+                if seq_embedding[0].shape[0] < max_seq_length + 2:
+                    # Pad to ensure consistent length
+                    pad_length = max_seq_length + 2 - seq_embedding[0].shape[0]
+                    embed_out = pad(torch.tensor(seq_embedding[0]), (0, 0, 0, pad_length)).numpy()
+            else:
+                # Generate embedding for single sequence
+                seq_embedding = model([seq], mode="seqcoding")
+                embed_out = torch.tensor(seq_embedding[0])
+            embeddings_list.append(embed_out)
 
         i += 1
 

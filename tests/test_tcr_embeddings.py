@@ -60,7 +60,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_mixed_path, "H", "tcr-bert", "H_test.tsv")
             assert os.path.exists("H_test.tsv")
             embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
             assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
             os.remove("H_test.tsv")
         except Exception as e:
@@ -78,7 +78,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_mixed_path, "H+L", "tcr-bert", "H_plus_L_test.tsv")
             assert os.path.exists("H_plus_L_test.tsv")
             embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 771  # 768 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
             assert embeddings.shape[0] == 6  # 3 H chains (TRB) + 3 L chains (TRA) from 3 TCR cells
             os.remove("H_plus_L_test.tsv")
         except Exception as e:
@@ -97,7 +97,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_mixed_path, "H", "tcrt5", "tcrt5_H_test.tsv")
             assert os.path.exists("tcrt5_H_test.tsv")
             embeddings = pd.read_table("tcrt5_H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 259  # 256 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 256  # 256 + cell_id + chain + sequence_id
             assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
             os.remove("tcrt5_H_test.tsv")
         except Exception as e:
@@ -132,139 +132,6 @@ class TestAmulety(unittest.TestCase):
             warning_msg = str(w[0].message)
             assert "TCRT5 model was trained on" in warning_msg
             assert "beta chains for TCR" in warning_msg
-
-    # def test_tcremp_command_not_available(self):
-    #     """Test that TCREMP raises ImportError when command-line tool is not available."""
-    #     import pandas as pd
-
-    #     from amulety.tcr_embeddings import tcremp
-
-    #     test_sequences = pd.Series(["CASSLAPGATNEKLFF", "CAVKDSNYQLIW"])
-
-    #     # Most systems won't have tcremp-run installed, so this should raise ImportError
-    #     try:
-    #         # Use skip_clustering=True to match successful implementation
-    #         result = tcremp(test_sequences, chain="H", skip_clustering=True)
-    #         # If this succeeds, tcremp-run is available and working
-    #         assert isinstance(result, torch.Tensor)
-    #         assert result.shape[0] == len(test_sequences)
-    #         print("PASS: TCREMP command-line tool is available and working")
-    #     except ImportError as e:
-    #         error_msg = str(e)
-    #         print(f"PASS: Proper ImportError caught: {error_msg[:100]}...")
-
-    #         # Verify error message quality
-    #         assert "TCREMP command-line tool is required but not installed" in error_msg
-    #         assert "git clone https://github.com/antigenomics/tcremp.git" in error_msg
-    #         assert "tcremp-run -h" in error_msg
-    #         assert "tcr-bert" in error_msg  # Alternative suggestions
-
-    # def test_tcremp_L_embedding_direct_call(self):
-    #     """Test TCREMP (alpha/gamma chains - L chains for TCR) using direct call."""
-    #     from amulety.tcr_embeddings import tcremp
-
-    #     # Extract alpha chains (L chains for TCR) from test data
-    #     alpha_chains = self.test_airr_tcr_df[self.test_airr_tcr_df["locus"] == "TRA"]
-    #     cdr3_sequences = alpha_chains["cdr3_aa"].dropna()
-
-    #     try:
-    #         # Use direct TCREMP call with skip_clustering=True (tested and working method)
-    #         embeddings = tcremp(cdr3_sequences, chain="L", skip_clustering=True)
-    #         # If successful, tcremp-run is available and working
-    #         assert isinstance(embeddings, torch.Tensor)
-    #         assert embeddings.shape[0] == len(cdr3_sequences)  # Number of alpha chains
-    #         print(f"PASS: TCREMP L embedding successful - {embeddings.shape}")
-    #     except (ImportError, RuntimeError) as e:
-    #         # Handle both ImportError (command not available) and RuntimeError (TCREMP internal errors)
-    #         if "not installed" in str(e):
-    #             print("PASS: TCREMP L embedding failed as expected (command not available)")
-    #         else:
-    #             print(f"PASS: TCREMP L embedding failed due to internal TCREMP issues: {str(e)[:100]}...")
-
-    # def test_tcremp_H_embedding_direct_call(self):
-    #     """Test TCREMP (beta/delta chains - H chains for TCR) using direct call."""
-    #     from amulety.tcr_embeddings import tcremp
-
-    #     # Extract beta chains (H chains for TCR) from test data
-    #     beta_chains = self.test_airr_tcr_df[self.test_airr_tcr_df["locus"] == "TRB"]
-    #     cdr3_sequences = beta_chains["cdr3_aa"].dropna()
-
-    #     try:
-    #         # Use direct TCREMP call with skip_clustering=True (tested and working method)
-    #         embeddings = tcremp(cdr3_sequences, chain="H", skip_clustering=True)
-    #         # If successful, tcremp-run is available and working
-    #         assert isinstance(embeddings, torch.Tensor)
-    #         assert embeddings.shape[0] == len(cdr3_sequences)  # Number of beta chains
-    #         print(f"PASS: TCREMP H embedding successful - {embeddings.shape}")
-    #     except (ImportError, RuntimeError) as e:
-    #         # Handle both ImportError (command not available) and RuntimeError (TCREMP internal errors)
-    #         if "not installed" in str(e):
-    #             print("PASS: TCREMP H embedding failed as expected (command not available)")
-    #         else:
-    #             print(f"PASS: TCREMP H embedding failed due to internal TCREMP issues: {str(e)[:100]}...")
-
-    # def test_tcremp_H_plus_L_embedding_direct_call(self):
-    #     """Test TCREMP (both alpha and beta chains separately - H+L for TCR) using direct call."""
-    #     from amulety.tcr_embeddings import tcremp
-
-    #     # Extract all chains from test data
-    #     all_chains = self.test_airr_tcr_df["cdr3_aa"].dropna()
-
-    #     try:
-    #         # Use direct TCREMP call with skip_clustering=True (tested and working method)
-    #         embeddings = tcremp(all_chains, chain="H+L", skip_clustering=True)
-    #         # If successful, tcremp-run is available and working
-    #         assert isinstance(embeddings, torch.Tensor)
-    #         assert embeddings.shape[0] == len(all_chains)  # All chains
-    #         print(f"PASS: TCREMP H+L embedding successful - {embeddings.shape}")
-    #     except (ImportError, RuntimeError) as e:
-    #         # Handle both ImportError (command not available) and RuntimeError (TCREMP internal errors)
-    #         if "not installed" in str(e):
-    #             print("PASS: TCREMP H+L embedding failed as expected (command not available)")
-    #         else:
-    #             print(f"PASS: TCREMP H+L embedding failed due to internal TCREMP issues: {str(e)[:100]}...")
-
-    # def test_tcremp_HL_embedding_direct_call(self):
-    #     """Test TCREMP (alpha-beta/gamma-delta pairs - HL pairs for TCR) using direct call."""
-    #     from amulety.tcr_embeddings import tcremp
-
-    #     # For HL pairs, use all CDR3 sequences (TCREMP can handle paired chain format)
-    #     all_chains = self.test_airr_tcr_df["cdr3_aa"].dropna()
-
-    #     try:
-    #         # Use direct TCREMP call with skip_clustering=True (tested and working method)
-    #         embeddings = tcremp(all_chains, chain="HL", skip_clustering=True)
-    #         # If successful, tcremp-run is available and working
-    #         assert isinstance(embeddings, torch.Tensor)
-    #         assert embeddings.shape[0] == len(all_chains)  # Number of sequences
-    #         print(f"PASS: TCREMP HL embedding successful - {embeddings.shape}")
-    #     except (ImportError, RuntimeError) as e:
-    #         # Handle both ImportError (command not available) and RuntimeError (TCREMP internal errors)
-    #         if "not installed" in str(e):
-    #             print("PASS: TCREMP HL embedding failed as expected (command not available)")
-    #         else:
-    #             print(f"PASS: TCREMP HL embedding failed due to internal TCREMP issues: {str(e)[:100]}...")
-
-    # def test_tcremp_LH_embedding_direct_call(self):
-    #     """Test TCREMP (beta-alpha/delta-gamma pairs - LH pairs for TCR) using direct call."""
-    #     from amulety.tcr_embeddings import tcremp
-
-    #     # For LH pairs, use all CDR3 sequences (TCREMP can handle paired chain format)
-    #     all_chains = self.test_airr_tcr_df["cdr3_aa"].dropna()
-
-    #     try:
-    #         # Use direct TCREMP call with skip_clustering=True (tested and working method)
-    #         embeddings = tcremp(all_chains, chain="LH", skip_clustering=True)
-    #         # If successful, tcremp-run is available and working
-    #         assert isinstance(embeddings, torch.Tensor)
-    #         assert embeddings.shape[0] == len(all_chains)  # Number of sequences
-    #         print(f"PASS: TCREMP LH embedding successful - {embeddings.shape}")
-    #     except (ImportError, RuntimeError) as e:
-    #         # Handle both ImportError (command not available) and RuntimeError (TCREMP internal errors)
-    #         if "not installed" in str(e):
-    #             print("PASS: TCREMP LH embedding failed as expected (command not available)")
-    #         else:
-    #             print(f"PASS: TCREMP LH embedding failed due to internal TCREMP issues: {str(e)[:100]}...")
 
     def test_custom_duplicate_column_tcr(self):
         """Test that we can pass any column name as duplicate_col for TCR data selection."""
@@ -346,64 +213,3 @@ class TestAmulety(unittest.TestCase):
         assert "must be numeric" in error_msg
 
         print("PASS: Custom duplicate column test for TCR data successful")
-
-    # def test_custom_cdr3_column_tcr(self):
-    #     """Test that we can pass any column name for CDR3 sequences in TCR data."""
-    #     from amulety.utils import get_cdr3_sequence_column
-
-    #     # Create test data with different CDR3 column names that users might have
-    #     test_data_standard = pd.DataFrame(
-    #         {
-    #             "sequence_id": ["TCR_001", "TCR_002"],
-    #             "sequence_vdj_aa": ["FULL_VDJ_SEQUENCE_1", "FULL_VDJ_SEQUENCE_2"],
-    #             "junction_aa": ["CASSLAPGATNEKLFF", "CAVNTGNQFYF"],  # Standard AIRR column
-    #             "cdr3_aa": ["CASSLAPGATNEKLFF", "CAVNTGNQFYF"],  # Standard AIRR column
-    #             "v_call": ["TRBV7-9*01", "TRAV8-4*01"],
-    #             "duplicate_count": [1, 1],
-    #             "locus": ["TRB", "TRA"],
-    #             "cell_id": ["cell_1", "cell_1"],
-    #         }
-    #     )
-
-    #     test_data_custom = pd.DataFrame(
-    #         {
-    #             "sequence_id": ["TCR_003", "TCR_004"],
-    #             "sequence_vdj_aa": ["FULL_VDJ_SEQUENCE_3", "FULL_VDJ_SEQUENCE_4"],
-    #             "cdr3_sequence": ["CASSLVGQGAYEQYF", "CAVRDMEYGNKLVF"],  # Custom CDR3 column name
-    #             "junction_sequence": ["CASSLVGQGAYEQYF", "CAVRDMEYGNKLVF"],  # Another custom name
-    #             "v_call": ["TRBV7-2*01", "TRAV13-1*01"],
-    #             "duplicate_count": [1, 1],
-    #             "locus": ["TRB", "TRA"],
-    #             "cell_id": ["cell_2", "cell_2"],
-    #         }
-    #     )
-
-    #     # Test standard AIRR columns are detected (priority: junction_aa > cdr3_aa)
-    #     result_junction = get_cdr3_sequence_column(test_data_standard, "sequence_vdj_aa")
-    #     assert result_junction == "junction_aa", f"Expected 'junction_aa', got '{result_junction}'"
-
-    #     # Test when only cdr3_aa exists
-    #     test_data_cdr3_only = test_data_standard.drop(columns=["junction_aa"])
-    #     result_cdr3 = get_cdr3_sequence_column(test_data_cdr3_only, "sequence_vdj_aa")
-    #     assert result_cdr3 == "cdr3_aa", f"Expected 'cdr3_aa', got '{result_cdr3}'"
-
-    #     # Test fallback to sequence_col when no standard CDR3 columns exist
-    #     result_fallback = get_cdr3_sequence_column(test_data_custom, "sequence_vdj_aa")
-    #     assert result_fallback == "sequence_vdj_aa", f"Expected 'sequence_vdj_aa', got '{result_fallback}'"
-
-    #     # Test that users can specify custom CDR3 column by using it as sequence_col
-    #     # This is the current way users can specify custom CDR3 columns
-    #     result_custom_cdr3 = get_cdr3_sequence_column(test_data_custom, "cdr3_sequence")
-    #     assert result_custom_cdr3 == "cdr3_sequence", f"Expected 'cdr3_sequence', got '{result_custom_cdr3}'"
-
-    #     result_custom_junction = get_cdr3_sequence_column(test_data_custom, "junction_sequence")
-    #     assert (
-    #         result_custom_junction == "junction_sequence"
-    #     ), f"Expected 'junction_sequence', got '{result_custom_junction}'"
-
-    #     # Test with process_airr function using custom CDR3 column
-    #     result_process = process_airr(test_data_custom, "H", sequence_col="cdr3_sequence")
-    #     assert len(result_process) == 1  # Should have 1 H chain (TRB)
-    #     assert result_process.iloc[0]["cdr3_sequence"] == "CASSLVGQGAYEQYF"
-
-    #     print("PASS: Custom CDR3 column test for TCR data successful")

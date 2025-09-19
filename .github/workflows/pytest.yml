@@ -42,7 +42,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install --upgrade setuptools wheel
-          pip install -r requirements.txt
+          pip install -r requirements_dev.txt
 
           # Install Immune2Vec dependencies only for Python 3.8
           if [[ "${{ matrix.python-version }}" == "3.8" ]]; then
@@ -53,33 +53,6 @@ jobs:
           fi
 
           pip install -e . --verbose
-      # Install TCREMP for testing
-      - name: Install TCREMP
-        shell: bash -el {0}
-        run: |
-          # Only install TCREMP for Python 3.11+ as it requires newer Python
-          if python -c "import sys; exit(0 if sys.version_info >= (3, 11) else 1)"; then
-            echo "Installing TCREMP for Python 3.11+"
-            git clone https://github.com/antigenomics/tcremp.git
-            cd tcremp
-
-            # Apply fix for clustering issue - force skip clustering like local environment
-            echo "Applying TCREMP clustering fix..."
-            sed -i.bak 's/if args.cluster:/if False:  # Force skip clustering/' tcremp/tcremp_run.py
-
-            # Verify the fix was applied
-            echo "Verifying TCREMP fix..."
-            grep -n "Force skip clustering" tcremp/tcremp_run.py || echo "Fix verification failed"
-
-            # Install pyarrow for parquet support (required by TCREMP)
-            pip install pyarrow
-
-            pip install .
-            # Verify installation
-            tcremp-run -h || echo "TCREMP installation verification failed"
-          else
-            echo "Skipping TCREMP installation for Python < 3.11"
-          fi
       - name: Run ${{ matrix.test-file }}
         shell: bash -el {0}
         run: pytest --doctest-modules --junitxml=junit/test-results-${{ matrix.test-file }}-${{ matrix.python-version }}.xml ${{ matrix.test-file }}

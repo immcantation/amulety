@@ -1,8 +1,8 @@
 """
 TCR embedding functions using various models.
-Please order alphabetically by function name.
 """
 # ruff: noqa: N806
+# Please order alphabetically by function name.
 
 import logging
 import math

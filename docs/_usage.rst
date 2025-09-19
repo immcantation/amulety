@@ -16,7 +16,7 @@ Translate sequence to amino acids
 Embed sequences with different models
 =====================================
 
-..typer:: amulety.amulety.app:embed
+.. typer:: amulety.amulety.app:embed
     :width: 90
     :show-nested:
     :make-sections:
