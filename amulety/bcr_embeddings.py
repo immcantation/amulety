@@ -192,6 +192,8 @@ def ablang(
 
             # Generate embedding for single sequence
             seq_embedding = model([seq], mode="seqcoding")
+            # seq_embedding.shape = (1, 768)
+            # “Seq-codings: These encodings are 768 values for each sequence, useful for sequence specific predictions.”
             embeddings_list.append(torch.tensor(seq_embedding[0]))
 
         i += 1
