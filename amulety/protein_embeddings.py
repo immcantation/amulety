@@ -40,6 +40,7 @@ def custommodel(
     embedding_dimension: int,
     max_seq_length: int,
     cache_dir: Optional[str] = "/tmp/amulety",
+    residue_level: bool = False,
     batch_size: Optional[int] = 50,
 ):
     """
@@ -62,7 +63,10 @@ def custommodel(
     start_time = time.time()
     n_seqs = len(sequences)
     n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, embedding_dimension))
+    if residue_level:
+        embeddings = torch.empty((n_seqs, max_seq_length, embedding_dimension))
+    else:
+        embeddings = torch.empty((n_seqs, embedding_dimension))
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
@@ -85,8 +89,9 @@ def custommodel(
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
 
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
+        if not residue_level:
+            for j, a in enumerate(attention_mask):
+                outputs[j] = outputs[j][a == 1, :].mean(0)
 
         embeddings[start:end] = torch.stack(outputs)
         del x
@@ -105,6 +110,7 @@ def esm2(
     cache_dir: Optional[str] = None,
     batch_size: int = 50,
     model_name: str = "facebook/esm2_t33_650M_UR50D",
+    residue_level: bool = False,
 ):
     """
     Embeds sequences using the ESM2 model. The maximum length of the sequences to be embedded is 512. The embedding dimension is 1280.
@@ -157,7 +163,10 @@ def esm2(
     start_time = time.time()
     n_seqs = len(sequences)
     n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
+    if residue_level:
+        embeddings = torch.empty((n_seqs, max_seq_length, dim))
+    else:
+        embeddings = torch.empty((n_seqs, dim))
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
@@ -180,8 +189,9 @@ def esm2(
             outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
 
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
+        if not residue_level:
+            for j, a in enumerate(attention_mask):
+                outputs[j] = outputs[j][a == 1, :].mean(0)
 
         embeddings[start:end] = torch.stack(outputs)
         del x
@@ -199,6 +209,7 @@ def prott5(
     sequences,
     cache_dir: Optional[str] = None,
     batch_size: int = 32,
+    residue_level: bool = False,
 ):
     """
     Embeds BCR or TCR sequences using the ProtT5-XL protein language model (Rostlab/prot_t5_xl_uniref50).
@@ -285,7 +296,10 @@ def prott5(
     n_seqs = len(sequences)
     n_batches = math.ceil(n_seqs / batch_size)
 
-    embeddings = torch.empty((n_seqs, dim))
+    if residue_level:
+        embeddings = torch.empty((n_seqs, max_seq_length, dim))
+    else:
+        embeddings = torch.empty((n_seqs, dim))
     logger.info("Initialized embeddings tensor with ProtT5 dimension: %s", dim)
 
     i = 1
@@ -315,8 +329,9 @@ def prott5(
                 outputs = outputs.hidden_states[-1]
             outputs = list(outputs.detach())
 
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
+        if not residue_level:
+            for j, a in enumerate(attention_mask):
+                outputs[j] = outputs[j][a == 1, :].mean(0)
 
         embeddings[start:end] = torch.stack(outputs)
         del x

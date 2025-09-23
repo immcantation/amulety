@@ -373,7 +373,7 @@ def embed_airr(
         # Process data with unified pattern
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = antiberta2(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     elif model == "antiberty":
         # Check chain compatibility - AntiBERTy supports individual chains only
@@ -413,7 +413,7 @@ def embed_airr(
             mode="concat",
         )
 
-        embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = balm_paired(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     # TCR models
     elif model == "tcr-bert":
@@ -422,7 +422,7 @@ def embed_airr(
         # TCR-BERT: Only CDR3, supports H+L, H, L, HL/LH
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = tcr_bert(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     elif model == "tcrt5":
         # Check compatible chains - TCRT5 only supports H (beta) chains
@@ -436,7 +436,7 @@ def embed_airr(
         # TCRT5: Only CDR3, only supports H (beta) chains
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = tcrt5(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     # Immune-specific models (BCR & TCR)
     elif model == "immune2vec":
@@ -471,7 +471,7 @@ def embed_airr(
         # Process data for esm2
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = esm2(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     elif model == "prott5":
         # Warn about paired chain compatibility
@@ -485,7 +485,7 @@ def embed_airr(
         # Process data for prott5
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size)
+        embedding = prott5(sequences=X, cache_dir=cache_dir, batch_size=batch_size, residue_level=residue_level)
 
     elif model == "custom":
         # Warn about paired chain compatibility
@@ -508,6 +508,7 @@ def embed_airr(
             max_seq_length=max_length,
             cache_dir=cache_dir,
             batch_size=batch_size,
+            residue_level=residue_level,
         )
     else:
         raise ValueError(f"Model {model} not supported.")

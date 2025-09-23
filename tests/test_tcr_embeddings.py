@@ -90,6 +90,16 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
+    def test_tcr_bert_mixed_H_embedding_residue_level(self):
+        """Test TCR-BERT mixed bulk sc H with residue-level embeddings."""
+        embed(self.test_mixed_path, "H", "tcr-bert", "H_residue_test.pt", residue_level=True)
+        assert os.path.exists("H_residue_test.pt")
+        embeddings = torch.load("H_residue_test.pt")
+        assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
+        assert embeddings.shape[1] == 64  # max sequence length (padded)
+        assert embeddings.shape[2] == 768  # TCR-BERT embedding dimension
+        os.remove("H_residue_test.pt")
+
     # TCRT5 tests (mixed data)
     def test_tcrt5_mixed_H_embedding_tsv(self):
         """Test TCRT5 (mixed bulk sc H)."""
@@ -120,6 +130,7 @@ class TestAmulety(unittest.TestCase):
             warning_msg = str(w[0].message)
             assert "TCRT5 model was trained on" in warning_msg
             assert "beta chains for TCR" in warning_msg
+            os.remove("tcrt5_L_test.tsv")
 
     def test_tcrt5_mixed_HL_embedding_should_warn(self):
         """Test TCRT5 with HL chains should warn (only supports H chains)."""
@@ -132,6 +143,17 @@ class TestAmulety(unittest.TestCase):
             warning_msg = str(w[0].message)
             assert "TCRT5 model was trained on" in warning_msg
             assert "beta chains for TCR" in warning_msg
+            os.remove("tcrt5_HL_test.tsv")
+
+    def test_tcrt5_mixed_H_embedding_residue_level(self):
+        """Test TCRT5 mixed bulk sc H with residue-level embeddings."""
+        embed(self.test_mixed_path, "H", "tcrt5", "tcrt5_H_residue_test.pt", residue_level=True)
+        assert os.path.exists("tcrt5_H_residue_test.pt")
+        embeddings = torch.load("tcrt5_H_residue_test.pt")
+        assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
+        assert embeddings.shape[1] == 20  # TCRT5 embedding dimension
+        assert embeddings.shape[2] == 256  # max sequence length (padded)
+        os.remove("tcrt5_H_residue_test.pt")
 
     def test_custom_duplicate_column_tcr(self):
         """Test that we can pass any column name as duplicate_col for TCR data selection."""

@@ -104,6 +104,22 @@ class TestAmulety(unittest.TestCase):
             else:
                 raise
 
+    def test_esm2_mixed_H_embedding_residue_level(self):
+        """Test esm2 mixed bulk sc H with residue-level embeddings."""
+        try:
+            embed(self.test_airr_mixed_path, "H", "esm2", "H_residue_test.pt", residue_level=True)
+            assert os.path.exists("H_residue_test.pt")
+            embeddings = torch.load("H_residue_test.pt")
+            assert embeddings.shape[0] == 2  # 2 H chains (TRB chains from 2 TCR cells)
+            assert embeddings.shape[1] == 512  # max sequence length (padded)
+            assert embeddings.shape[2] == 1280  # ESM2 embedding dimension
+            os.remove("H_residue_test.pt")
+        except Exception as e:
+            if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
+                self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
+            else:
+                raise
+
     # prott5 tests
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_prott5_mixed_HL_embedding(self):
@@ -147,8 +163,16 @@ class TestAmulety(unittest.TestCase):
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
         os.remove("H_test.tsv")
 
-    # Note: immune2vec tests have been moved to tests/test_immune2vec_integration.py
-    # to avoid duplication and provide better organization
+    @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
+    def test_prott5_mixed_H_embedding_residue_level(self):
+        """Test prott5 mixed bulk sc H with residue-level embeddings."""
+        embed(self.test_airr_mixed_path, "H", "prott5", "H_residue_test.pt", residue_level=True)
+        assert os.path.exists("H_residue_test.pt")
+        embeddings = torch.load("H_residue_test.pt")
+        assert embeddings.shape[0] == 2  # 2 H chains (TRB chains from 2 TCR cells)
+        assert embeddings.shape[1] == 1024  # max sequence length (padded)
+        assert embeddings.shape[2] == 1024  # ProtT5 embedding dimension
+        os.remove("H_residue_test.pt")
 
     # custom model tests
     def test_custom_mixed_HL_embedding(self):

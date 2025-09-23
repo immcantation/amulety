@@ -211,7 +211,7 @@ def ablang(
                 if seq_embedding[0].shape[0] < max_seq_length + 2:
                     # Pad to ensure consistent length
                     pad_length = max_seq_length + 2 - seq_embedding[0].shape[0]
-                    embed_out = pad(torch.tensor(seq_embedding[0]), (0, 0, 0, pad_length)).numpy()
+                    embed_out = pad(torch.tensor(seq_embedding[0]), (0, 0, 0, pad_length))
             else:
                 # Generate embedding for single sequence
                 seq_embedding = model([seq], mode="seqcoding")
@@ -229,6 +229,7 @@ def ablang(
 def antiberta2(
     sequences,
     cache_dir: Optional[str] = None,
+    residue_level: bool = False,
     batch_size: int = 50,
 ):
     """
@@ -237,6 +238,9 @@ def antiberta2(
 
     Parameters:
         sequences: pd.Series for single chain or pd.DataFrame for H+L mode
+        cache_dir: Optional[str]: Directory to cache the model files.
+        residue_level: bool: If True, returns residue-level embeddings.
+        batch_size: int: Number of sequences to process in each batch.
     """
 
     from transformers import RoFormerForMaskedLM, RoFormerTokenizer
@@ -283,7 +287,10 @@ def antiberta2(
     n_seqs = len(sequences_array)
     dim = 1024
     n_batches = math.ceil(n_seqs / batch_size)
-    embeddings = torch.empty((n_seqs, dim))
+    if residue_level:
+        embeddings = torch.empty((n_seqs, max_seq_length, dim))
+    else:
+        embeddings = torch.empty((n_seqs, dim))
 
     i = 1
     for start, end, batch in batch_loader(sequences_array, batch_size):
@@ -307,8 +314,10 @@ def antiberta2(
             outputs = list(outputs.detach())
 
         # aggregate across the residuals, ignore the padded bases
-        for j, a in enumerate(attention_mask):
-            outputs[j] = outputs[j][a == 1, :].mean(0)
+        if not residue_level:
+            for j, a in enumerate(attention_mask):
+                outputs[j] = outputs[j][a == 1, :].mean(0)
+                print(outputs[j].shape)
 
         embeddings[start:end] = torch.stack(outputs)
         del x
@@ -324,10 +333,19 @@ def antiberta2(
 def balm_paired(
     sequences,
     cache_dir: str = "/tmp/amulety",
+    residue_level: bool = False,
     batch_size: int = 50,
 ):
     """
-    Embeds sequences using the BALM-paired model. The maximum length of the sequences to be embedded is 1024. The embedding dimension is 1024.
+    Embeds sequences using the BALM-paired model.
+    The maximum length of the sequences to be embedded is 1024.
+    The embedding dimension is 1024.
+
+    Parameters:
+        sequences: pd.Series for single chain or pd.DataFrame for H+L mode
+        cache_dir: Optional[str]: Directory to cache the model files.
+        residue_level: bool: If True, returns residue-level embeddings.
+        batch_size: int: Number of sequences to process in each batch.
     """
 
     os.makedirs(cache_dir, exist_ok=True)
@@ -355,5 +373,6 @@ def balm_paired(
         batch_size=batch_size,
         max_seq_length=max_seq_length,
         cache_dir=cache_dir,
+        residue_level=residue_level,
     )
     return embeddings

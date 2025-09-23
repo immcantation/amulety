@@ -9,7 +9,7 @@
 - Added PROTT5, TCRT5 and TCRbert embeddings.
 - Added Ablang embeddings.
 - Added AnnData export
-- Added possibility to store residue-level embeddings for models that support that:
+- Added possibility to store residue-level embeddings for all models that support them.
 
 ### Fixed
 

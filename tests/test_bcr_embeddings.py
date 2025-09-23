@@ -73,6 +73,17 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
+    def test_ablang_residue_level(self):
+        """Test AbLang residue-level embeddings."""
+        embed(self.test_airr_mixed_path, "H", "ablang", "H_test_residue.pt", residue_level=True)
+        assert os.path.exists("H_test_residue.pt")
+
+        embeddings = torch.load("H_test_residue.pt")
+        assert embeddings.shape[1] == 162  # max seq length for ablang
+        assert embeddings.shape[2] == 768  # 768
+        assert embeddings.shape[0] == 2  # 2 H chain
+        os.remove("H_test_residue.pt")
+
     # antiberty tests
     def test_antiberty_mixed_HL_embedding(self):
         """Test antiberty (mixed bulk sc H+L)."""
@@ -110,9 +121,20 @@ class TestAmulety(unittest.TestCase):
         import anndata
 
         embeddings = anndata.read_h5ad("H_test.h5ad")
-        assert embeddings.X.shape[1] == 512  # 512
+        assert embeddings.X.shape[1] == 512  # Antiberty embedding dimension
         assert embeddings.X.shape[0] == 2  # 2 H chain
         os.remove("H_test.h5ad")
+
+    def test_antiberty_residue_level(self):
+        """Test AbLang residue-level embeddings."""
+        embed(self.test_airr_mixed_path, "H", "antiberty", "H_test_residue.pt", residue_level=True)
+        assert os.path.exists("H_test_residue.pt")
+
+        embeddings = torch.load("H_test_residue.pt")
+        assert embeddings.shape[1] == 510  # max seq length for antiberty
+        assert embeddings.shape[2] == 512  # antiberty embedding dimension
+        assert embeddings.shape[0] == 2  # 2 H chain
+        os.remove("H_test_residue.pt")
 
     # antiberta2 tests
     def test_antiberta2_mixed_HL_embedding(self):
@@ -144,6 +166,17 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
+    def test_antiberta2_residue_level(self):
+        """Test antiberta2 residue-level embeddings."""
+        embed(self.test_airr_mixed_path, "H", "antiberta2", "H_test_residue.pt", residue_level=True)
+        assert os.path.exists("H_test_residue.pt")
+
+        embeddings = torch.load("H_test_residue.pt")
+        assert embeddings.shape[1] == 256  # max seq length for antiberta2
+        assert embeddings.shape[2] == 1024  # antiberta2 embedding dimension
+        assert embeddings.shape[0] == 2  # 2 H chain
+        os.remove("H_test_residue.pt")
+
     # balm-paired tests
     def test_balm_paired_mixed_HL_embedding(self):
         """Test balm-paired (mixed bulk sc HL)."""
@@ -160,6 +193,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_airr_mixed_path, "H+L", "balm-paired", "H_plus_L_test.tsv")
         self.assertIn("was trained on paired chains", str(cm.warning))
         self.assertIn("--chain HL", str(cm.warning))
+        os.remove("H_plus_L_test.tsv")
 
     def test_balm_paired_mixed_H_embedding_tsv(self):
         """Test balm-paired (mixed bulk sc H)."""
@@ -167,3 +201,15 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_airr_mixed_path, "H", "balm-paired", "H_test.tsv")
         self.assertIn("was trained on paired chains", str(cm.warning))
         self.assertIn("--chain HL", str(cm.warning))
+        os.remove("H_test.tsv")
+
+    def test_balm_paired_residue_level(self):
+        """Test balm-paired residue-level embeddings."""
+        embed(self.test_airr_mixed_path, "HL", "balm-paired", "HL_test_residue.pt", residue_level=True)
+        assert os.path.exists("HL_test_residue.pt")
+
+        embeddings = torch.load("HL_test_residue.pt")
+        assert embeddings.shape[1] == 510  # max seq length for balm-paired
+        assert embeddings.shape[2] == 1024  # balm-paired embedding dimension
+        assert embeddings.shape[0] == 1  # 1 H chain
+        os.remove("HL_test_residue.pt")
