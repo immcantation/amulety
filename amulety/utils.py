@@ -285,6 +285,7 @@ def concatenate_heavylight(
     Raises:
         ValueError: If required columns are missing or duplicate_col is not numeric.
     """
+    # TODO add check if multiple heavy chains per cell and warn users
     colnames = [cell_id_col, "locus", duplicate_col, sequence_col]
     missing_cols = [col for col in colnames if col not in data.columns]
     if missing_cols:

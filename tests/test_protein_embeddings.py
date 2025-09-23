@@ -78,10 +78,8 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_airr_mixed_path, "H+L", "esm2", "H_plus_L_test.tsv")
             assert os.path.exists("H_plus_L_test.tsv")
             embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
-            assert (
-                embeddings.shape[0] == 4
-            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            assert embeddings.shape[1] == 1281  # 1280 + id
+            assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
             os.remove("H_plus_L_test.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
@@ -95,7 +93,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_airr_mixed_path, "H", "esm2", "H_test.tsv")
             assert os.path.exists("H_test.tsv")
             embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 1281  # 1280 + id
             assert (
                 embeddings.shape[0] == 2
             )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
@@ -133,10 +131,8 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "prott5", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
-        assert (
-            embeddings.shape[0] == 4
-        )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+        assert embeddings.shape[1] == 1025  # 1024 + id
+        assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
@@ -145,7 +141,7 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "prott5", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1027  # 1024 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 1025  # 1024 + id
         assert (
             embeddings.shape[0] == 2
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
@@ -179,7 +175,7 @@ class TestAmulety(unittest.TestCase):
                 # Check that protein language model warning was issued
                 assert len(w) > 0
                 warning_messages = [str(warning.message) for warning in w]
-                assert any("does not understand paired chain relationships" in msg for msg in warning_messages)
+                assert any("might not understand paired chain relationships" in msg for msg in warning_messages)
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"Custom model loading failed (corrupted cache): {e}")
@@ -200,10 +196,8 @@ class TestAmulety(unittest.TestCase):
             )
             assert os.path.exists("H_plus_L_test.tsv")
             embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
-            assert (
-                embeddings.shape[0] == 4
-            )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
+            assert embeddings.shape[1] == 1281  # 1280 + id
+            assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
             os.remove("H_plus_L_test.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
@@ -225,7 +219,7 @@ class TestAmulety(unittest.TestCase):
             )
             assert os.path.exists("H_test.tsv")
             embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 1283  # 1280 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 1281  # 1280 + id
             assert (
                 embeddings.shape[0] == 2
             )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)

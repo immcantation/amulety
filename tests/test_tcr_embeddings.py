@@ -60,7 +60,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_mixed_path, "H", "tcr-bert", "H_test.tsv")
             assert os.path.exists("H_test.tsv")
             embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 769  # 768 + id
             assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
             os.remove("H_test.tsv")
         except Exception as e:
@@ -78,7 +78,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_mixed_path, "H+L", "tcr-bert", "H_plus_L_test.tsv")
             assert os.path.exists("H_plus_L_test.tsv")
             embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 769  # 768 + id
             assert embeddings.shape[0] == 6  # 3 H chains (TRB) + 3 L chains (TRA) from 3 TCR cells
             os.remove("H_plus_L_test.tsv")
         except Exception as e:
@@ -97,7 +97,7 @@ class TestAmulety(unittest.TestCase):
             embed(self.test_mixed_path, "H", "tcrt5", "tcrt5_H_test.tsv")
             assert os.path.exists("tcrt5_H_test.tsv")
             embeddings = pd.read_table("tcrt5_H_test.tsv", delimiter="\t")
-            assert embeddings.shape[1] == 256  # 256 + cell_id + chain + sequence_id
+            assert embeddings.shape[1] == 257  # 256 + id
             assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
             os.remove("tcrt5_H_test.tsv")
         except Exception as e:

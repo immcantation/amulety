@@ -141,10 +141,10 @@ jobs:
           echo "Running Immune2Vec tests with custom path..."
 
           # Set the immune2vec path for testing
-          export IMMUNE2VEC_PATH="${GITHUB_WORKSPACE}/immune2vec_model"
-          echo "IMMUNE2VEC_PATH set to: $IMMUNE2VEC_PATH"
+          export INSTALLATION_PATH="${GITHUB_WORKSPACE}/immune2vec_model"
+          echo "INSTALLATION_PATH set to: $INSTALLATION_PATH"
           echo "Current working directory: $(pwd)"
-          echo "Checking if path exists: $(ls -la $IMMUNE2VEC_PATH 2>/dev/null || echo 'Path not found')"
+          echo "Checking if path exists: $(ls -la $INSTALLATION_PATH 2>/dev/null || echo 'Path not found')"
 
           # Run the dedicated integration tests from test_immune2vec_integration.py
           pytest -v tests/test_immune2vec_integration.py \
@@ -209,7 +209,7 @@ jobs:
               cache_dir='/tmp/test_immune2vec',
               batch_size=2,
               n_dim=50,  # Smaller for faster testing
-              immune2vec_path=os.environ.get('IMMUNE2VEC_PATH', os.path.join(os.getcwd(), 'immune2vec_model'))
+              installation_path=os.environ.get('INSTALLATION_PATH', os.path.join(os.getcwd(), 'immune2vec_model'))
           )
 
           print(f'Programmatic test successful! Generated embeddings with shape: {result.shape}')

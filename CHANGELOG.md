@@ -6,11 +6,14 @@
 
 - Allow calling Python API as well as CLI.
 - Allow choosing sequence column for translation.
+- Added PROTT5, TCRT5 and TCRbert embeddings.
+- Added Ablang embeddings.
+- Added AnnData export
+- Added possibility to store residue-level embeddings for models that support that:
 
 ### Fixed
 
 - Refactored code to allow scalability to TCR embeddings.
-- Added PROTT5 and TCRbert embeddings.
 
 ## 1.1 - Blue Tui
 

@@ -50,7 +50,7 @@ class TestAmulety(unittest.TestCase):
             embed(input_airr=self.test_airr_mixed_path, chain="HL", model="ablang", output_file_path="HL_test.pt")
             assert os.path.exists("HL_test.pt")
             embeddings = torch.load("HL_test.pt")
-            assert embeddings.shape[1] == 768  # AbLang embedding dimension
+            assert embeddings.shape[1] == 768
             assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
         self.assertIn("trained on individual chains only", str(cm.warning))
         os.remove("HL_test.pt")
@@ -60,7 +60,7 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "ablang", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 769  # 768 + id column
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
@@ -69,7 +69,7 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "ablang", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 768  # 768 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 769  # 768 + id column
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
@@ -90,7 +90,7 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "antiberty", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 512  # 512 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 513  # antiberty embedding dimension + id column
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
@@ -99,9 +99,20 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "antiberty", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 512  # 512 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 513  # 512 + id column
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
+
+    def test_antiberty_mixed_H_embedding_h5ad(self):
+        """Test antiberty (mixed bulk sc H) with h5ad output."""
+        embed(self.test_airr_mixed_path, "H", "antiberty", "H_test.h5ad")
+        assert os.path.exists("H_test.h5ad")
+        import anndata
+
+        embeddings = anndata.read_h5ad("H_test.h5ad")
+        assert embeddings.X.shape[1] == 512  # 512
+        assert embeddings.X.shape[0] == 2  # 2 H chain
+        os.remove("H_test.h5ad")
 
     # antiberta2 tests
     def test_antiberta2_mixed_HL_embedding(self):
@@ -110,7 +121,7 @@ class TestAmulety(unittest.TestCase):
             embed(input_airr=self.test_airr_mixed_path, chain="HL", model="antiberta2", output_file_path="HL_test.pt")
             assert os.path.exists("HL_test.pt")
             embeddings = torch.load("HL_test.pt")
-            assert embeddings.shape[1] == 1024  # antiberta2 embedding dimension
+            assert embeddings.shape[1] == 1024
             assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
         self.assertIn("trained on individual chains only", str(cm.warning))
         os.remove("HL_test.pt")
@@ -120,7 +131,7 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H+L", "antiberta2", "H_plus_L_test.tsv")
         assert os.path.exists("H_plus_L_test.tsv")
         embeddings = pd.read_table("H_plus_L_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1024  # 1024 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 1025  # 1024 + id column
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
 
@@ -129,7 +140,7 @@ class TestAmulety(unittest.TestCase):
         embed(self.test_airr_mixed_path, "H", "antiberta2", "H_test.tsv")
         assert os.path.exists("H_test.tsv")
         embeddings = pd.read_table("H_test.tsv", delimiter="\t")
-        assert embeddings.shape[1] == 1024  # 1024 + cell_id + chain + sequence_id
+        assert embeddings.shape[1] == 1025  # 1024 + id column
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
 
@@ -145,14 +156,14 @@ class TestAmulety(unittest.TestCase):
 
     def test_balm_paired_mixed_H_plus_L_embedding_tsv(self):
         """Test balm-paired (mixed bulk sc H+L)."""
-        with self.assertRaises(ValueError) as context:
+        with self.assertWarns(UserWarning) as cm:
             embed(self.test_airr_mixed_path, "H+L", "balm-paired", "H_plus_L_test.tsv")
-        self.assertIn("was trained on paired chains", str(context.exception))
-        self.assertIn("--chain HL", str(context.exception))
+        self.assertIn("was trained on paired chains", str(cm.warning))
+        self.assertIn("--chain HL", str(cm.warning))
 
     def test_balm_paired_mixed_H_embedding_tsv(self):
         """Test balm-paired (mixed bulk sc H)."""
-        with self.assertRaises(ValueError) as context:
+        with self.assertWarns(UserWarning) as cm:
             embed(self.test_airr_mixed_path, "H", "balm-paired", "H_test.tsv")
-        self.assertIn("was trained on paired chains", str(context.exception))
-        self.assertIn("--chain HL", str(context.exception))
+        self.assertIn("was trained on paired chains", str(cm.warning))
+        self.assertIn("--chain HL", str(cm.warning))

@@ -97,7 +97,7 @@ amulety embed --model immune2vec --immune2vec-path /path/to/immune2vec_model --i
 
 ```python
 from amulety.protein_embeddings import immune2vec
-embeddings = immune2vec(sequences, immune2vec_path='/path/to/immune2vec_model')
+embeddings = immune2vec(sequences, installation_path='/path/to/immune2vec_model')
 ```
 
 **Note:** Immune2Vec requires gensim version 3.8.3 specifically. If installation fails due to compilation issues, ensure you have compatible Python version (3.8-3.9 recommended).

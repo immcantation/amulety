@@ -19,3 +19,4 @@ ablang
 rjieba
 protobuf
 sentencepiece
+anndata

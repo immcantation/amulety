@@ -97,7 +97,6 @@ def antiberty(
         i += 1
 
     end_time = time.time()
-    print(embeddings.shape)
     logger.info("Took %s seconds", round(end_time - start_time, 2))
     return embeddings
 

@@ -152,21 +152,21 @@ class TestAmulety(unittest.TestCase):
         _, result_all = process_airr(self.test_mixed_df, "H", receptor_type="all")
         assert result_all.shape[0] == 6  # 3 IGH + 3 TRB chains
 
-        # # Test with receptor_type="BCR" (should warn and filter out TCR chains)
-        # result_bcr = process_airr(self.test_mixed_df, "H", receptor_type="BCR")
-        # assert result_bcr.shape[0] == 3  # Only IGH chains
+        # Test with receptor_type="BCR" (should warn and filter out TCR chains)
+        _, result_bcr = process_airr(self.test_mixed_df, "H", receptor_type="BCR")
+        assert result_bcr.shape[0] == 3  # Only IGH chains
 
-        # # Test with receptor_type="TCR" (should warn and filter out BCR chains)
-        # result_tcr = process_airr(self.test_mixed_df, "H", receptor_type="TCR")
-        # assert result_tcr.shape[0] == 3  # Only TRB chains
+        # Test with receptor_type="TCR" (should warn and filter out BCR chains)
+        _, result_tcr = process_airr(self.test_mixed_df, "H", receptor_type="TCR")
+        assert result_tcr.shape[0] == 3  # Only TRB chains
 
-        # # Test light chains
-        # result_all_light = process_airr(self.test_mixed_df, "L", receptor_type="all")
-        # assert result_all_light.shape[0] == 6  # 2 IGL + 1 IGK + 3 TRA chains
+        # Test light chains
+        _, result_all_light = process_airr(self.test_mixed_df, "L", receptor_type="all")
+        assert result_all_light.shape[0] == 6  # 2 IGL + 1 IGK + 3 TRA chains
 
-        # # Test paired chains with receptor_type="all"
-        # result_pairs = process_airr(self.test_mixed_df, "HL", receptor_type="all")
-        # assert result_pairs.shape[0] == 6  # 3 BCR pairs + 3 TCR pairs
+        # Test paired chains with receptor_type="all"
+        _, result_pairs = process_airr(self.test_mixed_df, "HL", receptor_type="all")
+        assert result_pairs.shape[0] == 6  # 3 BCR pairs + 3 TCR pairs
 
     def test_mixed_data_with_unified_models_data_processing(self):
         """Test that unified models can process mixed BCR+TCR data (data processing only)."""

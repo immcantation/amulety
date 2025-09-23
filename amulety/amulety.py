@@ -6,6 +6,7 @@ import time
 import warnings
 from importlib.metadata import version
 
+import anndata as ad
 import pandas as pd
 import torch
 import typer
@@ -164,7 +165,7 @@ def embed_airr(
     model_path: str = None,
     output_type: str = "pickle",
     duplicate_col: str = "duplicate_count",
-    immune2vec_path: str = None,
+    installation_path: str = None,
     residue_level: bool = False,
 ):
     """
@@ -203,11 +204,17 @@ def embed_airr(
         duplicate_col (str):
             The name of the numeric column used to select the best chain when
             multiple chains of the same type exist per cell. Default: "duplicate_count".
-        immune2vec_path (str):
+        installation_path (str):
             Custom path to Immune2Vec installation directory (optional).
         residue_level (bool):
             If True, returns residue-level embeddings of dimension sequence length x embedding dimension (L x D)
             instead of sequence-level (1 x D).
+    returns:
+        A tuple with:
+            The embeddings as a pandas DataFrame (if output_type="df"), a serialized torch object (if output_type="pickle")
+            or an anndata object (if output_type="anndata").
+            The filtered input AIRR DataFrame with the metadata.
+
 
     """
     # Check valid chain - unified interface for both BCR and TCR
@@ -216,10 +223,12 @@ def embed_airr(
         raise ValueError(f"Input chain must be one of {valid_chains}")
 
     # Use the chain parameter directly - no mapping needed
-    if output_type not in ["df", "pickle"]:
-        raise ValueError("Output type must be one of ['df', 'pickle']")
+    if output_type not in ["df", "pickle", "anndata"]:
+        raise ValueError("Output type must be one of ['df', 'pickle', 'anndata']")
     if sequence_col not in airr.columns:
         raise ValueError(f"Column {sequence_col} not found in the input AIRR data.")
+    if "sequence_id" not in airr.columns:
+        raise ValueError("Column 'sequence_id' not found in the input AIRR data.")
 
     if residue_level and output_type not in ["pickle"]:
         warnings.warn(
@@ -383,8 +392,9 @@ def embed_airr(
         # Check compatible chains - BALM-paired ONLY supports paired chains
         supported_chains = ["HL", "LH"]
         if chain not in supported_chains:
-            raise ValueError(
-                f"Model 'balm-paired' was trained on paired chains (HL/LH). Using --chain HL or --chain LH instead of --chain {chain} is recommended."
+            warnings.warn(
+                f"Model 'balm-paired' was trained on paired chains (HL/LH). Using --chain HL or --chain LH instead of --chain {chain} is recommended.",
+                UserWarning,
             )
         if chain == "LH":
             warnings.warn(
@@ -444,7 +454,9 @@ def embed_airr(
         # Process data for immune2vec
         X, dat = process_airr(airr, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
 
-        embedding = immune2vec(sequences=X, cache_dir=cache_dir, batch_size=batch_size, immune2vec_path=immune2vec_path)
+        embedding = immune2vec(
+            sequences=X, cache_dir=cache_dir, batch_size=batch_size, installation_path=installation_path
+        )
 
     # Protein models
     elif model == "esm2":
@@ -479,7 +491,7 @@ def embed_airr(
         # Warn about paired chain compatibility
         if chain in ["HL", "LH"]:
             warnings.warn(
-                f"Custom protein language model does not understand paired chain relationships. "
+                f"Custom protein language model might not understand paired chain relationships. "
                 f"Chain '{chain}' will be processed as concatenated sequences, but results may be inaccurate.",
                 UserWarning,
             )
@@ -505,14 +517,28 @@ def embed_airr(
             "Residue level embeddings have been zero padded to a maximum predetermined sequence length with dimensions (N sequences, max_seq_length, embedding_dimension)"
         )
     logger.info("Generated embeddings with dimensions %s", embedding.shape)
+
+    if chain in ["HL", "LH"]:
+        index_col = cell_id_col
+    else:
+        index_col = "sequence_id"
+
     if output_type == "pickle":
-        return embedding
-    elif output_type == "df":
-        allowed_index_cols = ["sequence_id", cell_id_col, "chain"]
-        index_cols = [col for col in dat.columns if col in allowed_index_cols]
+        return embedding, dat
+    elif output_type in ["df", "anndata"]:
         embedding_df = pd.DataFrame(embedding.numpy())
-        result_df = pd.concat([dat.loc[:, index_cols].reset_index(drop=True), embedding_df], axis=1)
-        return result_df
+        result_df = pd.concat([dat.loc[:, index_col].reset_index(drop=True), embedding_df], axis=1)
+        result_df.columns = [index_col] + [f"dim_{i+1}" for i in range(embedding.shape[1])]
+        if output_type == "df":
+            return result_df, dat
+        else:
+            result_df.set_index(index_col, inplace=True)
+            adata = ad.AnnData(result_df)
+            # Save all columns in data as observations
+            adata.obs[index_col] = result_df[index_col].values
+            return adata, dat
+    else:
+        raise ValueError("Output type must be one of ['df', 'pickle', 'anndata']")
 
 
 @app.command()
@@ -604,7 +630,7 @@ def embed(
         str,
         typer.Option(
             default=...,
-            help="The path where the generated embeddings will be saved. The file extension should be .pt, .csv, or .tsv.",
+            help="The path where the generated embeddings will be saved. The file extension should be .csv, or .tsv. for a dataframe, .pt for a pickled torch object, or .h5ad for an anndata object.",
         ),
     ],
     cache_dir: Annotated[
@@ -637,10 +663,10 @@ def embed(
             help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined.",
         ),
     ] = "duplicate_count",
-    immune2vec_path: Annotated[
+    installation_path: Annotated[
         str,
         typer.Option(
-            "--immune2vec-path",
+            "--installation-path",
             help="Custom path to Immune2Vec installation directory. Only applies to 'immune2vec' model.",
         ),
     ] = None,
@@ -653,17 +679,17 @@ def embed(
     ] = False,
 ):
     """
-    Embeds sequences from an AIRR rearrangement file using the specified model.
+    Embeds sequences from an AIRR rearrangement file using the specified model. It returns the
 
     Example usage:\n
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """
     out_extension = os.path.splitext(output_file_path)[-1][1:]
 
-    if out_extension not in ["tsv", "csv", "pt"]:
-        raise ValueError("Output suffix must be one of ['tsv', 'csv', 'pt']")
+    if out_extension not in ["tsv", "csv", "pt", "h5ad"]:
+        raise ValueError("Output suffix must be one of ['tsv', 'csv', 'pt', 'h5ad']")
 
-    output_type = "pickle" if out_extension == "pt" else "df"
+    output_type = "pickle" if out_extension == "pt" else "anndata" if out_extension == "h5ad" else "df"
 
     if residue_level and output_type not in ["pickle"]:
         warnings.warn(
@@ -673,7 +699,7 @@ def embed(
 
     airr = pd.read_csv(input_airr, sep="\t")
 
-    embedding = embed_airr(
+    embedding, data = embed_airr(
         airr,
         chain,
         model,
@@ -686,7 +712,7 @@ def embed(
         model_path=model_path,
         output_type=output_type,
         duplicate_col=duplicate_col,
-        immune2vec_path=immune2vec_path,
+        installation_path=installation_path,
         residue_level=residue_level,
     )
 
@@ -696,8 +722,21 @@ def embed(
         if not output_file_path.endswith(".pt"):
             output_file_path += ".pt"
         torch.save(embedding, output_file_path)
+        logger.info("Saving sequence filtered metadata as TSV file.")
+        data.to_csv(output_file_path.replace(".pt", "_metadata.tsv"), sep="\t", index=False)
+    elif output_type == "anndata":
+        logger.info("Saving embedding as an anndata object.")
+        # Change file ending to .h5ad if not already
+        if not output_file_path.endswith(".h5ad"):
+            output_file_path += ".h5ad"
+        embedding.write_h5ad(output_file_path)
+        logger.info("Saving sequence filtered metadata as TSV file.")
+        data.to_csv(output_file_path.replace(".h5ad", "_metadata.tsv"), sep="\t", index=False)
     else:
+        logger.info("Saving embedding as a TSV file.")
         embedding.to_csv(output_file_path, sep="\t" if out_extension == "tsv" else ",", index=False)
+        logger.info("Saving sequence filtered metadata as TSV file.")
+        data.to_csv(output_file_path.replace(".tsv", "_metadata.tsv"), sep="\t", index=False)
     logger.info("Saved embedding at %s", output_file_path)
 
 

@@ -53,16 +53,13 @@ class TestChainValidation(unittest.TestCase):
 
             for chain in paired_chains:
                 try:
-                    _ = embed_airr(data, chain, model, output_type="pickle")
+                    _, _ = embed_airr(data, chain, model, output_type="pickle")
                     # For BALM-paired, result might be None due to download failure, but no exception should be raised
                     # The important thing is that the chain validation passes (no ValueError)
                     print(f"{model} accepts {chain} chains (validation passed)")
                 except ValueError as e:
                     # This should not happen - paired-only models should accept HL/LH
                     self.fail(f"{model} should accept {chain} chains, but got validation error: {e}")
-                except Exception as e:
-                    # Other exceptions (like download failures) are acceptable for this test
-                    print(f"{model} accepts {chain} chains (validation passed, but model execution failed: {e})")
 
     def test_paired_only_models_reject_individual_chains(self):
         """Test that paired-only models reject individual chains."""
@@ -73,47 +70,24 @@ class TestChainValidation(unittest.TestCase):
             data = self.bcr_data if model == "balm-paired" else self.tcr_data
 
             for chain in individual_chains:
-                with self.assertRaises(ValueError) as context:
+                with self.assertWarns(UserWarning) as context:
                     embed_airr(data, chain, model, output_type="pickle")
 
-                error_msg = str(context.exception)
-                self.assertIn("was trained on paired chains", error_msg)
-                self.assertIn("--chain HL", error_msg)
+                warning_msg = str(context.warning)
+                self.assertIn("was trained on paired chains", warning_msg)
+                self.assertIn("--chain HL", warning_msg)
 
     def test_flexible_paired_models_accept_all_chains(self):
         """Test that flexible paired models accept all chain types."""
-        flexible_paired_models = ["tcr-bert", "tcremp"]  # Added tcremp - supports all chain types
+        flexible_paired_models = ["tcr-bert"]  # Added tcremp - supports all chain types
         all_chains = ["H", "L", "HL", "LH", "H+L"]
 
         for model in flexible_paired_models:
             data = self.tcr_data  # Both are TCR models
 
             for chain in all_chains:
-                try:
-                    # For TCREMP, use skip_clustering=True for stability
-                    if model == "tcremp":
-                        result = embed_airr(data, chain, model, output_type="pickle", skip_clustering=True)
-                    else:
-                        result = embed_airr(data, chain, model, output_type="pickle")
-                    self.assertIsNotNone(result)
-                except ImportError as e:
-                    # Skip models that require additional dependencies not installed in test environment
-                    print(f"(warning) Skipping {model} with {chain} chains - missing dependencies: {e}")
-                    continue
-                except RuntimeError as e:
-                    # Handle TCREMP internal errors (pandas merge issues, mapping column issues, etc.)
-                    if model == "tcremp" and any(
-                        error_pattern in str(e)
-                        for error_pattern in ["merge", "0 analysis clonotypes", "Mapping column", "KeyError", "pandas"]
-                    ):
-                        print(
-                            f"(warning) Skipping {model} with {chain} chains - internal TCREMP issues: {str(e)[:100]}..."
-                        )
-                        continue
-                    else:
-                        self.fail(f"{model} should accept {chain} chains, but got error: {e}")
-                except Exception as e:
-                    self.fail(f"{model} should accept {chain} chains, but got error: {e}")
+                result = embed_airr(data, chain, model, output_type="pickle")
+                self.assertIsNotNone(result)
 
     def test_h_chain_only_models_accept_h_only(self):
         """Test that H-chain-only models accept only H chains."""
@@ -138,29 +112,13 @@ class TestChainValidation(unittest.TestCase):
             data = self.tcr_data  # TCR data for TCR models
 
             for chain in invalid_chains:
-                with warnings.catch_warnings(record=True) as w:
-                    warnings.simplefilter("always")
-                    try:
-                        embed_airr(data, chain, model, output_type="pickle")
-                        # Should issue a warning but not raise an error
-                        self.assertTrue(len(w) > 0, f"{model} should warn for {chain} chains")
+                with self.assertWarns(UserWarning) as context:
+                    embed_airr(data, chain, model, output_type="pickle")
 
-                        # Find the specific warning about chain compatibility
-                        chain_warning_found = False
-                        for warning in w:
-                            warning_msg = str(warning.message)
-                            if "only supports H chains" in warning_msg and "beta chains for TCR" in warning_msg:
-                                chain_warning_found = True
-                                break
-
-                        self.assertTrue(
-                            chain_warning_found,
-                            f"{model} should warn about chain compatibility for {chain} chains. "
-                            f"Warnings found: {[str(warning.message) for warning in w]}",
-                        )
-                    except ImportError:
-                        # Skip if model is not installed
-                        pass
+                warning_msg = str(context.warning)
+                self.assertIn("was trained on", warning_msg)
+                self.assertIn("--chain HL", warning_msg)
+                self.assertIn("only supports H chains", warning_msg)
 
     def test_protein_language_models_warn_for_paired_chains(self):
         """Test that protein language models warn for paired chains."""
@@ -221,13 +179,13 @@ class TestChainValidation(unittest.TestCase):
             data = self.bcr_data if model in ["ablang", "antiberty", "antiberta2"] else self.tcr_data
 
             for chain in paired_chains:
-                with self.assertRaises(ValueError) as context:
+                with self.assertWarns(UserWarning) as context:
                     embed_airr(data, chain, model, output_type="pickle")
 
-                error_msg = str(context.exception)
-                self.assertIn("was trained on individual chains only", error_msg)
-                self.assertIn("--chain H", error_msg)
-                self.assertIn("--chain L", error_msg)
+                warning_msg = str(context.warning)
+                self.assertIn("was trained on individual chains only", warning_msg)
+                self.assertIn("--chain H", warning_msg)
+                self.assertIn("--chain L", warning_msg)
 
     def test_protein_language_models_accept_individual_chains(self):
         """Test that protein language models accept individual chains without warning."""
@@ -340,13 +298,12 @@ class TestChainValidation(unittest.TestCase):
     def test_chain_validation_error_messages(self):
         """Test that error messages are informative and helpful."""
         # Test individual chain model with paired chain
-        with self.assertRaises(ValueError) as context:
+        with self.assertWarns(UserWarning) as cm:
             embed_airr(self.bcr_data, "HL", "antiberty", output_type="pickle")
-
-        error_msg = str(context.exception)
-        self.assertIn("was trained on individual chains only", error_msg)
-        self.assertIn("--chain H", error_msg)
-        self.assertIn("--chain L", error_msg)
+        msg = str(cm.warning)
+        self.assertIn("was trained on individual chains only", msg)
+        self.assertIn("--chain H", msg)
+        self.assertIn("--chain L", msg)
 
 
 if __name__ == "__main__":

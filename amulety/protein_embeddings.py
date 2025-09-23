@@ -27,7 +27,7 @@ IMMUNE2VEC_INSTALLATION_INSTRUCTIONS = (
     "   git clone https://bitbucket.org/yaarilab/immune2vec_model.git\n\n"
     "STEP 3: Either add to Python path or specify custom path\n"
     "   Option A: import sys; sys.path.append('/path/to/immune2vec_model')\n"
-    "   Option B: Use immune2vec_path parameter: immune2vec(..., immune2vec_path='/path/to/immune2vec_model')\n\n"
+    "   Option B: Use installation_path parameter: immune2vec(..., installation_path='/path/to/immune2vec_model')\n\n"
     "STEP 4: Verify installation\n"
     "   python -c 'from embedding import sequence_modeling; print(\"Immune2Vec installed successfully\")'\n\n"
     "Reference: https://bitbucket.org/yaarilab/immune2vec_model/src/master/"
@@ -342,7 +342,7 @@ def immune2vec(
     min_count: int = 1,
     workers: int = 3,
     random_seed: int = 42,
-    immune2vec_path: Optional[str] = None,
+    installation_path: Optional[str] = None,
 ):
     """
     Embeds sequences using Immune2Vec model.
@@ -363,7 +363,7 @@ def immune2vec(
         min_count: Minimum count for words to be included (default: 1)
         workers: Number of worker threads (default: 3)
         random_seed: Random seed for reproducibility (default: 42)
-        immune2vec_path: Custom path to Immune2Vec installation directory (optional)
+        installation_path: Custom path to Immune2Vec installation directory (optional)
 
     Returns:
         torch.Tensor: Embeddings of shape (n_sequences, n_dim)
@@ -392,26 +392,26 @@ def immune2vec(
         raise ImportError(detailed_instructions) from gensim_error
 
     # If user provided a specific path, validate it first
-    if immune2vec_path:
-        if not os.path.exists(immune2vec_path) or not os.path.isdir(immune2vec_path):
+    if installation_path:
+        if not os.path.exists(installation_path) or not os.path.isdir(installation_path):
             raise ImportError(
-                f"Invalid immune2vec_path provided: '{immune2vec_path}' does not exist or is not a directory.\n\n{IMMUNE2VEC_INSTALLATION_INSTRUCTIONS}"
+                f"Invalid installation_path provided: '{installation_path}' does not exist or is not a directory.\n\n{IMMUNE2VEC_INSTALLATION_INSTRUCTIONS}"
             )
 
         # Try to import from the specified path
         import sys
 
         original_path = sys.path.copy()
-        sys.path.insert(0, immune2vec_path)
+        sys.path.insert(0, installation_path)
         try:
             from embedding import sequence_modeling
 
-            logger.info("Immune2Vec package successfully imported from user-provided path: %s", immune2vec_path)
+            logger.info("Immune2Vec package successfully imported from user-provided path: %s", installation_path)
         except ImportError as path_error:
             # Restore original path
             sys.path[:] = original_path
             raise ImportError(
-                f"Cannot import Immune2Vec from provided path '{immune2vec_path}'. Please verify the path contains a valid Immune2Vec installation.\n\n{IMMUNE2VEC_INSTALLATION_INSTRUCTIONS}"
+                f"Cannot import Immune2Vec from provided path '{installation_path}'. Please verify the path contains a valid Immune2Vec installation.\n\n{IMMUNE2VEC_INSTALLATION_INSTRUCTIONS}"
             ) from path_error
     else:
         # try to import immune2vec since this might need to be installed separately

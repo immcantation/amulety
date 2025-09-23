@@ -38,11 +38,11 @@ class TestImmune2VecIntegration(unittest.TestCase):
         cls.test_data.to_csv(cls.test_file_path, sep="\t", index=False)
 
         # Get Immune2Vec path from environment or use default search
-        cls.immune2vec_path = os.environ.get("IMMUNE2VEC_PATH")
-        if cls.immune2vec_path:
-            print(f"Using Immune2Vec path from environment: {cls.immune2vec_path}")
+        cls.installation_path = os.environ.get("INSTALLATION_PATH")
+        if cls.installation_path:
+            print(f"Using Immune2Vec path from environment: {cls.installation_path}")
         else:
-            print("No IMMUNE2VEC_PATH set, will use default search paths")
+            print("No INSTALLATION_PATH set, will use default search paths")
 
     @classmethod
     def tearDownClass(cls):
@@ -67,7 +67,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
             cache_dir=self.temp_dir,
             batch_size=2,
             n_dim=50,  # Smaller dimension for faster testing
-            immune2vec_path=self.immune2vec_path,
+            installation_path=self.installation_path,
         )
 
         # Verify results
@@ -90,7 +90,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
             cache_dir=self.temp_dir,
             batch_size=2,
             output_type="pickle",
-            immune2vec_path=self.immune2vec_path,
+            installation_path=self.installation_path,
         )
 
         # Verify results
@@ -111,7 +111,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
             cache_dir=self.temp_dir,
             batch_size=2,
             output_type="pickle",
-            immune2vec_path=self.immune2vec_path,
+            installation_path=self.installation_path,
         )
 
         # Verify results
@@ -132,7 +132,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
             cache_dir=self.temp_dir,
             batch_size=2,
             output_type="pickle",
-            immune2vec_path=self.immune2vec_path,
+            installation_path=self.installation_path,
         )
 
         # Verify results
@@ -156,14 +156,14 @@ class TestImmune2VecIntegration(unittest.TestCase):
                 cache_dir=self.temp_dir,
                 batch_size=1,
                 n_dim=50,
-                immune2vec_path="/invalid/immune2vec/installation/path",
+                installation_path="/invalid/immune2vec/installation/path",
             )
 
         # Verify error message mentions both installation options
         error_msg = str(context.exception)
         self.assertIn("Option A", error_msg)
         self.assertIn("Option B", error_msg)
-        self.assertIn("immune2vec_path", error_msg)
+        self.assertIn("installation_path", error_msg)
 
         print("Error handling test passed")
 
@@ -181,7 +181,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
             cache_dir=self.temp_dir,
             batch_size=1,
             n_dim=50,
-            immune2vec_path=None,  # Explicitly test None
+            installation_path=None,  # Explicitly test None
         )
 
         # Verify results
