@@ -12,7 +12,15 @@ analysis framework for Adaptive Immune Receptor Repertoire sequencing
 
 ## Quick start
 
-You can install AMULETY using pip (it requires python 3.8 or higher):
+You can install AMULETY using conda (it requires python 3.8 or higher):
+
+```bash
+conda install amulety
+```
+
+The conda installation will also install the necessary IgBlast dependency.
+You can also install AMULETY via pip, this will though require previously
+installing IgBlast if translations are desired.
 
 ```bash
 pip install amulety
