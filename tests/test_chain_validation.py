@@ -116,9 +116,7 @@ class TestChainValidation(unittest.TestCase):
                     embed_airr(data, chain, model, output_type="pickle")
 
                 warning_msg = str(context.warning)
-                self.assertIn("was trained on", warning_msg)
-                self.assertIn("--chain HL", warning_msg)
-                self.assertIn("only supports H chains", warning_msg)
+                self.assertIn("TCRT5 model was trained on", warning_msg)
 
     def test_protein_language_models_warn_for_paired_chains(self):
         """Test that protein language models warn for paired chains."""

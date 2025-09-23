@@ -535,7 +535,7 @@ def embed_airr(
             result_df.set_index(index_col, inplace=True)
             adata = ad.AnnData(result_df)
             # Save all columns in data as observations
-            adata.obs[index_col] = result_df[index_col].values
+            adata.obs[index_col] = result_df.index
             return adata, dat
     else:
         raise ValueError("Output type must be one of ['df', 'pickle', 'anndata']")
