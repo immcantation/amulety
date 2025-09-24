@@ -90,7 +90,7 @@ git clone https://bitbucket.org/yaarilab/immune2vec_model.git
 
 ```bash
 # Use with custom path parameter
-amulety embed --model immune2vec --immune2vec-path /path/to/immune2vec_model --input-airr data.tsv --chain H --output-file-path output.pt
+amulety embed --model immune2vec --installation-path /path/to/immune2vec_model --input-airr data.tsv --chain H --output-file-path output.pt
 ```
 
 **Python API:**

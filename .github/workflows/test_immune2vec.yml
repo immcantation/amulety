@@ -168,7 +168,7 @@ jobs:
             --chain H \
             --model immune2vec \
             --output-file-path test_immune2vec_output.pt \
-            --immune2vec-path "${GITHUB_WORKSPACE}/immune2vec_model" \
+            --installation-path "${GITHUB_WORKSPACE}/immune2vec_model" \
             --batch-size 2
           # Verify output
           python -c "
