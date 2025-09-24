@@ -109,6 +109,13 @@ def translate_airr(
     """
     data = airr.copy()
 
+    if "sequence_id" not in data.columns:
+        raise ValueError("Column 'sequence_id' not found in the input AIRR data.")
+    if sequence_col not in data.columns:
+        raise ValueError(
+            f"Column '{sequence_col}' not found in the input AIRR data. Please provide the correct sequence column name with --sequence-col."
+        )
+
     # Warn if translations already exist
     columns_reserved = ["sequence_aa", "sequence_alignment_aa", "sequence_vdj_aa"]
     overlap = [col for col in data.columns if col in columns_reserved]
@@ -610,7 +617,9 @@ def translate_igblast(
     input_file_path: Annotated[
         str,
         typer.Option(
-            "--input-file", "-i", help="The path to the input data file. The data file should be in AIRR format."
+            "--input-file",
+            "-i",
+            help="The path to the input data file. The data file should be in TSV format following the AIRR specifications.",
         ),
     ],
     output_dir: Annotated[
@@ -655,7 +664,7 @@ def translate_igblast(
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
 
-    This function takes a AIRR file containing nucleotide sequences
+    This function takes a AIRR file in TSV format containing nucleotide sequences
     and translates them into amino acid sequences using IgBlast, a tool for analyzing
     immunoglobulin and T cell receptor sequences. It performs the following steps:\n
 
