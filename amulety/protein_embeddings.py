@@ -15,7 +15,6 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 from amulety.utils import batch_loader
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Immune2Vec installation instructions (used in multiple places)
@@ -70,7 +69,7 @@ def custommodel(
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
-        print(f"Batch {i}/{n_batches}\n")
+        logger.info(f"Batch {i}/{n_batches}\n")
         x = torch.tensor(
             [
                 tokenizer.encode(

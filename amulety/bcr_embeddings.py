@@ -18,7 +18,6 @@ from torch.nn.functional import pad
 from amulety.protein_embeddings import custommodel
 from amulety.utils import batch_loader, insert_space_every_other_except_cls
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -317,7 +316,6 @@ def antiberta2(
         if not residue_level:
             for j, a in enumerate(attention_mask):
                 outputs[j] = outputs[j][a == 1, :].mean(0)
-                print(outputs[j].shape)
 
         embeddings[start:end] = torch.stack(outputs)
         del x

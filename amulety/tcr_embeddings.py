@@ -16,7 +16,6 @@ from amulety.utils import batch_loader
 
 # Optional imports for TCR models are handled within individual functions
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 

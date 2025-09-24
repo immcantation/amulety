@@ -2,29 +2,91 @@
 import logging
 import os
 import subprocess
+import sys
 import time
 import warnings
 from importlib.metadata import version
 
 import pandas as pd
 import typer
-from rich.console import Console
 from typing_extensions import Annotated
 
-from amulety.utils import (
-    check_dependencies,
-    process_airr,
-)
+from amulety.utils import ConditionalFormatter, check_dependencies, process_airr
 
 __version__ = version("amulety")
 
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 app = typer.Typer()
-stderr = Console(stderr=True)
-stdout = Console()
+
+
+@app.callback()
+def common_options(
+    log_file: Annotated[
+        str,
+        typer.Option(
+            "--log-file",
+            help="Path to log file. If not provided, logs will be printed to stdout.",
+        ),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging (DEBUG level).",
+        ),
+    ] = False,
+):
+    """
+    AMULETY: Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY
+
+    Global logging options can be specified before any command.
+    """
+    # Only setup logging if we're not just getting help
+    import sys
+
+    if "--help" not in sys.argv and "-h" not in sys.argv:
+        setup_logging(log_file=log_file, verbose=verbose)
+
+
+def setup_logging(log_file: str = None, verbose: bool = False):
+    """
+    Configure logging for the application.
+
+    Args:
+        log_file (str, optional): Path to log file. If None, logs to stdout.
+        verbose (bool): If True, enables verbose logging (DEBUG level).
+    """
+    # Clear any existing handlers
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Set log level
+    if verbose:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+
+    # Create formatter
+    formatter = ConditionalFormatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+
+    # Create handler - file or console
+    if log_file:
+        handler = logging.FileHandler(log_file, mode="a")
+        print(f"Logging to file: {log_file}")
+    else:
+        handler = logging.StreamHandler(sys.stdout)
+
+    handler.setLevel(level)
+    handler.setFormatter(formatter)
+
+    # Configure root logger
+    root_logger.setLevel(level)
+    root_logger.addHandler(handler)
+
+    return handler
 
 
 def check_igblast_available():
@@ -546,13 +608,22 @@ def embed_airr(
 @app.command()
 def translate_igblast(
     input_file_path: Annotated[
-        str, typer.Argument(..., help="The path to the input data file. The data file should be in AIRR format.")
+        str,
+        typer.Option(
+            "--input-file", "-i", help="The path to the input data file. The data file should be in AIRR format."
+        ),
     ],
-    output_dir: Annotated[str, typer.Argument(..., help="The directory where the generated embeddings will be saved.")],
-    reference_dir: Annotated[str, typer.Argument(..., help="The directory to the igblast references.")],
+    output_dir: Annotated[
+        str, typer.Option("--output-dir", "-o", help="The directory where the generated embeddings will be saved.")
+    ],
+    reference_dir: Annotated[
+        str, typer.Option("--reference-dir", "-r", help="The directory to the igblast references.")
+    ],
     keep_regions: Annotated[
         bool,
         typer.Option(
+            "--keep-regions",
+            "-k",
             help="If True, keeps the region translations in the output airr file. If False, it removes them.",
         ),
     ] = False,
@@ -560,9 +631,26 @@ def translate_igblast(
         str,
         typer.Option(
             "--sequence-col",
+            "-s",
             help="The name of the column containing the nucleotide sequences to translate.",
         ),
     ] = "sequence",
+    log_file: Annotated[
+        str,
+        typer.Option(
+            "--log-file",
+            "-l",
+            help="Path to log file. If not provided, logs will be printed to stdout.",
+        ),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging (DEBUG level).",
+        ),
+    ] = False,
 ):
     """
     Translates nucleotide sequences to amino acid sequences using IgBlast.
@@ -578,9 +666,14 @@ def translate_igblast(
     5. Removes gaps introduced by IgBlast from the sequence alignment.\n
     6. Saves the translated data into a new TSV file in the specified output directory.\n\n
     """
+
+    # Setup logging configuration (this will override global settings if provided)
+    if log_file is not None or verbose:
+        setup_logging(log_file=log_file, verbose=verbose)
+
     # Check if IgBlast is available
     if not check_igblast_available():
-        stderr.print(
+        logger.error(
             "[red]Error: IgBlast (igblastn) not found![/red]\n"
             "Please install IgBlast:\n"
             "  1. Add conda channels:\n"
@@ -612,56 +705,74 @@ def translate_igblast(
 @app.command()
 def embed(
     input_airr: Annotated[
-        str, typer.Option(default=..., help="The path to the input data file. The data file should be in AIRR format.")
+        str,
+        typer.Option(
+            "--input-airr", "-i", help="The path to the input data file. The data file should be in AIRR format."
+        ),
     ],
     chain: Annotated[
         str,
         typer.Option(
-            default=...,
+            "--chain",
+            "-c",
             help="Input sequences. For BCR: H=Heavy, L=Light, HL=Heavy-Light pairs, LH=Light-Heavy pairs, H+L=Both chains separately. For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately.",
         ),
     ],
     model: Annotated[
         str,
         typer.Option(
-            default=...,
+            "--model",
+            "-m",
             help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['tcr-bert', 'tcrt5']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
         ),
     ],
     output_file_path: Annotated[
         str,
         typer.Option(
-            default=...,
+            "--output-file-path",
+            "-o",
             help="The path where the generated embeddings will be saved. The file extension should be .csv, or .tsv. for a dataframe, .pt for a pickled torch object, or .h5ad for an anndata object.",
         ),
     ],
     cache_dir: Annotated[
         str,
-        typer.Option(help="Cache dir for storing the pre-trained model weights."),
+        typer.Option("--cache-dir", "-d", help="Cache dir for storing the pre-trained model weights."),
     ] = "/tmp/amulety",
     sequence_col: Annotated[
-        str, typer.Option("--sequence-col", help="The name of the column containing the amino acid sequences to embed.")
+        str,
+        typer.Option(
+            "--sequence-col", "-s", help="The name of the column containing the amino acid sequences to embed."
+        ),
     ] = "sequence_vdj_aa",
     cell_id_col: Annotated[
-        str, typer.Option(help="The name of the column containing the single-cell barcode.")
+        str, typer.Option("--cell-id-col", "-u", help="The name of the column containing the single-cell barcode.")
     ] = "cell_id",
-    batch_size: Annotated[int, typer.Option(help="The batch size of sequences to embed.")] = 50,
+    batch_size: Annotated[int, typer.Option("--batch-size", "-b", help="The batch size of sequences to embed.")] = 50,
     model_path: Annotated[
         str,
-        typer.Option(help="Path to custom model (HuggingFace model name or local path). Required for 'custom' model."),
+        typer.Option(
+            "--model-path",
+            "-p",
+            help="Path to custom model (HuggingFace model name or local path). Required for 'custom' model.",
+        ),
     ] = None,
     embedding_dimension: Annotated[
         int,
-        typer.Option(help="Embedding dimension for custom model. Required for 'custom' model."),
+        typer.Option(
+            "--embedding-dimension", "-e", help="Embedding dimension for custom model. Required for 'custom' model."
+        ),
     ] = None,
     max_length: Annotated[
         int,
-        typer.Option(help="Maximum sequence length for custom model. Required for 'custom' model."),
+        typer.Option(
+            "--max-length", "-x", help="Maximum sequence length for custom model. Required for 'custom' model."
+        ),
     ] = None,
     duplicate_col: Annotated[
         str,
         typer.Option(
             "--duplicate-col",
+            "-z",
             help="The name of the numeric column used to select the best chain when multiple chains of the same type exist per cell. Default: 'duplicate_count'. Custom columns must be numeric and user-defined.",
         ),
     ] = "duplicate_count",
@@ -669,14 +780,32 @@ def embed(
         str,
         typer.Option(
             "--installation-path",
-            help="Custom path to Immune2Vec installation directory. Only applies to 'immune2vec' model.",
+            "-j",
+            help="Custom path to model installation directory. Currently applies to 'immune2vec' model.",
         ),
     ] = None,
     residue_level: Annotated[
         bool,
         typer.Option(
             "--residue-level",
+            "-r",
             help="If True, returns residue-level embeddings of dimension sequence length x embedding dimension (L x D) instead of sequence-level (1 x D).",
+        ),
+    ] = False,
+    log_file: Annotated[
+        str,
+        typer.Option(
+            "--log-file",
+            "-l",
+            help="Path to log file. If not provided, logs will be printed to stdout.",
+        ),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging (DEBUG level).",
         ),
     ] = False,
 ):
@@ -687,6 +816,10 @@ def embed(
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """
     import torch
+
+    # Setup logging configuration (this will override global settings if provided)
+    if log_file is not None or verbose:
+        setup_logging(log_file=log_file, verbose=verbose)
 
     out_extension = os.path.splitext(output_file_path)[-1][1:]
 
@@ -745,40 +878,62 @@ def embed(
 
 
 @app.command()
-def check_deps():
+def check_deps(
+    log_file: Annotated[
+        str,
+        typer.Option(
+            "--log-file",
+            "-l",
+            help="Path to log file. If not provided, logs will be printed to stdout.",
+        ),
+    ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose logging (DEBUG level).",
+        ),
+    ] = False,
+):
     """Check if optional embedding dependencies and tools are installed."""
 
-    print("Checking AMULETY dependencies...\n")
+    # Setup logging configuration (this will override global settings if provided)
+    if log_file is not None or verbose:
+        setup_logging(log_file=log_file, verbose=verbose)
+
+    logger.info("Checking AMULETY dependencies...\n")
 
     # Check IgBlast availability
-    print("IgBlast (for translate-igblast command):")
+    logger.info("IgBlast (for translate-igblast command):")
     if check_igblast_available():
-        print("  IgBlast (igblastn) is available")
+        logger.info("  IgBlast (igblastn) is available")
     else:
-        print("  IgBlast (igblastn) not found")
-        print("     1. Add conda channels:")
-        print("        conda config --add channels conda-forge")
-        print("        conda config --add channels bioconda")
-        print("     2. Install IgBlast:")
-        print("        conda install -c bioconda igblast")
-        print("     3. Or use mamba: mamba install -c bioconda igblast")
-        print("     4. Or download from: https://ftp.ncbi.nlm.nih.gov/blast/executables/igblast/release/")
+        logger.info("  IgBlast (igblastn) not found")
+        logger.info("     1. Add conda channels:")
+        logger.info("        conda config --add channels conda-forge")
+        logger.info("        conda config --add channels bioconda")
+        logger.info("     2. Install IgBlast:")
+        logger.info("        conda install -c bioconda igblast")
+        logger.info("     3. Or use mamba: mamba install -c bioconda igblast")
+        logger.info("     4. Or download from: https://ftp.ncbi.nlm.nih.gov/blast/executables/igblast/release/")
 
-    print("\nEmbedding model dependencies:")
+    logger.info("\nEmbedding model dependencies:")
     missing = check_dependencies()
 
     if not missing:
-        print("  All embedding dependencies are installed!")
+        logger.info("  All embedding dependencies are installed!")
     else:
-        print(f"  {len(missing)} dependencies are missing.")
-        print("  AMULETY will raise ImportError with installation instructions when these models are used.")
-        print("\n  To install missing dependencies:")
+        logger.info(f"  {len(missing)} dependencies are missing.")
+        logger.info("  AMULETY will raise ImportError with installation instructions when these models are used.")
+        logger.info("\n  To install missing dependencies:")
         for name, install_cmd in missing:
-            print(f"    • {name}: {install_cmd}")
-        print("\n  Note: Models will provide detailed installation instructions when used.")
+            logger.info(f"    • {name}: {install_cmd}")
+        logger.info("\n  Note: Models will provide detailed installation instructions when used.")
 
 
 def main():
+    """Main entry point for the AMULETY CLI application."""
     asci_art = r"""
  █████  ███    ███ ██    ██ ██      ███████ ████████     ██    ██
 ██   ██ ████  ████ ██    ██ ██      ██         ██         ██  ██
@@ -786,9 +941,13 @@ def main():
 ██   ██ ██  ██  ██ ██    ██ ██      ██         ██           ██
 ██   ██ ██      ██  ██████  ███████ ███████    ██           ██
 """
-    stderr.print(asci_art)
-    stderr.print(
-        f"AMULETY: Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY\n version {__version__}\n"
+    # Setup default logging to console for startup messages
+    setup_logging()
+
+    logging.info(asci_art, extra={"simple": True})
+    logging.info(
+        f"AMULETY: Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY\n version {__version__}\n",
+        extra={"simple": True},
     )
 
     app()
