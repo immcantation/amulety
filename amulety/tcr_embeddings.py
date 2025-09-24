@@ -291,6 +291,12 @@ def tcrt5(
                 if not residue_level:
                     # Use mean pooling over sequence length to get fixed-size embedding
                     sequence_embedding = enc_outputs.last_hidden_state.mean(dim=1).squeeze()
+                else:
+                    sequence_embedding = enc_outputs.last_hidden_state.squeeze()
+                    if sequence_embedding.shape[0] < max_seq_length:
+                        # Pad with zeros if needed
+                        padding = torch.zeros((max_seq_length - sequence_embedding.shape[0], dim))
+                        sequence_embedding = torch.cat((sequence_embedding, padding), dim=0)
                 batch_embeddings.append(sequence_embedding.cpu())
 
         embeddings[start:end] = torch.stack(batch_embeddings)

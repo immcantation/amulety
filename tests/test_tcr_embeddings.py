@@ -45,6 +45,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 768  # TCR-BERT embedding dimension
             assert embeddings.shape[0] == 3  # 3 TCR cells with paired H and L chains
             os.remove("HL_test.pt")
+            os.remove("HL_test_metadata.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -63,6 +64,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 769  # 768 + id
             assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
             os.remove("H_test.tsv")
+            os.remove("H_test_metadata.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -81,6 +83,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 769  # 768 + id
             assert embeddings.shape[0] == 6  # 3 H chains (TRB) + 3 L chains (TRA) from 3 TCR cells
             os.remove("H_plus_L_test.tsv")
+            os.remove("H_plus_L_test_metadata.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -99,6 +102,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 64  # max sequence length (padded)
         assert embeddings.shape[2] == 768  # TCR-BERT embedding dimension
         os.remove("H_residue_test.pt")
+        os.remove("H_residue_test_metadata.tsv")
 
     # TCRT5 tests (mixed data)
     def test_tcrt5_mixed_H_embedding_tsv(self):
@@ -110,6 +114,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 257  # 256 + id
             assert embeddings.shape[0] == 3  # 3 H chains (TRB chains from 3 TCR cells)
             os.remove("tcrt5_H_test.tsv")
+            os.remove("tcrt5_H_test_metadata.tsv")
         except Exception as e:
             if any(
                 error_type in str(e)
@@ -131,6 +136,7 @@ class TestAmulety(unittest.TestCase):
             assert "TCRT5 model was trained on" in warning_msg
             assert "beta chains for TCR" in warning_msg
             os.remove("tcrt5_L_test.tsv")
+            os.remove("tcrt5_L_test_metadata.tsv")
 
     def test_tcrt5_mixed_HL_embedding_should_warn(self):
         """Test TCRT5 with HL chains should warn (only supports H chains)."""
@@ -144,6 +150,7 @@ class TestAmulety(unittest.TestCase):
             assert "TCRT5 model was trained on" in warning_msg
             assert "beta chains for TCR" in warning_msg
             os.remove("tcrt5_HL_test.tsv")
+            os.remove("tcrt5_HL_test_metadata.tsv")
 
     def test_tcrt5_mixed_H_embedding_residue_level(self):
         """Test TCRT5 mixed bulk sc H with residue-level embeddings."""
@@ -154,6 +161,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 20  # TCRT5 embedding dimension
         assert embeddings.shape[2] == 256  # max sequence length (padded)
         os.remove("tcrt5_H_residue_test.pt")
+        os.remove("tcrt5_H_residue_test_metadata.tsv")
 
     def test_custom_duplicate_column_tcr(self):
         """Test that we can pass any column name as duplicate_col for TCR data selection."""

@@ -83,7 +83,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         # Import embed function and test directly
         from amulety.amulety import embed_airr
 
-        embeddings = embed_airr(
+        embeddings, _ = embed_airr(
             airr=self.test_data,
             chain="H",
             model="immune2vec",
@@ -104,7 +104,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         """Test CLI interface with custom path for HL pairs."""
         from amulety.amulety import embed_airr
 
-        embeddings = embed_airr(
+        embeddings, _ = embed_airr(
             airr=self.test_data,
             chain="HL",
             model="immune2vec",
@@ -125,7 +125,7 @@ class TestImmune2VecIntegration(unittest.TestCase):
         """Test CLI interface with custom path for H+L separate chains."""
         from amulety.amulety import embed_airr
 
-        embeddings = embed_airr(
+        embeddings, _ = embed_airr(
             airr=self.test_data,
             chain="H+L",
             model="immune2vec",

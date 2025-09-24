@@ -54,6 +54,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
         self.assertIn("trained on individual chains only", str(cm.warning))
         os.remove("HL_test.pt")
+        os.remove("HL_test_metadata.tsv")
 
     def test_ablang_mixed_H_plus_L_embedding_tsv(self):
         """Test AbLang (mixed bulk sc H+L)."""
@@ -63,6 +64,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 769  # 768 + id column
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
+        os.remove("H_plus_L_test_metadata.tsv")
 
     def test_ablang_mixed_H_embedding_tsv(self):
         """Test AbLang H."""
@@ -72,6 +74,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 769  # 768 + id column
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
+        os.remove("H_test_metadata.tsv")
 
     def test_ablang_residue_level(self):
         """Test AbLang residue-level embeddings."""
@@ -83,6 +86,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[2] == 768  # 768
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test_residue.pt")
+        os.remove("H_test_residue_metadata.tsv")
 
     # antiberty tests
     def test_antiberty_mixed_HL_embedding(self):
@@ -94,6 +98,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 512
             assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
             os.remove("HL_test.pt")
+            os.remove("HL_test_metadata.tsv")
         self.assertIn("was trained on individual chains only", str(cm.warning))
 
     def test_antiberty_mixed_H_plus_L_embedding_tsv(self):
@@ -104,6 +109,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 513  # antiberty embedding dimension + id column
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
+        os.remove("H_plus_L_test_metadata.tsv")
 
     def test_antiberty_mixed_H_embedding_tsv(self):
         """Test antiberty (mixed bulk sc H)."""
@@ -113,6 +119,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 513  # 512 + id column
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
+        os.remove("H_test_metadata.tsv")
 
     def test_antiberty_mixed_H_embedding_h5ad(self):
         """Test antiberty (mixed bulk sc H) with h5ad output."""
@@ -135,6 +142,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[2] == 512  # antiberty embedding dimension
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test_residue.pt")
+        os.remove("H_test_residue_metadata.tsv")
 
     # antiberta2 tests
     def test_antiberta2_mixed_HL_embedding(self):
@@ -147,6 +155,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
         self.assertIn("trained on individual chains only", str(cm.warning))
         os.remove("HL_test.pt")
+        os.remove("HL_test_metadata.tsv")
 
     def test_antiberta2_mixed_H_plus_L_embedding_tsv(self):
         """Test antiberta2 (mixed bulk sc H+L)."""
@@ -156,6 +165,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1025  # 1024 + id column
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
+        os.remove("H_plus_L_test_metadata.tsv")
 
     def test_antiberta2_mixed_H_embedding_tsv(self):
         """Test antiberta2 (mixed bulk sc H)."""
@@ -165,6 +175,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1025  # 1024 + id column
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test.tsv")
+        os.remove("H_test_metadata.tsv")
 
     def test_antiberta2_residue_level(self):
         """Test antiberta2 residue-level embeddings."""
@@ -176,6 +187,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[2] == 1024  # antiberta2 embedding dimension
         assert embeddings.shape[0] == 2  # 2 H chain
         os.remove("H_test_residue.pt")
+        os.remove("H_test_residue_metadata.tsv")
 
     # balm-paired tests
     def test_balm_paired_mixed_HL_embedding(self):
@@ -186,6 +198,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1024  # balm-paired embedding dimension
         assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
         os.remove("HL_test.pt")
+        os.remove("HL_test_metadata.tsv")
 
     def test_balm_paired_mixed_H_plus_L_embedding_tsv(self):
         """Test balm-paired (mixed bulk sc H+L)."""
@@ -194,6 +207,7 @@ class TestAmulety(unittest.TestCase):
         self.assertIn("was trained on paired chains", str(cm.warning))
         self.assertIn("--chain HL", str(cm.warning))
         os.remove("H_plus_L_test.tsv")
+        os.remove("H_plus_L_test_metadata.tsv")
 
     def test_balm_paired_mixed_H_embedding_tsv(self):
         """Test balm-paired (mixed bulk sc H)."""
@@ -202,6 +216,7 @@ class TestAmulety(unittest.TestCase):
         self.assertIn("was trained on paired chains", str(cm.warning))
         self.assertIn("--chain HL", str(cm.warning))
         os.remove("H_test.tsv")
+        os.remove("H_test_metadata.tsv")
 
     def test_balm_paired_residue_level(self):
         """Test balm-paired residue-level embeddings."""
@@ -213,3 +228,4 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[2] == 1024  # balm-paired embedding dimension
         assert embeddings.shape[0] == 1  # 1 H chain
         os.remove("HL_test_residue.pt")
+        os.remove("HL_test_residue_metadata.tsv")

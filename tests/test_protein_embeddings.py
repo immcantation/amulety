@@ -59,6 +59,7 @@ class TestAmulety(unittest.TestCase):
                 assert embeddings.shape[1] == 1280  # ESM2 embedding dimension
                 assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
                 os.remove("HL_test.pt")
+                os.remove("HL_test_metadata.tsv")
                 # Check that protein language model warning was issued
                 assert len(w) > 0
                 warning_messages = [str(warning.message) for warning in w]
@@ -81,6 +82,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 1281  # 1280 + id
             assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
             os.remove("H_plus_L_test.tsv")
+            os.remove("H_plus_L_test_metadata.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
@@ -98,6 +100,7 @@ class TestAmulety(unittest.TestCase):
                 embeddings.shape[0] == 2
             )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
             os.remove("H_test.tsv")
+            os.remove("H_test_metadata.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
@@ -114,6 +117,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 512  # max sequence length (padded)
             assert embeddings.shape[2] == 1280  # ESM2 embedding dimension
             os.remove("H_residue_test.pt")
+            os.remove("H_residue_test_metadata.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"ESM2 model loading failed (corrupted cache): {e}")
@@ -134,6 +138,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 1024  # ProtT5 embedding dimension
             assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
             os.remove("HL_test.pt")
+            os.remove("HL_test_metadata.tsv")
             # Check that protein language model warning was issued
             assert len(w) > 0
             warning_messages = [str(warning.message) for warning in w]
@@ -150,6 +155,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1025  # 1024 + id
         assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
         os.remove("H_plus_L_test.tsv")
+        os.remove("H_plus_L_test_metadata.tsv")
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_prott5_mixed_H_embedding_tsv(self):
@@ -162,6 +168,7 @@ class TestAmulety(unittest.TestCase):
             embeddings.shape[0] == 2
         )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
         os.remove("H_test.tsv")
+        os.remove("H_test_metadata.tsv")
 
     @unittest.skipIf(SKIP_LARGE_MODELS, "Skipping ProtT5 test on GitHub Actions due to disk space limitations")
     def test_prott5_mixed_H_embedding_residue_level(self):
@@ -173,6 +180,7 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[1] == 1024  # max sequence length (padded)
         assert embeddings.shape[2] == 1024  # ProtT5 embedding dimension
         os.remove("H_residue_test.pt")
+        os.remove("H_residue_test_metadata.tsv")
 
     # custom model tests
     def test_custom_mixed_HL_embedding(self):
@@ -196,6 +204,7 @@ class TestAmulety(unittest.TestCase):
                 assert embeddings.shape[1] == 1280  # Custom ESM2 embedding dimension
                 assert embeddings.shape[0] == 1  # Just one cell with paired H and L chains
                 os.remove("HL_test.pt")
+                os.remove("HL_test_metadata.tsv")
                 # Check that protein language model warning was issued
                 assert len(w) > 0
                 warning_messages = [str(warning.message) for warning in w]
@@ -223,6 +232,7 @@ class TestAmulety(unittest.TestCase):
             assert embeddings.shape[1] == 1281  # 1280 + id
             assert embeddings.shape[0] == 5  # 2 H chain + 3 L chain
             os.remove("H_plus_L_test.tsv")
+            os.remove("H_plus_L_test_metadata.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"Custom model loading failed (corrupted cache): {e}")
@@ -248,6 +258,7 @@ class TestAmulety(unittest.TestCase):
                 embeddings.shape[0] == 2
             )  # 2 H chain + 2 L chain (only the most abundant L chain per cell kept for single-cell data)
             os.remove("H_test.tsv")
+            os.remove("H_test_metadata.tsv")
         except Exception as e:
             if "SafetensorError" in str(e) or "InvalidHeaderDeserialization" in str(e):
                 self.skipTest(f"Custom model loading failed (corrupted cache): {e}")
