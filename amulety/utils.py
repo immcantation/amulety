@@ -1,6 +1,5 @@
 """Main module."""
 import logging
-import subprocess
 import warnings
 from typing import Iterable
 
@@ -168,7 +167,7 @@ def process_airr(
     if gamma_delta_present and receptor_type.upper() in ["TCR", "ALL"]:
         gamma_delta_chains = present_loci & {"TRG", "TRD"}
         logger.warning(
-            "Gamma/Delta TCR chains (%s) detected. Note: TCR-specific models (TCR-BERT, Trex, TCREMP) "
+            "Gamma/Delta TCR chains (%s) detected. Note: TCR-specific models (TCR-BERT) "
             "are primarily trained on Alpha/Beta TCRs. For Gamma/Delta TCRs, consider using general protein "
             "models (ESM2, ProtT5) which support all TCR types.",
             list(gamma_delta_chains),
@@ -218,7 +217,6 @@ def process_airr(
         if is_bulk:
             data[cell_id_col] = pd.NA
 
-        # For models like TCREMP that need H+L in tab_locus_gene format
         if mode == "tab_locus_gene":
             data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode=mode)
         else:
@@ -238,7 +236,6 @@ def process_airr(
             data[cell_id_col] = pd.NA
 
         elif is_single_cell:
-            # For models like TCREMP that need H+L in tab_locus_gene format
             if mode == "concat":
                 data = process_h_plus_l(data, sequence_col, cell_id_col, duplicate_col, mode="tab")
             else:
@@ -330,7 +327,6 @@ def concatenate_heavylight(
     elif mode == "tab":
         return data_chain
     elif mode == "tab_locus_gene":
-        # Create locus_vgene and locus_jgene columns for TCREMP format
         data_full = data.copy()  # Work with full data before pivot
 
         # Extract V and J gene information
@@ -359,7 +355,6 @@ def concatenate_heavylight(
                 j_col = f"{locus}J"
                 result[j_col] = "Unknown"
 
-        # Remove columns ending with 'D' (D gene related) as TCREMP doesn't need them
         # d_columns = [col for col in result.columns if col.endswith("D")]
         # if d_columns:
         #     result = result.drop(columns=d_columns)
@@ -429,7 +424,6 @@ def process_h_plus_l(
         return data
 
     elif mode == "tab_locus_gene":
-        # Extended format with V/J gene information for models like TCREMP
         # This handles H+L, H, or L chains separately with gene information
 
         # Create locus_vgene and locus_jgene columns
@@ -497,25 +491,6 @@ def check_dependencies():
         missing_deps.append(("AbLang", "pip install ablang"))
 
     # Check TCR models
-    try:
-        result = subprocess.run(["tcremp-run", "-h"], capture_output=True, text=True, timeout=10)
-        if result.returncode == 0:
-            available_models.append("TCREMP")
-        else:
-            missing_deps.append(
-                (
-                    "TCREMP",
-                    "git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install . (requires Python 3.11+)",
-                )
-            )
-    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
-        missing_deps.append(
-            (
-                "TCREMP",
-                "git clone https://github.com/antigenomics/tcremp.git && cd tcremp && pip install . (requires Python 3.11+)",
-            )
-        )
-
     try:
         from transformers import BertModel, BertTokenizer  # noqa: F401
 
