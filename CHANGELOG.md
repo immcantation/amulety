@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0dev
+## 2.0 - Brown Kiwi
 
 ### Added
 
@@ -13,7 +13,7 @@
 
 ### Fixed
 
-- Refactored code to allow scalability to TCR embeddings.
+- Refactored code to allow extending to TCR embeddings.
 
 ## 1.1 - Blue Tui
 
