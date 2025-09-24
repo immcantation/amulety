@@ -14,6 +14,7 @@
 ### Fixed
 
 - Refactored code to allow extending to TCR embeddings.
+- Used lazy imports to decrease the response time to load help message.
 
 ## 1.1 - Blue Tui
 

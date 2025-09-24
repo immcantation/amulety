@@ -6,16 +6,11 @@ import time
 import warnings
 from importlib.metadata import version
 
-import anndata as ad
 import pandas as pd
-import torch
 import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
-from amulety.protein_embeddings import custommodel, esm2, prott5
-from amulety.tcr_embeddings import tcr_bert, tcrt5
 from amulety.utils import (
     check_dependencies,
     process_airr,
@@ -168,6 +163,10 @@ def embed_airr(
     installation_path: str = None,
     residue_level: bool = False,
 ):
+    from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
+    from amulety.protein_embeddings import custommodel, esm2, prott5
+    from amulety.tcr_embeddings import tcr_bert, tcrt5
+
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
 
@@ -217,6 +216,8 @@ def embed_airr(
 
 
     """
+    import anndata as ad
+
     # Check valid chain - unified interface for both BCR and TCR
     valid_chains = ["H", "L", "HL", "LH", "H+L"]
     if chain not in valid_chains:
@@ -685,6 +686,8 @@ def embed(
     Example usage:\n
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """
+    import torch
+
     out_extension = os.path.splitext(output_file_path)[-1][1:]
 
     if out_extension not in ["tsv", "csv", "pt", "h5ad"]:
