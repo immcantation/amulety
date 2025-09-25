@@ -377,7 +377,7 @@ def immune2vec(
         min_count: Minimum count for words to be included (default: 1)
         workers: Number of worker threads (default: 3)
         random_seed: Random seed for reproducibility (default: 42)
-        installation_path: Custom path to Immune2Vec installation directory (optional)
+        installation_path: Custom path to Immune2Vec installation directory (required if not in PYTHONPATH)
 
     Returns:
         torch.Tensor: Embeddings of shape (n_sequences, n_dim)
@@ -406,6 +406,8 @@ def immune2vec(
         raise ImportError(detailed_instructions) from gensim_error
 
     # If user provided a specific path, validate it first
+    if "IMMUNE2VEC_PATH" in os.environ and not installation_path:
+        installation_path = os.environ["IMMUNE2VEC_PATH"]
     if installation_path:
         if not os.path.exists(installation_path) or not os.path.isdir(installation_path):
             raise ImportError(

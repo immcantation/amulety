@@ -746,7 +746,7 @@ def embed(
     cache_dir: Annotated[
         str,
         typer.Option("--cache-dir", "-d", help="Cache dir for storing the pre-trained model weights."),
-    ] = "/tmp/amulety",
+    ] = "/tmp/amulety-cache",
     sequence_col: Annotated[
         str,
         typer.Option(
@@ -825,6 +825,14 @@ def embed(
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
     """
     import torch
+
+    # Set up environment variable for cache dir, this one precedes the function parameter
+    if os.environ.get("AMULETY_CACHE"):
+        cache_dir = os.environ["AMULETY_CACHE"]
+
+    if cache_dir is not None:
+        # os.environ["TRANSFORMERS_CACHE"] = cache_dir
+        os.environ["HF_HOME"] = cache_dir
 
     # Setup logging configuration (this will override global settings if provided)
     if log_file is not None or verbose:
