@@ -1,9 +1,0 @@
-name: amulety
-channels:
-  - defaults
-  - conda-forge
-  - bioconda
-dependencies:
-  - python=3.8 # Ensure compatibility with gensim 3.8.3
-  - igblast=1.22.0
-  - pip

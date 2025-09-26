@@ -3,7 +3,8 @@ LABEL authors="Gisela Gabernet" \
     description="Docker image containing all requirements for AMULETY"
 
 COPY environment.yml /
-RUN micromamba create -f /environment.yml && micromamba clean -a
+RUN micromamba create -n amulety -c conda-forge -c bioconda python=3.8 igblast=1.22.0 pip
+RUN micromamba clean -a
 ENV PATH /opt/conda/envs/amulety/bin:$PATH
 
 RUN igblastn -version
