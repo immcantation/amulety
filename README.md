@@ -12,6 +12,9 @@ analysis framework for Adaptive Immune Receptor Repertoire sequencing
 
 ## Quick start
 
+The full AMULETY usage documentation can be found on the
+[readthedocs page](https://amulety.readthedocs.io/).
+
 You can install AMULETY using conda (it requires python 3.8 or higher):
 
 ```bash
@@ -34,9 +37,6 @@ cd amulety
 pip install -e .
 ```
 
-The full usage documentation can also be found on the readthedocs
-[usage page](https://amulety.readthedocs.io/en/latest/usage.html).
-
 To print the usage help for the AMULETY package type:
 
 ```bash
@@ -45,7 +45,7 @@ amulety --help
 
 ## Using the docker container
 
-The docker container is available under `immcantation/amulety`. Please refer to the [docker documentation]() to install docker first on your system.
+The docker container is available under `immcantation/amulety`. Please refer to the [docker documentation](https://docs.docker.com/engine/install/) to install docker first on your system.
 
 To use amulety from within the container run:
 

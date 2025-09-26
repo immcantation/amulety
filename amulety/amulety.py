@@ -106,6 +106,18 @@ def translate_airr(
 
     Requires IgBlast to be installed and available in PATH.
     Install with: conda install -c bioconda igblast
+
+    Parameters:
+        airr (pd.DataFrame):
+            Input AIRR rearrangement table as a pandas DataFrame.
+        tmpdir (str):
+            Temporary directory for intermediate files.
+        reference_dir (str):
+            The directory to the igblast references.
+        keep_regions (bool):
+            If True, keeps the region translations in the output airr file. If False, it removes them.
+        sequence_col (str):
+            The name of the column containing the nucleotide sequences to translate.
     """
     data = airr.copy()
 
@@ -232,10 +244,6 @@ def embed_airr(
     installation_path: str = None,
     residue_level: bool = False,
 ):
-    from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
-    from amulety.protein_embeddings import custommodel, esm2, prott5
-    from amulety.tcr_embeddings import tcr_bert, tcrt5
-
     """
     Embeds sequences from an AIRR DataFrame using the specified model.
 
@@ -286,6 +294,10 @@ def embed_airr(
 
     """
     import anndata as ad
+
+    from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
+    from amulety.protein_embeddings import custommodel, esm2, prott5
+    from amulety.tcr_embeddings import tcr_bert, tcrt5
 
     # Check valid chain - unified interface for both BCR and TCR
     valid_chains = ["H", "L", "HL", "LH", "H+L"]
@@ -820,6 +832,7 @@ def embed(
 ):
     """
     Embeds sequences from an AIRR rearrangement file using the specified model. It returns the
+    embeddings in the specified output format along with the filtered input AIRR data.
 
     Example usage:\n
         amulety embed --chain HL --model antiberta2 --output-file-path out.pt airr_rearrangement.tsv
