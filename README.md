@@ -43,6 +43,28 @@ To print the usage help for the AMULETY package type:
 amulety --help
 ```
 
+## Using the docker container
+
+The docker container is available under `immcantation/amulety`. Please refer to the [docker documentation]() to install docker first on your system.
+
+To use amulety from within the container run:
+
+```
+docker run -itv `pwd`:`pwd` -w `pwd` -u $(id -u):$(id -g) immcantation/amulety amulety embed --input-airr tests/AIRR_rearrangement_translated_mixed.tsv --chain H --model immune2vec --output-file-path test_fixed.tsv --cache-dir /tmp/cache
+```
+
+You can also create an alias so that you don't need to type all of this each time you call amulety:
+
+```
+alias amulety="docker run -itv `pwd`:`pwd` -w `pwd` -u $(id -u):$(id -g) immcantation/amulety amulety"
+```
+
+Once applied you can just use the amulety command instead:
+
+```
+amulety embed --input-airr AIRR_translated.tsv --chain H --model antiberta2 --output-file-path antiberta2_embeddings.tsv
+```
+
 ## Contact
 
 If you need help or have any questions, please contact the

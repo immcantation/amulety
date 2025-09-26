@@ -5,8 +5,15 @@ from typing import Iterable
 
 import pandas as pd
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+
+class ConditionalFormatter(logging.Formatter):
+    def format(self, record):
+        if hasattr(record, "simple") and record.simple:
+            return record.getMessage()
+        else:
+            return logging.Formatter.format(self, record)
 
 
 def batch_loader(data: Iterable, batch_size: int):

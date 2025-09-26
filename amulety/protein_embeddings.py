@@ -15,7 +15,6 @@ from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 from amulety.utils import batch_loader
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Immune2Vec installation instructions (used in multiple places)
@@ -70,7 +69,7 @@ def custommodel(
 
     i = 1
     for start, end, batch in batch_loader(sequences, batch_size):
-        print(f"Batch {i}/{n_batches}\n")
+        logger.info(f"Batch {i}/{n_batches}\n")
         x = torch.tensor(
             [
                 tokenizer.encode(
@@ -378,7 +377,7 @@ def immune2vec(
         min_count: Minimum count for words to be included (default: 1)
         workers: Number of worker threads (default: 3)
         random_seed: Random seed for reproducibility (default: 42)
-        installation_path: Custom path to Immune2Vec installation directory (optional)
+        installation_path: Custom path to Immune2Vec installation directory (required if not in PYTHONPATH)
 
     Returns:
         torch.Tensor: Embeddings of shape (n_sequences, n_dim)
@@ -407,6 +406,8 @@ def immune2vec(
         raise ImportError(detailed_instructions) from gensim_error
 
     # If user provided a specific path, validate it first
+    if "IMMUNE2VEC_PATH" in os.environ and not installation_path:
+        installation_path = os.environ["IMMUNE2VEC_PATH"]
     if installation_path:
         if not os.path.exists(installation_path) or not os.path.isdir(installation_path):
             raise ImportError(
