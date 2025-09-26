@@ -2,6 +2,67 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "amulety"
+version = "2.0"
+description = "Python package to create embeddings of BCR amino acid sequences."
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.8, <4"
+license = {text = "MIT"}
+keywords = [
+    "immcantation",
+    "immunoinformatics",
+    "bioinformatics",
+    "embedding",
+    "antibody",
+    "BCR",
+    "Machine Learning",
+    "biology",
+    "NGS",
+    "next generation sequencing"
+]
+authors = [
+    {name = "Mamie Wang", email = "mamie.wang@yale.edu"},
+    {name = "Wengyao Jiang", email = "wengyao.jiang@yale.edu"},
+    {name = "Steven Kleinstein", email = "steven.kleinstein@yale.edu"},
+    {name = "Gisela Gabernet", email = "gisela.gabernet@yale.edu"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "torch",
+    "transformers",
+    "typer",
+    "antiberty",
+    "ablang",
+    "rjieba",
+    "sentencepiece",
+    "anndata"
+]
+
+[project.urls]
+Homepage = "https://github.com/immcantation/amulety"
+Repository = "https://github.com/immcantation/amulety"
+Issues = "https://github.com/immcantation/amulety/issues"
+
+[project.scripts]
+amulety = "amulety.amulety:main"
+
+[tool.setuptools]
+packages = ["amulety"]
 
 [tool.pytest.ini_options]
 markers = ["datafiles: load datafiles"]
@@ -17,7 +78,11 @@ norecursedirs = [
     "src",
     "docs",
 ]
+python_files = ["test_*.py"]
 
+[tool.mypy.overrides]
+warn_unused_configs = true
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120

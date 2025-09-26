@@ -1,0 +1,246 @@
+name: Test Immune2Vec
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  # Allow manual triggering
+  workflow_dispatch:
+
+# Cancel if a newer run is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-immune2vec:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8"] # Use Python 3.8 for optimal gensim 3.8.3 compatibility
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: immune2vec-test
+
+      - name: Install base dependencies
+        shell: bash -el {0}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade setuptools wheel
+
+          # Install basic dependencies first (excluding gensim to avoid conflicts)
+          pip install numpy pandas torch transformers typer antiberty ablang rjieba
+          pip install pre-commit protobuf sentencepiece pytest-workflow pytest
+
+          # Install AMULETY in development mode
+          pip install -e . --verbose
+
+      - name: Install Immune2Vec dependencies
+        shell: bash -el {0}
+        run: |
+          echo "Installing Immune2Vec prerequisites..."
+          echo "Python version: $(python --version)"
+          echo "Pip version: $(pip --version)"
+
+          echo "Installing gensim version 3.8.3 (as per Prerequisites)..."
+          # Use the exact command from Prerequisites
+          python3 -m pip install gensim==3.8.3
+
+          echo "Installing ray package..."
+          pip3 install ray
+
+          echo "Verifying installations..."
+          python -c "
+          import gensim
+          print(f'gensim version: {gensim.__version__}')
+          assert gensim.__version__ == '3.8.3', f'Expected 3.8.3, got {gensim.__version__}'
+          "
+          python -c "import ray; print('ray installed successfully')"
+
+          echo "Cloning Immune2Vec repository..."
+          git clone https://bitbucket.org/yaarilab/immune2vec_model.git
+
+          echo "Verifying Immune2Vec installation..."
+          ls -la immune2vec_model/
+          ls -la immune2vec_model/embedding/
+
+          echo "Testing Immune2Vec import..."
+          cd immune2vec_model
+
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          try:
+              from embedding import sequence_modeling
+              print('Immune2Vec successfully imported')
+
+              # Test basic functionality
+              import pandas as pd
+              sequences = pd.Series(['EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYAMHWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKVSYLSTASSLDYWGQGTLVTVSS'])
+              model = sequence_modeling.ProtVec(
+                  data=sequences.tolist(),
+                  n=3,
+                  size=50,
+                  out='test_setup',
+                  sg=1,
+                  window=25,
+                  min_count=1,
+                  workers=1,
+                  sample_fraction=1.0,
+                  random_seed=42
+              )
+              result = model.to_vecs(sequences.iloc[0])
+              print(f'Basic functionality test passed, embedding shape: {result.shape}')
+
+          except Exception as e:
+              print(f'Failed to import or test Immune2Vec: {e}')
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          "
+
+          # Clean up temporary files
+          rm -f test_setup_corpus.txt
+          cd ..
+
+      - name: Debug Immune2Vec setup
+        shell: bash -el {0}
+        run: |
+          echo "=== Immune2Vec Setup Debug ==="
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "Current directory: $(pwd)"
+          echo "Immune2Vec directory contents:"
+          ls -la immune2vec_model/ || echo "immune2vec_model not found"
+          echo "Embedding directory contents:"
+          ls -la immune2vec_model/embedding/ || echo "embedding directory not found"
+
+      - name: Prepare test environment
+        shell: bash -el {0}
+        run: |
+          echo "Preparing test environment for Immune2Vec..."
+
+          # Create junit directory
+          mkdir -p junit
+
+      - name: Run Immune2Vec specific tests
+        shell: bash -el {0}
+        run: |
+          echo "Running Immune2Vec tests with custom path..."
+
+          # Set the immune2vec path for testing
+          export INSTALLATION_PATH="${GITHUB_WORKSPACE}/immune2vec_model"
+          echo "INSTALLATION_PATH set to: $INSTALLATION_PATH"
+          echo "Current working directory: $(pwd)"
+          echo "Checking if path exists: $(ls -la $INSTALLATION_PATH 2>/dev/null || echo 'Path not found')"
+
+          # Run the dedicated integration tests from test_immune2vec_integration.py
+          pytest -v tests/test_immune2vec_integration.py \
+                    --junitxml=junit/test-results-immune2vec-integration-${{ matrix.python-version }}.xml
+
+      - name: Test Immune2Vec CLI with custom path
+        shell: bash -el {0}
+        run: |
+          echo "Testing Immune2Vec CLI with custom path parameter..."
+
+          # Create test data
+          cat > test_immune2vec_data.tsv << 'EOF'
+          sequence_id	cell_id	sequence_vdj_aa	chain	duplicate_count	v_call	locus
+          seq1	cell1	EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYAMHWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKVSYLSTASSLDYWGQGTLVTVSS	H	1	IGHV1-69*01	IGH
+          seq2	cell2	DIQMTQSPSSLSASVGDRVTITCRASQSISSWLAWYQQKPGKAPKLLIYKASSLESGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQYNSYPLTFGGGTKVEIK	L	1	IGKV1-39*01	IGK
+          EOF
+
+          # Test CLI with custom immune2vec path
+          python -m amulety embed \
+            --input-airr test_immune2vec_data.tsv \
+            --chain H \
+            --model immune2vec \
+            --output-file-path test_immune2vec_output.pt \
+            --installation-path "${GITHUB_WORKSPACE}/immune2vec_model" \
+            --batch-size 2
+          # Verify output
+          python -c "
+          import torch
+          embeddings = torch.load('test_immune2vec_output.pt')
+          print(f'CLI test successful! Generated embeddings with shape: {embeddings.shape}')
+          assert embeddings.shape[0] == 1, f'Expected 1 sequence, got {embeddings.shape[0]}'
+          assert embeddings.shape[1] == 100, f'Expected 100 dimensions, got {embeddings.shape[1]}'
+          print('All CLI tests passed!')
+          "
+
+          # Clean up test files
+          rm -f test_immune2vec_data.tsv test_immune2vec_output.pt
+          # Clean up any corpus files generated during testing
+          rm -f *_corpus.txt
+
+      - name: Test programmatic interface with custom path
+        shell: bash -el {0}
+        run: |
+          echo "Testing programmatic interface with custom path..."
+
+          python -c "
+          import pandas as pd
+          from amulety.protein_embeddings import immune2vec
+          import os
+
+          # Test sequences
+          sequences = pd.Series([
+              'EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYAMHWVRQAPGKGLEWVSAISGSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAKVSYLSTASSLDYWGQGTLVTVSS',
+              'DIQMTQSPSSLSASVGDRVTITCRASQSISSWLAWYQQKPGKAPKLLIYKASSLESGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQYNSYPLTFGGGTKVEIK'
+          ])
+
+          print('Testing immune2vec with custom path parameter...')
+
+          # Test with custom path
+          result = immune2vec(
+              sequences=sequences,
+              cache_dir='/tmp/test_immune2vec',
+              batch_size=2,
+              n_dim=50,  # Smaller for faster testing
+              installation_path=os.environ.get('INSTALLATION_PATH', os.path.join(os.getcwd(), 'immune2vec_model'))
+          )
+
+          print(f'Programmatic test successful! Generated embeddings with shape: {result.shape}')
+          assert result.shape[0] == 2, f'Expected 2 sequences, got {result.shape[0]}'
+          assert result.shape[1] == 50, f'Expected 50 dimensions, got {result.shape[1]}'
+          print('All programmatic tests passed!')
+          "
+
+      - name: Clean up temporary files
+        shell: bash -el {0}
+        run: |
+          echo "Cleaning up temporary files..."
+          # Remove any corpus files that might have been generated
+          find . -name "*_corpus.txt" -type f -delete || true
+          find . -name "*.model" -type f -delete || true
+          find /tmp -name "*immune2vec*" -type d -exec rm -rf {} + 2>/dev/null || true
+          echo "Cleanup completed"
+        if: ${{ always() }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: immune2vec-test-results-${{ matrix.python-version }}
+          path: junit/test-results-immune2vec-*-${{ matrix.python-version }}.xml
+        if: ${{ always() }}
+
+      - name: Upload Immune2Vec installation logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: immune2vec-installation-logs-${{ matrix.python-version }}
+          path: |
+            immune2vec_model/
+            !immune2vec_model/.git/
+        if: ${{ always() }}

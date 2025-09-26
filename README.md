@@ -1,44 +1,84 @@
 # AMULETY
 
-Amulety stands for Adaptive imMUne receptor Language model Embedding Tool.
-It is a Python command line tool to embed B-cell receptor (antibody) and T-cell Receptor amino acid sequences using pre-trained protein or antibody language models. So far only BCR embeddings are supported but TCR support is planned for future releases. The package also has functionality to translate nucleotide sequences to amino acids with IgBlast.
+AMULETY stands for Adaptive imMUne receptor Language model Embedding tool for TCR and antibodY.
+AMULETY is a Python command line tool to embed B-cell receptor (BCR), also termed antibodies in
+their secreted form, and T-cell receptor (TCR) amino acid sequences using pre-trained general
+protein or specific immune receptor language models. The package supports both BCR and TCR embeddings.
+The package also has functionality to translate nucleotide sequences to amino acids with IgBlast.
 
-Here is the list of currently supported embeddings:
+AMULETY is part of the [Immcantation](http://immcantation.readthedocs.io)
+analysis framework for Adaptive Immune Receptor Repertoire sequencing
+(AIRR-seq) data analysis.
 
-| Model                 | Command     | Embedding Dimension | Reference                                                                        |
-| --------------------- | ----------- | ------------------- | -------------------------------------------------------------------------------- |
-| AntiBERTa2            | antiberta2  | 1024                | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
-| AntiBERTy             | antiberty   | 512                 | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
-| BALM-paired           | balm_paired | 1024                | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
-| ESM2 (650M parameter) | esm2        | 1280                | [doi:10.1126/science.ade2574](https://doi.org/10.1126/science.ade2574)           |
-| User-specified model  | custommodel | Configurable        |                                                                                  |
+## Quick start
 
-## Installation
+The full AMULETY usage documentation can be found on the
+[readthedocs page](https://amulety.readthedocs.io/).
 
-You can install AMULETY using pip:
+You can install AMULETY using conda (it requires python 3.8 or higher):
+
+```bash
+conda install amulety
+```
+
+The conda installation will also install the necessary IgBlast dependency.
+You can also install AMULETY via pip, this will though require previously
+installing IgBlast if translations are desired.
 
 ```bash
 pip install amulety
 ```
 
-## Usage
+Or install from source:
 
-To print the usage help for the AMULETY package then type:
+```bash
+git clone https://github.com/immcantation/amulety.git
+cd amulety
+pip install -e .
+```
+
+To print the usage help for the AMULETY package type:
 
 ```bash
 amulety --help
 ```
 
-The full usage documentation can also be found on the readthedocs [usage page](https://amulety.readthedocs.io/en/latest/usage.html).
+## Using the docker container
+
+The docker container is available under `immcantation/amulety`. Please refer to the [docker documentation](https://docs.docker.com/engine/install/) to install docker first on your system.
+
+To use amulety from within the container run:
+
+```
+docker run -itv `pwd`:`pwd` -w `pwd` -u $(id -u):$(id -g) immcantation/amulety amulety embed --input-airr tests/AIRR_rearrangement_translated_mixed.tsv --chain H --model immune2vec --output-file-path test_fixed.tsv --cache-dir /tmp/cache
+```
+
+You can also create an alias so that you don't need to type all of this each time you call amulety:
+
+```
+alias amulety="docker run -itv `pwd`:`pwd` -w `pwd` -u $(id -u):$(id -g) immcantation/amulety amulety"
+```
+
+Once applied you can just use the amulety command instead:
+
+```
+amulety embed --input-airr AIRR_translated.tsv --chain H --model antiberta2 --output-file-path antiberta2_embeddings.tsv
+```
 
 ## Contact
 
-For help and questions please contact the [Immcantation Group](mailto:immcantation@googlegroups.com).
+If you need help or have any questions, please contact the
+[Immcantation Group](mailto:immcantation@googlegroups.com).
+
+If you have discovered a bug or have a feature request, you can open an issue using the [issue tracker](https://github.com/immcantation/amulety/issues).
+
+To receive alerts about Immcantation releases, news, events, and tutorials, join the [Immcantation News](https://groups.google.com/g/immcantation-news) Google Group. [Membership settings](https://groups.google.com/g/immcantation-news/membership) can be adjusted to change the frequency of email updates.
 
 ## Authors
 
 [Mamie Wang](https://github.com/mamie) (aut,cre)
 [Gisela Gabernet](https://github.com/ggabernet) (aut,cre)
+[Wengyao Jiang](https://github.com/wenggyaoo) (aut,cre)
 [Steven Kleinstein](mailto:steven.kleinstein@yale.edu) (aut,cph)
 
 ## Citing
@@ -57,4 +97,4 @@ To cite the paper comparing the embedding methods on BCR sequences, please cite:
 
 ## License
 
-This project is licensed under the terms of the GPL v3 license. See the LICENSE file for details.
+This project is licensed under the terms of the GPL v3 license.
