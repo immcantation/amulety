@@ -105,4 +105,4 @@ jobs:
           done
 
           unzip igblast_base.zip
-          amulety translate-igblast tests/AIRR_rearrangement_single-cell_testtranslation.tsv . igblast_base
+          amulety translate-igblast -i tests/AIRR_rearrangement_single-cell_testtranslation.tsv -o . -r igblast_base
