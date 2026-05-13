@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.3 - Green Kakapo
+
+### Fixed
+
+- Create output directory in the translate-igblast command if it doesn't exist.
+- Allow different prefixes and organism names for igblast germline reference files.
+
 ## 2.1.2 - Green Weka hotfix II
 
 ### Fixed
