@@ -44,7 +44,8 @@ dependencies = [
     "numpy",
     "pandas",
     "torch",
-    "transformers",
+    "torchvision",
+    "transformers<4.52", #Antiberty fails on transformers 4.52+ due to a breaking change in the API
     "typer",
     "antiberty",
     # ablang depends on numba which currently supports Python <3.14.
