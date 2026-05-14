@@ -6,7 +6,7 @@
 
 - Create output directory in the translate-igblast command if it doesn't exist.
 - Allow different prefixes and organism names for igblast germline reference files.
-- Pinned version of transformers to avoid incompatibility with Amulety.
+- Pinned version of transformers to avoid incompatibility with Antiberty.
 
 ## 2.1.2 - Green Weka hotfix II
 
