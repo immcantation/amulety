@@ -17,6 +17,6 @@ typer
 antiberty
 ablang
 rjieba
-protobuf
 sentencepiece
+protobuf
 anndata

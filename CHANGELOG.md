@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- Upgraded `transformers` dependency from `<4.52` to `>=5.3.0` to address a critical
+  remote code execution vulnerability (Dependabot alert #7, CVE-2026-4372) affecting
+  all versions of the HuggingFace transformers library prior to 5.3.0.
+
+### Changed
+
+- Dropped Python 3.8 and 3.9 support (`requires-python` bumped to `>=3.10`). Both versions are past end-of-life (Oct 2024 and Oct 2025 respectively) and `transformers>=5.3.0` itself requires Python 3.10+.
+
+### Fixed
+
+- Added a compatibility patch for AntiBERTy (`antiberty` ≤ 0.1.3, last released
+  July 2023) to work with `transformers` ≥ 4.52.
+  - `transformers` ≥ 4.52: replaces the deprecated `init_weights()` call with
+    `post_init()` in `AntiBERTy.__init__`, fixing
+    `AttributeError: 'AntiBERTy' object has no attribute 'all_tied_weights_keys'`
+    (see https://github.com/jeffreyruffolo/AntiBERTy/issues/4).
+  - `transformers` ≥ 4.36: forces `attn_implementation="eager"` when loading the
+    AntiBERTy model, preserving numerical consistency with the original embeddings
+    (SDPA, the new default, produces different values).
+
 ## 2.1.2 - Green Weka hotfix II
 
 ### Fixed

@@ -1,11 +1,8 @@
 name: Test Immune2Vec
 
 on:
-  push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main, dev]
-  # Allow manual triggering
+  # Immune2Vec requires gensim==3.8.3 which only supports Python 3.8 (EOL).
+  # Automatic CI runs are disabled; trigger manually if needed.
   workflow_dispatch:
 
 # Cancel if a newer run is started
