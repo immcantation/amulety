@@ -21,6 +21,72 @@ from amulety.utils import batch_loader, insert_space_every_other_except_cls
 logger = logging.getLogger(__name__)
 
 
+def _patch_antiberty_for_new_transformers():
+    """
+    Monkey-patch AntiBERTy for compatibility with newer transformers versions.
+
+    Two version-gated fixes are applied:
+
+    Fix 1 (transformers >= 4.52): Replace self.init_weights() with self.post_init()
+    in AntiBERTy.__init__.  Without this, newer transformers raises:
+        AttributeError: 'AntiBERTy' object has no attribute 'all_tied_weights_keys'
+    See: https://github.com/jeffreyruffolo/AntiBERTy/issues/4
+
+    Fix 2 (transformers >= 4.36): Force attn_implementation="eager" in
+    AntiBERTyRunner.  SDPA became the default attention backend for BERT in
+    4.36 and produces numerically different embeddings; eager must be
+    requested explicitly to preserve the original outputs.
+    """
+    import transformers
+    from packaging.version import Version
+
+    tv = Version(transformers.__version__)
+    needs_post_init_fix = tv >= Version("4.52")
+    needs_eager_fix = tv >= Version("4.36")
+
+    if not needs_post_init_fix and not needs_eager_fix:
+        return  # Nothing to patch for this transformers version
+
+    try:
+        from antiberty.AntiBERTyRunner import CHECKPOINT_PATH, VOCAB_FILE, AntiBERTyRunner
+        from antiberty.model.AntiBERTy import AntiBERTy, AntiBERTyHeads
+    except ImportError:
+        return  # antiberty not installed; the caller will raise a clearer error
+
+    if getattr(AntiBERTy, "_amulety_patched", False):
+        return  # Already patched in this process
+
+    if needs_post_init_fix:
+        # Fix 1: Replace init_weights() with post_init() in AntiBERTy.__init__.
+        def _patched_antiberty_init(self, config):
+            super(AntiBERTy, self).__init__(config)
+            from transformers.models.bert.modeling_bert import BertModel
+
+            self.bert = BertModel(config)
+            self.cls = AntiBERTyHeads(config)
+            self.num_species = 6
+            self.num_chains = 2
+            self.num_grafts = 2
+            self.post_init()
+
+        AntiBERTy.__init__ = _patched_antiberty_init
+
+    AntiBERTy._amulety_patched = True
+
+    if needs_eager_fix:
+        # Fix 2: Force eager attention in AntiBERTyRunner.__init__.
+        def _patched_runner_init(self):
+            import torch as _torch
+            import transformers as _transformers
+
+            self.device = _torch.device("cuda" if _torch.cuda.is_available() else "cpu")
+            self.model = AntiBERTy.from_pretrained(CHECKPOINT_PATH, attn_implementation="eager").to(self.device)
+            self.model.eval()
+            self.tokenizer = _transformers.BertTokenizer(vocab_file=VOCAB_FILE, do_lower_case=False)
+
+        AntiBERTyRunner.__init__ = _patched_runner_init
+
+
 def antiberty(
     sequences,
     cache_dir: Optional[str] = None,
@@ -35,6 +101,8 @@ def antiberty(
         sequences: pd.Series for single chain or pd.DataFrame for H+L mode
     """
     from antiberty import AntiBERTyRunner
+
+    _patch_antiberty_for_new_transformers()
 
     max_seq_length = 510
 
