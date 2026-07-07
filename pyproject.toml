@@ -51,6 +51,7 @@ dependencies = [
     "ablang; python_version < '3.14'",
     "rjieba",
     "sentencepiece",
+    "protobuf",
     "anndata"
 ]
 
