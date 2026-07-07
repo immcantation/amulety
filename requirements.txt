@@ -20,3 +20,4 @@ rjieba
 protobuf
 sentencepiece
 anndata
+protobuf
