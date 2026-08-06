@@ -279,7 +279,7 @@ def embed_airr(
             For TCR: H=Beta/Delta, L=Alpha/Gamma, HL=Beta-Alpha/Delta-Gamma pairs, LH=Alpha-Beta/Gamma-Delta pairs, H+L=Both chains separately
         model (str):
             The embedding model to use.
-            BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired"]
+            BCR models: ["ablang", "antiberta2", "antiberty", "balm-paired", "vec-bcrdist"]
             TCR models: ["tcr-bert", "tcrt5"]
             Immune models (BCR & TCR): ["immune2vec"]
             Protein models: ["esm2", "prott5", "custom"]
@@ -318,7 +318,7 @@ def embed_airr(
     """
     import anndata as ad
 
-    from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired
+    from amulety.bcr_embeddings import ablang, antiberta2, antiberty, balm_paired, vec_bcrdist
     from amulety.protein_embeddings import custommodel, esm2, prott5
     from amulety.tcr_embeddings import tcr_bert, tcrt5
 
@@ -352,7 +352,7 @@ def embed_airr(
 
     # ===== DETERMINE RECEPTOR TYPE FOR VALIDATION =====
     # Automatically determine receptor type based on model
-    bcr_models = {"ablang", "antiberty", "antiberta2", "balm-paired"}
+    bcr_models = {"ablang", "antiberty", "antiberta2", "balm-paired", "vec-bcrdist"}
     tcr_models = {"tcr-bert", "tcrt5"}
     protein_models = {"esm2", "prott5", "immune2vec", "custom"}
 
@@ -406,7 +406,16 @@ def embed_airr(
 
     # ===== MODEL EXECUTION WITH CHAIN VALIDATION =====
     # BCR models
-    if model == "ablang":
+    if model == "vec-bcrdist":
+        if chain not in ["H", "L"]:
+            raise ValueError("Model 'vec-bcrdist' currently supports single-chain BCR data only: use chain='H' or 'L'.")
+        if residue_level:
+            raise ValueError("Model 'vec-bcrdist' returns one vector per BCR and does not support residue_level=True.")
+
+        _, dat = process_airr(data, chain, sequence_col, cell_id_col, duplicate_col, receptor_type, mode="concat")
+        embedding = vec_bcrdist(dat)
+
+    elif model == "ablang":
         # Check chain compatibility - AbLang supports individual chains only
         if chain in ["HL", "LH"]:
             warnings.warn(
@@ -755,7 +764,7 @@ def embed(
         typer.Option(
             "--model",
             "-m",
-            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired']. TCR: ['tcr-bert', 'tcrt5']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
+            help="The embedding model to use. BCR: ['ablang', 'antiberta2', 'antiberty', 'balm-paired', 'vec-bcrdist']. TCR: ['tcr-bert', 'tcrt5']. Immune (BCR & TCR): ['immune2vec']. Protein: ['esm2', 'prott5', 'custom']. Use 'custom' for fine-tuned models with --model-path, --embedding-dimension, and --max-length parameters.",
         ),
     ],
     output_file_path: Annotated[

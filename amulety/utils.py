@@ -528,6 +528,13 @@ def check_dependencies():
     except ImportError:
         missing_deps.append(("AbLang", "pip install ablang"))
 
+    try:
+        from sklearn.manifold import MDS  # noqa: F401
+
+        available_models.append("vecBCRdist")
+    except ImportError:
+        missing_deps.append(("vecBCRdist", "pip install scikit-learn"))
+
     # Check TCR models
     try:
         result = subprocess.run(["tcremp-run", "-h"], capture_output=True, text=True, timeout=10)

@@ -8,6 +8,24 @@
 | AntiBERTa2  | antiberta2  | 1024                | H, L, H+L  | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
 | AntiBERTy   | antiberty   | 512                 | H, L, H+L  | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
 | BALM-paired | balm-paired | 1024                | HL, LH     | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
+| vecBCRdist  | vec-bcrdist | 512                 | H or L     | [Vectorized TCRdist preprint](https://www.biorxiv.org/content/10.64898/2026.04.10.717405v1) |
+
+### vecBCRdist
+
+vecBCRdist is a distance-derived embedding rather than a trained language model. It reads the observed
+`cdr1_aa`, `cdr2_aa`, and `cdr3_aa` columns directly, including somatic mutations, and does not infer BCR CDRs
+from `v_call` or `combo_xcr.tsv`. CDR1 and CDR2 have weight 1, CDR3 has weight 3, and the gap penalty is 4,
+matching the current BCRdist configuration. Squared Euclidean distances between output vectors approximate
+BCRdist, which permits BCRdist-like representations in clustering methods that require numerical features.
+Because BCRdist can select a pair-specific optimal CDR3 gap, while one fixed vector cannot, vecBCRdist uses
+the fixed-position gap approximation inherited from vecTCRdist.
+
+The current implementation supports one chain at a time (`--chain H` or `--chain L`). Paired heavy-light and
+combined `H+L` distances are not implemented.
+
+```bash
+amulety embed --input-airr AIRR_translated.tsv --chain H --model vec-bcrdist --output-file-path vec_bcrdist.tsv
+```
 
 ### AntiBERTa2
 

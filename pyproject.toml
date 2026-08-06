@@ -43,6 +43,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "pandas",
+    "scikit-learn",
     "torch",
     "torchvision",
     "transformers<4.52", #Antiberty fails on transformers 4.52+ due to a breaking change in the API
@@ -54,6 +55,12 @@ dependencies = [
     "rjieba",
     "sentencepiece",
     "anndata"
+]
+
+[project.optional-dependencies]
+vecbcrdist-reference = [
+    "pwseqdist==0.6",
+    "tcrdist3==0.3",
 ]
 
 [project.urls]
