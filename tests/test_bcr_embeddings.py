@@ -17,7 +17,6 @@ import torch
 from amulety.amulety import embed, embed_airr
 from amulety.bcr_embeddings import BCRDistEncoder, setup_bcr_cdr_strings, vec_bcrdist
 
-
 HAS_PWSEQDIST = find_spec("pwseqdist") is not None
 CONVBENCH_TCRDIST3_PATH = os.environ.get("CONVBENCH_TCRDIST3_PATH")
 HAS_CONVBENCH_REFERENCE = (
