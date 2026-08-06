@@ -24,6 +24,7 @@ from amulety.utils import batch_loader, insert_space_every_other_except_cls
 
 logger = logging.getLogger(__name__)
 
+
 def antiberty(
     sequences,
     cache_dir: Optional[str] = None,
@@ -404,6 +405,7 @@ def balm_paired(
     )
     return embeddings
 
+
 # implement vexTCRdist from vecTCRdist:
 # Kept from clustcrdist.constants.hashing: the canonical amino-acid order and the BLOSUM62-derived tcrdist substitution-cost matrix.
 AALPHABET = "ARNDCQEGHILKMFPSTWYV"
@@ -460,9 +462,7 @@ def setup_bcr_cdr_strings(
             if not sequence:
                 raise ValueError(f"Column '{column}' contains an empty sequence at row {row_index}")
             if invalid:
-                raise ValueError(
-                    f"Column '{column}' contains unsupported amino acid(s) {invalid} at row {row_index}"
-                )
+                raise ValueError(f"Column '{column}' contains unsupported amino acid(s) {invalid} at row {row_index}")
     return list(cdrs.itertuples(index=False, name=None))
 
 
@@ -519,13 +519,13 @@ class BCRDistEncoder(BaseEstimator, TransformerMixin):
         )
         return mds.fit_transform(self.dm)
 
-    def _calc_tcrdist_aa_vectors(self, SQRT: bool = True):
+    def _calc_tcrdist_aa_vectors(self, sqrt: bool = True):
         """Kept from TCRDistEncoder, with the BCRdist gap penalty."""
         self.dm = np.zeros((21, 21))
         self.dm[:20, :20] = self.distance_matrix
         self.dm[:20, 20] = self.gap_penalty
         self.dm[20, :20] = self.gap_penalty
-        if SQRT:
+        if sqrt:
             self.dm = np.sqrt(self.dm)
         vectors = self._calc_mds_vecs()
         return {amino_acid: vector for amino_acid, vector in zip(AALPHABET + GAPCHAR, vectors)}
@@ -578,21 +578,21 @@ class BCRDistEncoder(BaseEstimator, TransformerMixin):
             raise RuntimeError("Unexpected vecBCRdist embedding shape")
         return vectors
 
-    def fit(self, X=None, y=None):
+    def fit(self, x=None, y=None):
         """Keep vecTCRdist fitting, but remove setup_gene_cdr_strings/combo_xcr.tsv."""
         del y
         self.aa_vectors_ = self._calc_tcrdist_aa_vectors()
         self.m = self.aa_dim * (self.cdr1_num_pos + self.cdr2_num_pos + self.num_pos)
-        if X is not None:
-            setup_bcr_cdr_strings(X, self.cdr1_col, self.cdr2_col, self.cdr3_col)
+        if x is not None:
+            setup_bcr_cdr_strings(x, self.cdr1_col, self.cdr2_col, self.cdr3_col)
         return self
 
-    def transform(self, X: pd.DataFrame) -> np.ndarray:
+    def transform(self, x: pd.DataFrame) -> np.ndarray:
         """Replace vecTCRdist's V-gene/junction DataFrame transform branch."""
         check_is_fitted(self, ("aa_vectors_", "m"))
-        if not isinstance(X, pd.DataFrame):
+        if not isinstance(x, pd.DataFrame):
             raise TypeError("BCRDistEncoder expects an AIRR pandas DataFrame")
-        return self._gapped_encode_bcr_cdrs(X)
+        return self._gapped_encode_bcr_cdrs(x)
 
 
 def vec_bcrdist(cdr_sequences: pd.DataFrame, aa_dim: int = 8):

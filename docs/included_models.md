@@ -2,12 +2,12 @@
 
 ## B-Cell Receptor (BCR) Models
 
-| Model       | Command     | Embedding Dimension | Trained on | Reference                                                                        |
-| ----------- | ----------- | ------------------- | ---------- | -------------------------------------------------------------------------------- |
-| AbLang      | ablang      | 768                 | H, L, H+L  | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)   |
-| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L  | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
-| AntiBERTy   | antiberty   | 512                 | H, L, H+L  | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
-| BALM-paired | balm-paired | 1024                | HL, LH     | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
+| Model       | Command     | Embedding Dimension | Trained on | Reference                                                                                   |
+| ----------- | ----------- | ------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| AbLang      | ablang      | 768                 | H, L, H+L  | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)              |
+| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L  | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513)            |
+| AntiBERTy   | antiberty   | 512                 | H, L, H+L  | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)                  |
+| BALM-paired | balm-paired | 1024                | HL, LH     | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967)            |
 | vecBCRdist  | vec-bcrdist | 512                 | H or L     | [Vectorized TCRdist preprint](https://www.biorxiv.org/content/10.64898/2026.04.10.717405v1) |
 
 ### vecBCRdist
