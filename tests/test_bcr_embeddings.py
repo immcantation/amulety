@@ -17,6 +17,7 @@ import torch
 from amulety.amulety import embed, embed_airr
 from amulety.bcr_embeddings import BCRDistEncoder, setup_bcr_cdr_strings, vec_bcrdist
 
+## use reference CONVBENCH_TCRDIST3:
 HAS_PWSEQDIST = find_spec("pwseqdist") is not None
 CONVBENCH_TCRDIST3_PATH = os.environ.get("CONVBENCH_TCRDIST3_PATH")
 HAS_CONVBENCH_REFERENCE = (
@@ -49,17 +50,12 @@ class TestAmulety(unittest.TestCase):
         self.test_mixed_path = os.path.join(self.this_dir, self.test_mixed)
         self.test_mixed_df = pd.read_table(self.test_mixed_path, delimiter="\t", header=0)
 
-        self.bcr_cdr_data = pd.DataFrame(
-            {
-                "sequence_id": ["heavy_1", "heavy_2", "light_1"],
-                "sequence_vdj_aa": ["AAAA", "AAAA", "AAAA"],
-                "v_call": ["IGHV1-1*01", "IGHV1-1*01", "IGKV1-1*01"],
-                "locus": ["IGH", "IGH", "IGK"],
-                "cdr1_aa": ["GFTFSSYW", "GFTFSTYW", "QGISNS"],
-                "cdr2_aa": ["IKQDGTEK", "IKQDGTEK", "TAS"],
-                "cdr3_aa": ["ARENLPSFFYYDSSAYLPEATFDF", "ARENLPSFFYYDSSAYLPEATFDF", "QQYYSSVMYT"],
-            }
+        self.test_vec_bcrdist_path = os.path.join(
+            self.this_dir,
+            "translated_cdr",
+            "AIRR_rearrangement_single-cell_testtranslation_translated.tsv",
         )
+        self.vec_bcrdist_df = pd.read_table(self.test_vec_bcrdist_path, delimiter="\t", header=0)
 
         # Bulk test data (no cell_id column)
         self.test_bulk = "AIRR_rearrangement_bulk_test.tsv"
@@ -68,21 +64,9 @@ class TestAmulety(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    @staticmethod
-    def _bcrdist_reference_data():
-        """Four translated BCRs used for the exact pwseqdist reference values."""
-        return pd.DataFrame(
-            {
-                "cdr1_aa": ["GFTFSSYW", "SSNIGNNY", "GGSINSGDYS", "QGISNS"],
-                "cdr2_aa": ["IKQDGTEK", "ENN", "IYHSGST", "TAS"],
-                "cdr3_aa": [
-                    "ARENLPSFFYYDSSAYLPEATFDF",
-                    "GTWDSSLSAGV",
-                    "ARSTVNIWGTFEY",
-                    "QQYYSSVMYT",
-                ],
-            }
-        )
+    def _bcrdist_reference_data(self):
+        """Use unique observed CDR triplets from the translated AIRR fixture."""
+        return self.vec_bcrdist_df.drop_duplicates(["cdr1_aa", "cdr2_aa", "cdr3_aa"]).reset_index(drop=True)
 
     @staticmethod
     def _load_convbench_tcrdist3(path):
@@ -283,45 +267,58 @@ class TestAmulety(unittest.TestCase):
         os.remove("HL_test_residue.pt")
         os.remove("HL_test_residue_metadata.tsv")
 
+    ########################################################
     # vec-bcrdist tests
     def test_vec_bcrdist_reads_observed_cdrs(self):
         """Use AIRR CDR1/2/3 rather than inferred V-gene CDR strings."""
-        cdrs = setup_bcr_cdr_strings(self.bcr_cdr_data)
+        cdrs = setup_bcr_cdr_strings(self.vec_bcrdist_df)
         self.assertEqual(cdrs[0], ("GFTFSSYW", "IKQDGTEK", "ARENLPSFFYYDSSAYLPEATFDF"))
 
     def test_vec_bcrdist_changes_when_observed_cdr_changes(self):
         """A mutation in an observed CDR changes the receptor embedding."""
-        embeddings = vec_bcrdist(self.bcr_cdr_data)
-        self.assertEqual(embeddings.shape, (3, 512))
+        embeddings = vec_bcrdist(self.vec_bcrdist_df)
+        self.assertEqual(embeddings.shape, (5, 512))
         self.assertEqual(embeddings.dtype, torch.float32)
         self.assertFalse(torch.equal(embeddings[0], embeddings[1]))
 
     def test_vec_bcrdist_encoder_is_deterministic(self):
         """The fixed-seed AA MDS encoding is reproducible."""
-        first = BCRDistEncoder().fit_transform(self.bcr_cdr_data)
-        second = BCRDistEncoder().fit_transform(self.bcr_cdr_data)
+        first = BCRDistEncoder().fit_transform(self.vec_bcrdist_df)
+        second = BCRDistEncoder().fit_transform(self.vec_bcrdist_df)
         np.testing.assert_allclose(first, second)
 
     @unittest.skipUnless(HAS_CONVBENCH_REFERENCE, "requires pinned ConvBench tcrdist3 reference dependencies")
     def test_vec_bcrdist_matches_convbench_bcrdist(self):
         """Compare vecBCRdist directly with ConvBench's v2cdr=False BCRdist matrix."""
         data = self._bcrdist_reference_data()
-        convbench_input = pd.DataFrame(
-            {
-                "id_col": [f"reference_{index}" for index in data.index],
-                "subject_id": "reference_subject",
-                # This mirrors ConvBench BCR input. With v2cdr=False, observed
-                # CDR columns below, rather than V-gene inference, are used.
-                "v_b_gene": ["IGHV3-7*01", "IGLV1-51*02", "IGHV4-30-2*01", "IGKV1-NL1*01"],
-                "j_b_gene": ["IGHJ3*01", "IGLJ3*02", "IGHJ4*02", "IGKJ2*01"],
-                "cdr1_b_aa": data["cdr1_aa"],
-                "cdr2_b_aa": data["cdr2_aa"],
-                "cdr3_b_aa": data["cdr3_aa"],
-                "pmhc_b_aa": "",
-                "seq_id": [f"s{index}" for index in data.index],
-                "count": 1,
+        convbench_input = data.rename(
+            columns={
+                "v_call": "v_b_gene",
+                "j_call": "j_b_gene",
+                "cdr1_aa": "cdr1_b_aa",
+                "cdr2_aa": "cdr2_b_aa",
+                "cdr3_aa": "cdr3_b_aa",
             }
-        )
+        ).assign(
+            id_col=data["sequence_id"].astype(str),
+            subject_id="reference_subject",
+            pmhc_b_aa="",
+            seq_id=[f"s{index}" for index in data.index],
+            count=1,
+        )[
+            [
+                "id_col",
+                "subject_id",
+                "v_b_gene",
+                "cdr3_b_aa",
+                "j_b_gene",
+                "cdr1_b_aa",
+                "cdr2_b_aa",
+                "pmhc_b_aa",
+                "seq_id",
+                "count",
+            ]
+        ]
         convbench = self._load_convbench_tcrdist3(CONVBENCH_TCRDIST3_PATH)
         reference = convbench.run_tcrdist3(
             seqs=convbench_input,
@@ -380,11 +377,11 @@ class TestAmulety(unittest.TestCase):
 
     def test_vec_bcrdist_embed_airr_filters_single_chain(self):
         """AMULETY passes only the requested heavy or light chain to vecBCRdist."""
-        embedding, metadata = embed_airr(self.bcr_cdr_data, chain="H", model="vec-bcrdist")
+        embedding, metadata = embed_airr(self.vec_bcrdist_df, chain="H", model="vec-bcrdist")
         self.assertEqual(embedding.shape, (2, 512))
         self.assertListEqual(metadata["locus"].tolist(), ["IGH", "IGH"])
 
     def test_vec_bcrdist_embed_airr_rejects_paired_input(self):
         """Paired heavy--light mode is outside the current vecBCRdist contract."""
         with self.assertRaisesRegex(ValueError, "single-chain"):
-            embed_airr(self.bcr_cdr_data, chain="H+L", model="vec-bcrdist")
+            embed_airr(self.vec_bcrdist_df, chain="H+L", model="vec-bcrdist")
