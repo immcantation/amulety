@@ -102,6 +102,8 @@ def translate_airr(
     airr: pd.DataFrame,
     tmpdir: str,
     reference_dir: str,
+    reference_prefix: str = "imgt_",
+    reference_species: str = "human",
     keep_regions: bool = False,
     sequence_col: str = "sequence",
     nproc: int = 1,
@@ -118,7 +120,11 @@ def translate_airr(
         tmpdir (str):
             Temporary directory for intermediate files.
         reference_dir (str):
-            The directory to the igblast references.
+            The directory to the pre-built igblast germline reference data.
+        reference_prefix (str):
+            The prefix for the igblast germline reference files (default: "imgt_").
+        reference_species (str):
+            The species for the igblast germline reference (default: "human").
         keep_regions (bool):
             If True, keeps the region translations in the output airr file. If False, it removes them.
         sequence_col (str):
@@ -167,19 +173,19 @@ def translate_airr(
     command_igblastn = [
         "igblastn",
         "-germline_db_V",
-        f"{reference_dir}/database/imgt_human_ig_v",
+        f"{reference_dir}/database/{reference_prefix}{reference_species}_ig_v",
         "-germline_db_D",
-        f"{reference_dir}/database/imgt_human_ig_d",
+        f"{reference_dir}/database/{reference_prefix}{reference_species}_ig_d",
         "-germline_db_J",
-        f"{reference_dir}/database/imgt_human_ig_j",
+        f"{reference_dir}/database/{reference_prefix}{reference_species}_ig_j",
         "-query",
         out_fasta,
         "-num_threads",
         str(nproc),
         "-organism",
-        "human",
+        f"{reference_species}",
         "-auxiliary_data",
-        f"{reference_dir}/optional_file/human_gl.aux",
+        f"{reference_dir}/optional_file/{reference_species}_gl.aux",
         "-show_translation",
         "-outfmt",
         "19",
@@ -603,12 +609,28 @@ def translate_igblast(
             help="The path to the input data file. The data file should be in TSV format following the AIRR specifications.",
         ),
     ],
+    reference_dir: Annotated[
+        str, typer.Option("--reference-dir", "-r", help="The directory to the pre-built igblast germline references.")
+    ],
     output_dir: Annotated[
         str, typer.Option("--output-dir", "-o", help="The directory where the generated embeddings will be saved.")
-    ],
-    reference_dir: Annotated[
-        str, typer.Option("--reference-dir", "-r", help="The directory to the igblast references.")
-    ],
+    ] = ".",
+    reference_prefix: Annotated[
+        str,
+        typer.Option(
+            "--reference-prefix",
+            "-p",
+            help="The prefix for the igblast germline reference files (default: 'imgt_').",
+        ),
+    ] = "imgt_",
+    reference_species: Annotated[
+        str,
+        typer.Option(
+            "--reference-species",
+            "-s",
+            help="The species for the igblast germline reference (default: 'human').",
+        ),
+    ] = "human",
     keep_regions: Annotated[
         bool,
         typer.Option(
@@ -667,6 +689,9 @@ def translate_igblast(
     Example usage:\n
         amulety translate-igblast --input-file input.tsv --output-dir ./output --reference-dir /path/to/igblast/references
     """
+    # Check that outdir exists and create if not
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
 
     # Setup logging configuration (this will override global settings if provided)
     if log_file is not None or verbose:
@@ -696,7 +721,13 @@ def translate_igblast(
     out_translated = os.path.join(output_dir, f"{bn}_translated.tsv")
 
     data_transl = translate_airr(
-        data, tmpdir=None, reference_dir=reference_dir, keep_regions=keep_regions, sequence_col=sequence_col
+        data,
+        tmpdir=None,
+        reference_dir=reference_dir,
+        reference_prefix=reference_prefix,
+        reference_species=reference_species,
+        keep_regions=keep_regions,
+        sequence_col=sequence_col,
     )
 
     logger.info(f"Saved the translations in {out_translated} file.")
