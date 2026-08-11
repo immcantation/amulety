@@ -406,35 +406,13 @@ def balm_paired(
     return embeddings
 
 
-# implement vexTCRdist from vecTCRdist:
-# Kept from clustcrdist.constants.hashing: the canonical amino-acid order and the BLOSUM62-derived tcrdist substitution-cost matrix.
+# implement vecBCRdist from vecTCRdist:
+# Kept from clustcrdist.constants.hashing:
+# the canonical amino-acid order and the BLOSUM62-derived tcrdist substitution-cost matrix.
 AALPHABET = "ARNDCQEGHILKMFPSTWYV"
 GAPCHAR = "-"
-BLOSUM_62 = np.array(
-    [
-        [4, -1, -2, -2, 0, -1, -1, 0, -2, -1, -1, -1, -1, -2, -1, 1, 0, -3, -2, 0],
-        [-1, 5, 0, -2, -3, 1, 0, -2, 0, -3, -2, 2, -1, -3, -2, -1, -1, -3, -2, -3],
-        [-2, 0, 6, 1, -3, 0, 0, 0, 1, -3, -3, 0, -2, -3, -2, 1, 0, -4, -2, -3],
-        [-2, -2, 1, 6, -3, 0, 2, -1, -1, -3, -4, -1, -3, -3, -1, 0, -1, -4, -3, -3],
-        [0, -3, -3, -3, 9, -3, -4, -3, -3, -1, -1, -3, -1, -2, -3, -1, -1, -2, -2, -1],
-        [-1, 1, 0, 0, -3, 5, 2, -2, 0, -3, -2, 1, 0, -3, -1, 0, -1, -2, -1, -2],
-        [-1, 0, 0, 2, -4, 2, 5, -2, 0, -3, -3, 1, -2, -3, -1, 0, -1, -3, -2, -2],
-        [0, -2, 0, -1, -3, -2, -2, 6, -2, -4, -4, -2, -3, -3, -2, 0, -2, -2, -3, -3],
-        [-2, 0, 1, -1, -3, 0, 0, -2, 8, -3, -3, -1, -2, -1, -2, -1, -2, -2, 2, -3],
-        [-1, -3, -3, -3, -1, -3, -3, -4, -3, 4, 2, -3, 1, 0, -3, -2, -1, -3, -1, 3],
-        [-1, -2, -3, -4, -1, -2, -3, -4, -3, 2, 4, -2, 2, 0, -3, -2, -1, -2, -1, 1],
-        [-1, 2, 0, -1, -3, 1, 1, -2, -1, -3, -2, 5, -1, -3, -1, 0, -1, -3, -2, -2],
-        [-1, -1, -2, -3, -1, 0, -2, -3, -2, 1, 2, -1, 5, 0, -2, -1, -1, -1, -1, 1],
-        [-2, -3, -3, -3, -2, -3, -3, -3, -1, 0, 0, -3, 0, 6, -4, -2, -2, 1, 3, -1],
-        [-1, -2, -2, -1, -3, -1, -1, -2, -2, -3, -3, -1, -2, -4, 7, -1, -1, -4, -3, -2],
-        [1, -1, 1, 0, -1, 0, 0, 0, -1, -2, -2, 0, -1, -2, -1, 4, 1, -3, -2, -2],
-        [0, -1, 0, -1, -1, -1, -1, -2, -2, -1, -1, -1, -1, -2, -1, 1, 5, -2, -2, 0],
-        [-3, -3, -4, -4, -2, -2, -3, -2, -2, -3, -2, -3, -1, 1, -4, -3, -2, 11, 2, -3],
-        [-2, -2, -2, -3, -2, -1, -2, -3, 2, -1, -1, -2, -1, 3, -3, -2, -2, 2, 7, -1],
-        [0, -3, -3, -3, -1, -2, -2, -3, -3, 3, 1, -2, 1, -1, -2, -2, 0, -3, -1, 4],
-    ],
-    dtype=np.float64,
-)
+_BLOSUM_62_PATH = os.path.join(os.path.dirname(__file__), "matrices", "blosum_62.csv")
+BLOSUM_62 = pd.read_csv(_BLOSUM_62_PATH, index_col=0).loc[list(AALPHABET), list(AALPHABET)].to_numpy(dtype=np.float64)
 TCRDIST_DM = np.maximum(0.0, np.minimum(4.0, 4.0 - BLOSUM_62))
 
 
@@ -448,7 +426,7 @@ def setup_bcr_cdr_strings(
     cdr_columns = (cdr1_col, cdr2_col, cdr3_col)
     missing_columns = [column for column in cdr_columns if column not in bcrs.columns]
     if missing_columns:
-        raise ValueError(f"Missing BCR CDR column(s): {missing_columns}")
+        raise ValueError(f"Missing BCR CDR column(s): {missing_columns}. Make sure you run `amulety translate-igblast` with the option `--keep-regions` to obtain the CDR amino acid sequences.")
 
     allowed = set(AALPHABET)
     cdrs = bcrs.loc[:, cdr_columns].copy()
@@ -468,7 +446,7 @@ def setup_bcr_cdr_strings(
 
 class BCRDistEncoder(BaseEstimator, TransformerMixin):
     """Minimal BCR adaptation of clustcrdist.encoding.TCRDistEncoder.
-
+    Kept from clustcrdist.encoding.TCRDistEncoder:
     1. The vecTCRdist MDS, amino-acid encoding, trimming, gap placement, and square-root weighting are retained.
     2. The TCR V-gene dictionary path is replaced by observed AIRR ``cdr1_aa``, ``cdr2_aa``, and ``cdr3_aa``.
     """

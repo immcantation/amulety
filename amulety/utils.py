@@ -1,6 +1,7 @@
 """Main module."""
 import logging
 import subprocess
+import sys
 import warnings
 from typing import Iterable
 
@@ -528,12 +529,8 @@ def check_dependencies():
     except ImportError:
         missing_deps.append(("AbLang", "pip install ablang"))
 
-    try:
-        from sklearn.manifold import MDS  # noqa: F401
-
-        available_models.append("vecBCRdist")
-    except ImportError:
-        missing_deps.append(("vecBCRdist", "pip install scikit-learn"))
+    # vecBCRdist uses scikit-learn, which is a required amulety dependency.
+    available_models.append("vecBCRdist")
 
     # Check TCR models
     try:
@@ -568,6 +565,16 @@ def check_dependencies():
         available_models.append("TCRT5")
     except ImportError:
         missing_deps.append(("TCRT5", "pip install transformers"))
+
+    if sys.version_info < (3, 9):
+        missing_deps.append(("vecTCRdist", "requires Python >=3.9"))
+    else:
+        try:
+            from clustcrdist.encoding import TCRDistEncoder  # noqa: F401
+
+            available_models.append("vecTCRdist")
+        except ImportError:
+            missing_deps.append(("vecTCRdist", "pip install 'amulety[vec-tcrdist]'"))
 
     # Check protein language models
     try:

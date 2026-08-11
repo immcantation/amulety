@@ -6,9 +6,11 @@ TCR embedding functions using various models.
 
 import logging
 import math
+import sys
 import time
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 import torch
 from torch.nn.functional import pad
@@ -314,3 +316,56 @@ def tcrt5(
     logger.info("TCRT5 embedding took %s seconds", round(end_time - start_time, 2))
 
     return embeddings
+
+
+def vec_tcrdist(tcrs: pd.DataFrame, chain: str, aa_dim: int = 8) -> torch.Tensor:
+    """Embed one alpha or beta TCR chain with clustcrdist's upstream encoder.
+
+    Args:
+        tcrs: AIRR DataFrame containing ``v_call`` and ``cdr3_aa`` columns.
+        chain: ``"H"`` for beta or ``"L"`` for alpha.
+        aa_dim: Dimensions per amino-acid vector passed to ``TCRDistEncoder``.
+
+    Returns:
+        A float32 tensor with one embedding per input receptor.
+
+    Raises:
+        ImportError: If Python is older than 3.9 or clustcrdist is not installed.
+        ValueError: If the input is not alpha/beta AIRR data or ``chain`` is unsupported.
+
+    """
+    if sys.version_info < (3, 9):
+        raise ImportError("vec-tcrdist requires Python >=3.9 because clustcrdist requires Python >=3.9.")
+
+    try:
+        from clustcrdist.encoding import TCRDistEncoder  # type: ignore[import-not-found]
+    except ImportError as error:
+        raise ImportError(
+            "vec-tcrdist requires the optional clustcrdist dependency. Install it with: pip install 'amulety[vec-tcrdist]'"
+        ) from error
+
+    chain_map = {"H": "B", "L": "A"}
+    if chain not in chain_map:
+        raise ValueError("vec-tcrdist currently supports single-chain TCR data only: use chain='H' or 'L'.")
+
+    required_columns = {"v_call", "cdr3_aa", "locus"}
+    missing_columns = sorted(required_columns - set(tcrs.columns))
+    if missing_columns:
+        raise ValueError(f"vec-tcrdist requires AIRR column(s): {missing_columns}")
+
+    expected_locus = {"H": "TRB", "L": "TRA"}[chain]
+    present_loci = set(tcrs["locus"].astype(str).str.upper())
+    if present_loci != {expected_locus}:
+        raise ValueError(
+            f"vec-tcrdist currently supports {expected_locus} data for chain='{chain}'; found loci: {sorted(present_loci)}"
+        )
+
+    encoder = TCRDistEncoder(
+        aa_dim=aa_dim,
+        organism="human",
+        chain=chain_map[chain],
+        vgene_col="v_call",
+        cdr3_col="cdr3_aa",
+        full_tcr=True,
+    )
+    return torch.from_numpy(np.asarray(encoder.fit_transform(tcrs), dtype=np.float32))

@@ -57,10 +57,11 @@ Burbach SM, Briney B. Improving antibody language models with native pairing. Pa
 
 ## T-Cell Receptor (TCR) Models
 
-| Model    | Command  | Embedding Dimension | Trained on        | Reference                                                                                    |
-| -------- | -------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
-| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
-| TCRT5    | tcrt5    | 256                 | H only            | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
+| Model      | Command     | Embedding Dimension | Trained on        | Reference                                                                                    |
+| ---------- | ----------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
+| TCR-BERT   | tcr-bert    | 768                 | H, L, HL, LH, H+L | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
+| TCRT5      | tcrt5       | 256                 | H only            | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
+| vecTCRdist | vec-tcrdist | Reference-dependent | H (TRB) or L (TRA) | [clustcrdist](https://github.com/svalkiers/immune_response_detection) |
 
 ### TCR-BERT
 
@@ -75,6 +76,17 @@ T5-based model pre-trained on masked span reconstruction using ~14M CDR3 β sequ
 
 Reference:
 Deng K, Guan R, Liu Z, et al. TCRT5: T-cell receptor sequence modeling with T5. bioRxiv. 2024. [doi:10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124).
+
+### vecTCRdist
+
+vecTCRdist directly wraps `clustcrdist.encoding.TCRDistEncoder` for human alpha/beta TCRs. It uses AIRR
+`v_call` and `cdr3_aa` columns to encode the V-gene CDRs and CDR3. Install the optional dependency with
+`pip install "amulety[vec-tcrdist]"`; it requires Python 3.9 or later. The first implementation supports
+single-chain `H` (TRB) or `L` (TRA) input only.
+
+```bash
+amulety embed --input-airr AIRR.tsv --chain H --model vec-tcrdist --output-file-path vec_tcrdist.tsv
+```
 
 ## General Protein Models
 

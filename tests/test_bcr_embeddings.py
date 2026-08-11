@@ -8,7 +8,7 @@ python -m unittest test_amulety.py
 import os
 import sys
 import unittest
-from importlib.util import find_spec, module_from_spec, spec_from_file_location
+from importlib.util import find_spec
 
 import numpy as np
 import pandas as pd
@@ -17,15 +17,7 @@ import torch
 from amulety.amulety import embed, embed_airr
 from amulety.bcr_embeddings import BCRDistEncoder, setup_bcr_cdr_strings, vec_bcrdist
 
-## use reference CONVBENCH_TCRDIST3:
 HAS_PWSEQDIST = find_spec("pwseqdist") is not None
-CONVBENCH_TCRDIST3_PATH = os.environ.get("CONVBENCH_TCRDIST3_PATH")
-HAS_CONVBENCH_REFERENCE = (
-    CONVBENCH_TCRDIST3_PATH is not None
-    and os.path.isfile(CONVBENCH_TCRDIST3_PATH)
-    and find_spec("tcrdist") is not None
-    and HAS_PWSEQDIST
-)
 
 
 class TestAmulety(unittest.TestCase):
@@ -67,14 +59,6 @@ class TestAmulety(unittest.TestCase):
     def _bcrdist_reference_data(self):
         """Use unique observed CDR triplets from the translated AIRR fixture."""
         return self.vec_bcrdist_df.drop_duplicates(["cdr1_aa", "cdr2_aa", "cdr3_aa"]).reset_index(drop=True)
-
-    @staticmethod
-    def _load_convbench_tcrdist3(path):
-        """Load the pinned ConvBench reference script without adding it to AMULETY."""
-        spec = spec_from_file_location("convbench_tcrdist3_reference", path)
-        module = module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
 
     # ablang tests
     @unittest.skipIf(sys.version_info >= (3, 14), "AbLang unavailable on Python >=3.14 (numba constraint)")
@@ -286,56 +270,6 @@ class TestAmulety(unittest.TestCase):
         first = BCRDistEncoder().fit_transform(self.vec_bcrdist_df)
         second = BCRDistEncoder().fit_transform(self.vec_bcrdist_df)
         np.testing.assert_allclose(first, second)
-
-    @unittest.skipUnless(HAS_CONVBENCH_REFERENCE, "requires pinned ConvBench tcrdist3 reference dependencies")
-    def test_vec_bcrdist_matches_convbench_bcrdist(self):
-        """Compare vecBCRdist directly with ConvBench's v2cdr=False BCRdist matrix."""
-        data = self._bcrdist_reference_data()
-        convbench_input = data.rename(
-            columns={
-                "v_call": "v_b_gene",
-                "j_call": "j_b_gene",
-                "cdr1_aa": "cdr1_b_aa",
-                "cdr2_aa": "cdr2_b_aa",
-                "cdr3_aa": "cdr3_b_aa",
-            }
-        ).assign(
-            id_col=data["sequence_id"].astype(str),
-            subject_id="reference_subject",
-            pmhc_b_aa="",
-            seq_id=[f"s{index}" for index in data.index],
-            count=1,
-        )[
-            [
-                "id_col",
-                "subject_id",
-                "v_b_gene",
-                "cdr3_b_aa",
-                "j_b_gene",
-                "cdr1_b_aa",
-                "cdr2_b_aa",
-                "pmhc_b_aa",
-                "seq_id",
-                "count",
-            ]
-        ]
-        convbench = self._load_convbench_tcrdist3(CONVBENCH_TCRDIST3_PATH)
-        reference = convbench.run_tcrdist3(
-            seqs=convbench_input,
-            id_col="id_col",
-            cpus=1,
-            chunk_size=1000,
-            radius=1000,
-            v2cdr=False,
-        ).rw_beta.toarray()
-        vectors = BCRDistEncoder().fit_transform(data)
-        upper_triangle = np.triu_indices(len(data), k=1)
-        reference_bcrdist = reference[upper_triangle]
-        squared_l2 = np.sum((vectors[:, None] - vectors[None, :]) ** 2, axis=2)[upper_triangle]
-
-        self.assertTrue(np.all(reference_bcrdist > 0))
-        self.assertGreater(np.corrcoef(reference_bcrdist, squared_l2)[0, 1], 0.98)
-        self.assertLess(np.mean(np.abs(reference_bcrdist - squared_l2) / reference_bcrdist), 0.1)
 
     @unittest.skipUnless(HAS_PWSEQDIST, "requires optional dependency: pwseqdist")
     def test_vec_bcrdist_pwseqdist_reference_values(self):

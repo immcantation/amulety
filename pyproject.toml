@@ -58,9 +58,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-vecbcrdist-reference = [
-    "pwseqdist==0.6",
-    "tcrdist3==0.3",
+vec-tcrdist = [
+    "clustcrdist; python_version >= '3.9'",
 ]
 
 [project.urls]
@@ -73,6 +72,9 @@ amulety = "amulety.amulety:main"
 
 [tool.setuptools]
 packages = ["amulety"]
+
+[tool.setuptools.package-data]
+amulety = ["matrices/*.csv"]
 
 [tool.pytest.ini_options]
 markers = ["datafiles: load datafiles"]
