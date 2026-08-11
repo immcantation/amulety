@@ -57,11 +57,11 @@ Burbach SM, Briney B. Improving antibody language models with native pairing. Pa
 
 ## T-Cell Receptor (TCR) Models
 
-| Model      | Command     | Embedding Dimension | Trained on        | Reference                                                                                    |
-| ---------- | ----------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
-| TCR-BERT   | tcr-bert    | 768                 | H, L, HL, LH, H+L | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
-| TCRT5      | tcrt5       | 256                 | H only            | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
-| vecTCRdist | vec-tcrdist | Reference-dependent | H (TRB) or L (TRA) | [clustcrdist](https://github.com/svalkiers/immune_response_detection) |
+| Model      | Command     | Embedding Dimension | Trained on         | Reference                                                                                    |
+| ---------- | ----------- | ------------------- | ------------------ | -------------------------------------------------------------------------------------------- |
+| TCR-BERT   | tcr-bert    | 768                 | H, L, HL, LH, H+L  | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
+| TCRT5      | tcrt5       | 256                 | H only             | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
+| vecTCRdist | vec-tcrdist | Reference-dependent | H (TRB) or L (TRA) | [clustcrdist](https://github.com/svalkiers/immune_response_detection)                        |
 
 ### TCR-BERT
 

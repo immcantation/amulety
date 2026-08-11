@@ -426,7 +426,9 @@ def setup_bcr_cdr_strings(
     cdr_columns = (cdr1_col, cdr2_col, cdr3_col)
     missing_columns = [column for column in cdr_columns if column not in bcrs.columns]
     if missing_columns:
-        raise ValueError(f"Missing BCR CDR column(s): {missing_columns}. Make sure you run `amulety translate-igblast` with the option `--keep-regions` to obtain the CDR amino acid sequences.")
+        raise ValueError(
+            f"Missing BCR CDR column(s): {missing_columns}. Make sure you run `amulety translate-igblast` with the option `--keep-regions` to obtain the CDR amino acid sequences."
+        )
 
     allowed = set(AALPHABET)
     cdrs = bcrs.loc[:, cdr_columns].copy()
