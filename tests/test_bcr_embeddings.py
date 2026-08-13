@@ -258,6 +258,17 @@ class TestAmulety(unittest.TestCase):
         cdrs = setup_bcr_cdr_strings(self.vec_bcrdist_df)
         self.assertEqual(cdrs[0], ("GFTFSSYW", "IKQDGTEK", "ARENLPSFFYYDSSAYLPEATFDF"))
 
+    def test_vec_bcrdist_handles_cdr3_equal_to_trim_length(self):
+        """A five-residue CDR3 has an empty trimmed interior and becomes gaps."""
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr3_aa"] = "VVNQF"
+        self.assertEqual(setup_bcr_cdr_strings(cdrs)[0][2], "VVNQF")
+        self.assertEqual(BCRDistEncoder()._trim_and_gap_cdr3("VVNQF"), "-" * 32)
+
+        cdrs.loc[cdrs.index[0], "cdr3_aa"] = "VVNQ"
+        with self.assertRaisesRegex(ValueError, r"cdr3_aa.*length < 5"):
+            setup_bcr_cdr_strings(cdrs)
+
     def test_vec_bcrdist_changes_when_observed_cdr_changes(self):
         """A mutation in an observed CDR changes the receptor embedding."""
         embeddings = vec_bcrdist(self.vec_bcrdist_df)

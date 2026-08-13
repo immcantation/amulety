@@ -443,6 +443,12 @@ def setup_bcr_cdr_strings(
                 raise ValueError(f"Column '{column}' contains an empty sequence at row {row_index}")
             if invalid:
                 raise ValueError(f"Column '{column}' contains unsupported amino acid(s) {invalid} at row {row_index}")
+    short_cdr3_rows = cdrs.index[cdrs[cdr3_col].str.len().lt(5)].tolist()
+    if short_cdr3_rows:
+        raise ValueError(
+            f"Column '{cdr3_col}' contains CDR3 sequence(s) of length < 5 at rows {short_cdr3_rows}; "
+            "vecBCRdist requires length >= 5 because it trims three N-terminal and two C-terminal residues."
+        )
     return list(cdrs.itertuples(index=False, name=None))
 
 
@@ -513,7 +519,7 @@ class BCRDistEncoder(BaseEstimator, TransformerMixin):
     @staticmethod
     def _trim_and_gap(cdr: str, num_pos: int, n_trim: int = 0, c_trim: int = 0) -> str:
         """Generalize vecTCRdist's _trim_and_gap_cdr3 to an observed BCR CDR."""
-        if len(cdr) <= n_trim + c_trim:
+        if len(cdr) < n_trim + c_trim:
             raise ValueError(f"Sequence '{cdr}' is too short for n_trim={n_trim} and c_trim={c_trim}")
         gappos = min(6, 3 + (len(cdr) - 5) // 2) - n_trim
         end = -c_trim if c_trim else len(cdr)
