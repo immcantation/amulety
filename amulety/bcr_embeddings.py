@@ -422,7 +422,10 @@ def setup_bcr_cdr_strings(
     cdr2_col: str = "cdr2_aa",
     cdr3_col: str = "cdr3_aa",
 ):
-    """Replace V-gene lookup with observed BCR CDR1/2/3 strings."""
+    """Replace V-gene lookup with observed BCR CDR1/2/3 strings.
+
+    Missing/empty CDR1 or CDR2 are allowed and encoded as all-gap regions. CDR3 must be present, canonical, and length >= 5.
+    """
     cdr_columns = (cdr1_col, cdr2_col, cdr3_col)
     missing_columns = [column for column in cdr_columns if column not in bcrs.columns]
     if missing_columns:
@@ -433,16 +436,24 @@ def setup_bcr_cdr_strings(
     allowed = set(AALPHABET)
     cdrs = bcrs.loc[:, cdr_columns].copy()
     for column in cdr_columns:
-        if cdrs[column].isna().any():
-            missing_rows = cdrs.index[cdrs[column].isna()].tolist()
-            raise ValueError(f"Column '{column}' contains missing values at rows {missing_rows}")
-        cdrs[column] = cdrs[column].astype(str).str.upper()
+        cdrs[column] = cdrs[column].astype("string").fillna("").str.upper().str.strip()
+
+    # CDR1/2: empty -> gap-padded encoding later; noncanonical letters still rejected.
+    for column in (cdr1_col, cdr2_col):
         for row_index, sequence in cdrs[column].items():
-            invalid = sorted(set(sequence) - allowed)
             if not sequence:
-                raise ValueError(f"Column '{column}' contains an empty sequence at row {row_index}")
+                continue
+            invalid = sorted(set(sequence) - allowed)
             if invalid:
                 raise ValueError(f"Column '{column}' contains unsupported amino acid(s) {invalid} at row {row_index}")
+
+    for row_index, sequence in cdrs[cdr3_col].items():
+        if not sequence:
+            raise ValueError(f"Column '{cdr3_col}' contains a missing or empty sequence at row {row_index}")
+        invalid = sorted(set(sequence) - allowed)
+        if invalid:
+            raise ValueError(f"Column '{cdr3_col}' contains unsupported amino acid(s) {invalid} at row {row_index}")
+
     short_cdr3_rows = cdrs.index[cdrs[cdr3_col].str.len().lt(5)].tolist()
     if short_cdr3_rows:
         raise ValueError(

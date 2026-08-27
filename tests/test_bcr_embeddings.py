@@ -269,6 +269,33 @@ class TestAmulety(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"cdr3_aa.*length < 5"):
             setup_bcr_cdr_strings(cdrs)
 
+    def test_vec_bcrdist_allows_missing_cdr1_cdr2_as_gaps(self):
+        """Missing/empty CDR1/2 are kept and encoded as all-gap regions."""
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr1_aa"] = pd.NA
+        cdrs.loc[cdrs.index[0], "cdr2_aa"] = ""
+        parsed = setup_bcr_cdr_strings(cdrs)
+        self.assertEqual(parsed[0][0], "")
+        self.assertEqual(parsed[0][1], "")
+
+        encoder = BCRDistEncoder().fit(cdrs)
+        self.assertEqual(encoder._trim_and_gap("", encoder.cdr1_num_pos), "-" * encoder.cdr1_num_pos)
+        self.assertEqual(encoder._trim_and_gap("", encoder.cdr2_num_pos), "-" * encoder.cdr2_num_pos)
+        embedding = encoder.transform(cdrs.iloc[[0]])
+        self.assertEqual(embedding.shape, (1, 512))
+
+    def test_vec_bcrdist_rejects_missing_cdr3_and_noncanonical(self):
+        """CDR3 must be present; noncanonical residues are still rejected."""
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr3_aa"] = pd.NA
+        with self.assertRaisesRegex(ValueError, r"cdr3_aa.*missing or empty"):
+            setup_bcr_cdr_strings(cdrs)
+
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr1_aa"] = "GFTFXSYW"
+        with self.assertRaisesRegex(ValueError, r"unsupported amino acid"):
+            setup_bcr_cdr_strings(cdrs)
+
     def test_vec_bcrdist_changes_when_observed_cdr_changes(self):
         """A mutation in an observed CDR changes the receptor embedding."""
         embeddings = vec_bcrdist(self.vec_bcrdist_df)
