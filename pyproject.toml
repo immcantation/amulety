@@ -43,6 +43,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "pandas",
+    "scikit-learn",
     "torch",
     "torchvision",
     "transformers<4.52", #Antiberty fails on transformers 4.52+ due to a breaking change in the API
@@ -56,6 +57,11 @@ dependencies = [
     "anndata"
 ]
 
+[project.optional-dependencies]
+vec-tcrdist = [
+    "clustcrdist; python_version >= '3.9'",
+]
+
 [project.urls]
 Homepage = "https://github.com/immcantation/amulety"
 Repository = "https://github.com/immcantation/amulety"
@@ -66,6 +72,9 @@ amulety = "amulety.amulety:main"
 
 [tool.setuptools]
 packages = ["amulety"]
+
+[tool.setuptools.package-data]
+amulety = ["matrices/*.csv"]
 
 [tool.pytest.ini_options]
 markers = ["datafiles: load datafiles"]

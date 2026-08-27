@@ -6,12 +6,17 @@ python -m unittest test_amulety.py
 """
 
 import os
+import sys
+import types
 import unittest
+from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 import torch
 
-from amulety.amulety import embed
+from amulety.amulety import embed, embed_airr
+from amulety.tcr_embeddings import vec_tcrdist
 from amulety.utils import process_airr
 
 
@@ -162,6 +167,63 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[2] == 256  # max sequence length (padded)
         os.remove("tcrt5_H_residue_test.pt")
         os.remove("tcrt5_H_residue_test_metadata.tsv")
+
+    @unittest.skipIf(sys.version_info < (3, 9), "vec-tcrdist requires Python >=3.9")
+    def test_vec_tcrdist_uses_upstream_encoder(self):
+        """Use clustcrdist's TCRDistEncoder with AIRR V-gene and CDR3 columns."""
+        calls = {}
+
+        class FakeTCRDistEncoder:
+            def __init__(self, **kwargs):
+                calls["kwargs"] = kwargs
+
+            def fit_transform(self, tcrs):
+                calls["tcrs"] = tcrs.copy()
+                return np.arange(len(tcrs) * 4, dtype=np.float64).reshape(len(tcrs), 4)
+
+        clustcrdist = types.ModuleType("clustcrdist")
+        encoding = types.ModuleType("clustcrdist.encoding")
+        encoding.TCRDistEncoder = FakeTCRDistEncoder
+        clustcrdist.encoding = encoding
+
+        beta_tcrs = self.test_airr_tcr_df.loc[self.test_airr_tcr_df["locus"] == "TRB"]
+        with patch.dict(sys.modules, {"clustcrdist": clustcrdist, "clustcrdist.encoding": encoding}):
+            embeddings = vec_tcrdist(beta_tcrs, chain="H")
+
+        self.assertEqual(embeddings.dtype, torch.float32)
+        self.assertEqual(embeddings.shape, (len(beta_tcrs), 4))
+        self.assertEqual(
+            calls["kwargs"],
+            {
+                "aa_dim": 8,
+                "organism": "human",
+                "chain": "B",
+                "vgene_col": "v_call",
+                "cdr3_col": "cdr3_aa",
+                "full_tcr": True,
+            },
+        )
+        self.assertListEqual(calls["tcrs"]["sequence_id"].tolist(), beta_tcrs["sequence_id"].tolist())
+
+    def test_vec_tcrdist_embed_airr_rejects_paired_and_residue_level_modes(self):
+        """Reject modes unsupported by the single-chain upstream encoder wrapper."""
+        with self.assertRaisesRegex(ValueError, "single-chain"):
+            embed_airr(self.test_airr_tcr_df, chain="H+L", model="vec-tcrdist")
+        with self.assertRaisesRegex(ValueError, "residue_level"):
+            embed_airr(self.test_airr_tcr_df, chain="H", model="vec-tcrdist", residue_level=True)
+
+    def test_vec_tcrdist_embed_airr_filters_beta_chain(self):
+        """Pass only the selected beta chain rows to the vecTCRdist wrapper."""
+        expected_tcrs = self.test_airr_tcr_df.loc[self.test_airr_tcr_df["locus"] == "TRB"]
+        fake_embeddings = torch.zeros((len(expected_tcrs), 4))
+
+        with patch("amulety.tcr_embeddings.vec_tcrdist", return_value=fake_embeddings) as encoder:
+            embeddings, metadata = embed_airr(self.test_airr_tcr_df, chain="H", model="vec-tcrdist")
+
+        self.assertTrue(torch.equal(embeddings, fake_embeddings))
+        self.assertListEqual(metadata["locus"].tolist(), ["TRB"] * len(expected_tcrs))
+        pd.testing.assert_frame_equal(encoder.call_args[0][0], expected_tcrs.assign(chain="H"))
+        self.assertEqual(encoder.call_args[1], {"chain": "H"})
 
     def test_custom_duplicate_column_tcr(self):
         """Test that we can pass any column name as duplicate_col for TCR data selection."""

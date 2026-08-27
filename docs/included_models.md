@@ -2,12 +2,30 @@
 
 ## B-Cell Receptor (BCR) Models
 
-| Model       | Command     | Embedding Dimension | Trained on | Reference                                                                        |
-| ----------- | ----------- | ------------------- | ---------- | -------------------------------------------------------------------------------- |
-| AbLang      | ablang      | 768                 | H, L, H+L  | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)   |
-| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L  | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513) |
-| AntiBERTy   | antiberty   | 512                 | H, L, H+L  | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)       |
-| BALM-paired | balm-paired | 1024                | HL, LH     | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967) |
+| Model       | Command     | Embedding Dimension | Trained on | Reference                                                                                   |
+| ----------- | ----------- | ------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| AbLang      | ablang      | 768                 | H, L, H+L  | [doi.org/10.1101/2022.01.20.477061](https://doi.org/10.1101/2022.01.20.477061)              |
+| AntiBERTa2  | antiberta2  | 1024                | H, L, H+L  | [doi:10.1016/j.patter.2022.100513](https://doi.org/10.1016/j.patter.2022.100513)            |
+| AntiBERTy   | antiberty   | 512                 | H, L, H+L  | [doi:10.48550/arXiv.2112.07782](https://doi.org/10.48550/arXiv.2112.07782)                  |
+| BALM-paired | balm-paired | 1024                | HL, LH     | [doi:10.1016/j.patter.2024.100967](https://doi.org/10.1016/j.patter.2024.100967)            |
+| vecBCRdist  | vec-bcrdist | 512                 | H or L     | [Vectorized TCRdist preprint](https://www.biorxiv.org/content/10.64898/2026.04.10.717405v1) |
+
+### vecBCRdist
+
+vecBCRdist is a distance-derived embedding rather than a trained language model. It reads the observed
+`cdr1_aa`, `cdr2_aa`, and `cdr3_aa` columns directly, including somatic mutations, and does not infer BCR CDRs
+from `v_call` or `combo_xcr.tsv`. CDR1 and CDR2 have weight 1, CDR3 has weight 3, and the gap penalty is 4,
+matching the current BCRdist configuration. Squared Euclidean distances between output vectors approximate
+BCRdist, which permits BCRdist-like representations in clustering methods that require numerical features.
+Because BCRdist can select a pair-specific optimal CDR3 gap, while one fixed vector cannot, vecBCRdist uses
+the fixed-position gap approximation inherited from vecTCRdist.
+
+The current implementation supports one chain at a time (`--chain H` or `--chain L`). Paired heavy-light and
+combined `H+L` distances are not implemented.
+
+```bash
+amulety embed --input-airr AIRR_translated.tsv --chain H --model vec-bcrdist --output-file-path vec_bcrdist.tsv
+```
 
 ### AntiBERTa2
 
@@ -39,10 +57,11 @@ Burbach SM, Briney B. Improving antibody language models with native pairing. Pa
 
 ## T-Cell Receptor (TCR) Models
 
-| Model    | Command  | Embedding Dimension | Trained on        | Reference                                                                                    |
-| -------- | -------- | ------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
-| TCR-BERT | tcr-bert | 768                 | H, L, HL, LH, H+L | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
-| TCRT5    | tcrt5    | 256                 | H only            | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
+| Model      | Command     | Embedding Dimension | Trained on         | Reference                                                                                    |
+| ---------- | ----------- | ------------------- | ------------------ | -------------------------------------------------------------------------------------------- |
+| TCR-BERT   | tcr-bert    | 768                 | H, L, HL, LH, H+L  | [doi:10.1101/2021.11.18.469186](https://www.biorxiv.org/content/10.1101/2021.11.18.469186v1) |
+| TCRT5      | tcrt5       | 256                 | H only             | [doi.org/10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124)               |
+| vecTCRdist | vec-tcrdist | Reference-dependent | H (TRB) or L (TRA) | [clustcrdist](https://github.com/svalkiers/immune_response_detection)                        |
 
 ### TCR-BERT
 
@@ -57,6 +76,17 @@ T5-based model pre-trained on masked span reconstruction using ~14M CDR3 β sequ
 
 Reference:
 Deng K, Guan R, Liu Z, et al. TCRT5: T-cell receptor sequence modeling with T5. bioRxiv. 2024. [doi:10.1101/2024.11.11.623124](https://doi.org/10.1101/2024.11.11.623124).
+
+### vecTCRdist
+
+vecTCRdist directly wraps `clustcrdist.encoding.TCRDistEncoder` for human alpha/beta TCRs. It uses AIRR
+`v_call` and `cdr3_aa` columns to encode the V-gene CDRs and CDR3. Install the optional dependency with
+`pip install "amulety[vec-tcrdist]"`; it requires Python 3.9 or later. The first implementation supports
+single-chain `H` (TRB) or `L` (TRA) input only.
+
+```bash
+amulety embed --input-airr AIRR.tsv --chain H --model vec-tcrdist --output-file-path vec_tcrdist.tsv
+```
 
 ## General Protein Models
 

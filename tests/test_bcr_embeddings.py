@@ -8,11 +8,16 @@ python -m unittest test_amulety.py
 import os
 import sys
 import unittest
+from importlib.util import find_spec
 
+import numpy as np
 import pandas as pd
 import torch
 
-from amulety.amulety import embed
+from amulety.amulety import embed, embed_airr
+from amulety.bcr_embeddings import BCRDistEncoder, setup_bcr_cdr_strings, vec_bcrdist
+
+HAS_PWSEQDIST = find_spec("pwseqdist") is not None
 
 
 class TestAmulety(unittest.TestCase):
@@ -37,12 +42,23 @@ class TestAmulety(unittest.TestCase):
         self.test_mixed_path = os.path.join(self.this_dir, self.test_mixed)
         self.test_mixed_df = pd.read_table(self.test_mixed_path, delimiter="\t", header=0)
 
+        self.test_vec_bcrdist_path = os.path.join(
+            self.this_dir,
+            "translated_cdr",
+            "AIRR_rearrangement_single-cell_testtranslation_translated.tsv",
+        )
+        self.vec_bcrdist_df = pd.read_table(self.test_vec_bcrdist_path, delimiter="\t", header=0)
+
         # Bulk test data (no cell_id column)
         self.test_bulk = "AIRR_rearrangement_bulk_test.tsv"
         self.test_bulk_path = os.path.join(self.this_dir, self.test_bulk)
 
     def tearDown(self):
         """Tear down test fixtures, if any."""
+
+    def _bcrdist_reference_data(self):
+        """Use unique observed CDR triplets from the translated AIRR fixture."""
+        return self.vec_bcrdist_df.drop_duplicates(["cdr1_aa", "cdr2_aa", "cdr3_aa"]).reset_index(drop=True)
 
     # ablang tests
     @unittest.skipIf(sys.version_info >= (3, 14), "AbLang unavailable on Python >=3.14 (numba constraint)")
@@ -234,3 +250,110 @@ class TestAmulety(unittest.TestCase):
         assert embeddings.shape[0] == 1  # 1 H chain
         os.remove("HL_test_residue.pt")
         os.remove("HL_test_residue_metadata.tsv")
+
+    ########################################################
+    # vec-bcrdist tests
+    def test_vec_bcrdist_reads_observed_cdrs(self):
+        """Use AIRR CDR1/2/3 rather than inferred V-gene CDR strings."""
+        cdrs = setup_bcr_cdr_strings(self.vec_bcrdist_df)
+        self.assertEqual(cdrs[0], ("GFTFSSYW", "IKQDGTEK", "ARENLPSFFYYDSSAYLPEATFDF"))
+
+    def test_vec_bcrdist_handles_cdr3_equal_to_trim_length(self):
+        """A five-residue CDR3 has an empty trimmed interior and becomes gaps."""
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr3_aa"] = "VVNQF"
+        self.assertEqual(setup_bcr_cdr_strings(cdrs)[0][2], "VVNQF")
+        self.assertEqual(BCRDistEncoder()._trim_and_gap_cdr3("VVNQF"), "-" * 32)
+
+        cdrs.loc[cdrs.index[0], "cdr3_aa"] = "VVNQ"
+        with self.assertRaisesRegex(ValueError, r"cdr3_aa.*length < 5"):
+            setup_bcr_cdr_strings(cdrs)
+
+    def test_vec_bcrdist_allows_missing_cdr1_cdr2_as_gaps(self):
+        """Missing/empty CDR1/2 are kept and encoded as all-gap regions."""
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr1_aa"] = pd.NA
+        cdrs.loc[cdrs.index[0], "cdr2_aa"] = ""
+        parsed = setup_bcr_cdr_strings(cdrs)
+        self.assertEqual(parsed[0][0], "")
+        self.assertEqual(parsed[0][1], "")
+
+        encoder = BCRDistEncoder().fit(cdrs)
+        self.assertEqual(encoder._trim_and_gap("", encoder.cdr1_num_pos), "-" * encoder.cdr1_num_pos)
+        self.assertEqual(encoder._trim_and_gap("", encoder.cdr2_num_pos), "-" * encoder.cdr2_num_pos)
+        embedding = encoder.transform(cdrs.iloc[[0]])
+        self.assertEqual(embedding.shape, (1, 512))
+
+    def test_vec_bcrdist_rejects_missing_cdr3_and_noncanonical(self):
+        """CDR3 must be present; noncanonical residues are still rejected."""
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr3_aa"] = pd.NA
+        with self.assertRaisesRegex(ValueError, r"cdr3_aa.*missing or empty"):
+            setup_bcr_cdr_strings(cdrs)
+
+        cdrs = self.vec_bcrdist_df.copy()
+        cdrs.loc[cdrs.index[0], "cdr1_aa"] = "GFTFXSYW"
+        with self.assertRaisesRegex(ValueError, r"unsupported amino acid"):
+            setup_bcr_cdr_strings(cdrs)
+
+    def test_vec_bcrdist_changes_when_observed_cdr_changes(self):
+        """A mutation in an observed CDR changes the receptor embedding."""
+        embeddings = vec_bcrdist(self.vec_bcrdist_df)
+        self.assertEqual(embeddings.shape, (5, 512))
+        self.assertEqual(embeddings.dtype, torch.float32)
+        self.assertFalse(torch.equal(embeddings[0], embeddings[1]))
+
+    def test_vec_bcrdist_encoder_is_deterministic(self):
+        """The fixed-seed AA MDS encoding is reproducible."""
+        first = BCRDistEncoder().fit_transform(self.vec_bcrdist_df)
+        second = BCRDistEncoder().fit_transform(self.vec_bcrdist_df)
+        np.testing.assert_allclose(first, second)
+
+    @unittest.skipUnless(HAS_PWSEQDIST, "requires optional dependency: pwseqdist")
+    def test_vec_bcrdist_pwseqdist_reference_values(self):
+        """Regenerate the six BCRdist reference values with pwseqdist.nb_tcrdist."""
+        import pwseqdist as pw
+
+        def region_distance(first, second, weight, n_trim, c_trim, fixed_gap):
+            return weight * pw.metrics.nb_tcrdist(
+                pw.matrices.seq2vec(first),
+                pw.matrices.seq2vec(second),
+                distance_matrix=pw.matrices.tcr_nb_distance_matrix,
+                dist_weight=1,
+                gap_penalty=4,
+                ntrim=n_trim,
+                ctrim=c_trim,
+                fixed_gappos=fixed_gap,
+            )
+
+        def bcrdist(first, second):
+            return (
+                region_distance(first.cdr1_aa, second.cdr1_aa, 1, 0, 0, True)
+                + region_distance(first.cdr2_aa, second.cdr2_aa, 1, 0, 0, True)
+                + region_distance(first.cdr3_aa, second.cdr3_aa, 3, 3, 2, False)
+            )
+
+        data = self._bcrdist_reference_data()
+        reference_bcrdist = np.array(
+            [
+                bcrdist(data.iloc[first], data.iloc[second])
+                for first in range(len(data))
+                for second in range(first + 1, len(data))
+            ]
+        )
+
+        np.testing.assert_array_equal(
+            reference_bcrdist,
+            np.array([283.0, 257.0, 285.0, 148.0, 98.0, 155.0]),
+        )
+
+    def test_vec_bcrdist_embed_airr_filters_single_chain(self):
+        """AMULETY passes only the requested heavy or light chain to vecBCRdist."""
+        embedding, metadata = embed_airr(self.vec_bcrdist_df, chain="H", model="vec-bcrdist")
+        self.assertEqual(embedding.shape, (2, 512))
+        self.assertListEqual(metadata["locus"].tolist(), ["IGH", "IGH"])
+
+    def test_vec_bcrdist_embed_airr_rejects_paired_input(self):
+        """Paired heavy--light mode is outside the current vecBCRdist contract."""
+        with self.assertRaisesRegex(ValueError, "single-chain"):
+            embed_airr(self.vec_bcrdist_df, chain="H+L", model="vec-bcrdist")

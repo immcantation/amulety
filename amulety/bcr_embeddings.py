@@ -11,8 +11,12 @@ import subprocess
 import time
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 import torch
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.manifold import MDS
+from sklearn.utils.validation import check_is_fitted
 from torch.nn.functional import pad
 
 from amulety.protein_embeddings import custommodel
@@ -400,3 +404,196 @@ def balm_paired(
         residue_level=residue_level,
     )
     return embeddings
+
+
+# implement vecBCRdist from vecTCRdist:
+# Kept from clustcrdist.constants.hashing:
+# the canonical amino-acid order and the BLOSUM62-derived tcrdist substitution-cost matrix.
+AALPHABET = "ARNDCQEGHILKMFPSTWYV"
+GAPCHAR = "-"
+_BLOSUM_62_PATH = os.path.join(os.path.dirname(__file__), "matrices", "blosum_62.csv")
+BLOSUM_62 = pd.read_csv(_BLOSUM_62_PATH, index_col=0).loc[list(AALPHABET), list(AALPHABET)].to_numpy(dtype=np.float64)
+TCRDIST_DM = np.maximum(0.0, np.minimum(4.0, 4.0 - BLOSUM_62))
+
+
+def setup_bcr_cdr_strings(
+    bcrs: pd.DataFrame,
+    cdr1_col: str = "cdr1_aa",
+    cdr2_col: str = "cdr2_aa",
+    cdr3_col: str = "cdr3_aa",
+):
+    """Replace V-gene lookup with observed BCR CDR1/2/3 strings.
+
+    Missing/empty CDR1 or CDR2 are allowed and encoded as all-gap regions. CDR3 must be present, canonical, and length >= 5.
+    """
+    cdr_columns = (cdr1_col, cdr2_col, cdr3_col)
+    missing_columns = [column for column in cdr_columns if column not in bcrs.columns]
+    if missing_columns:
+        raise ValueError(
+            f"Missing BCR CDR column(s): {missing_columns}. Make sure you run `amulety translate-igblast` with the option `--keep-regions` to obtain the CDR amino acid sequences."
+        )
+
+    allowed = set(AALPHABET)
+    cdrs = bcrs.loc[:, cdr_columns].copy()
+    for column in cdr_columns:
+        cdrs[column] = cdrs[column].astype("string").fillna("").str.upper().str.strip()
+
+    # CDR1/2: empty -> gap-padded encoding later; noncanonical letters still rejected.
+    for column in (cdr1_col, cdr2_col):
+        for row_index, sequence in cdrs[column].items():
+            if not sequence:
+                continue
+            invalid = sorted(set(sequence) - allowed)
+            if invalid:
+                raise ValueError(f"Column '{column}' contains unsupported amino acid(s) {invalid} at row {row_index}")
+
+    for row_index, sequence in cdrs[cdr3_col].items():
+        if not sequence:
+            raise ValueError(f"Column '{cdr3_col}' contains a missing or empty sequence at row {row_index}")
+        invalid = sorted(set(sequence) - allowed)
+        if invalid:
+            raise ValueError(f"Column '{cdr3_col}' contains unsupported amino acid(s) {invalid} at row {row_index}")
+
+    short_cdr3_rows = cdrs.index[cdrs[cdr3_col].str.len().lt(5)].tolist()
+    if short_cdr3_rows:
+        raise ValueError(
+            f"Column '{cdr3_col}' contains CDR3 sequence(s) of length < 5 at rows {short_cdr3_rows}; "
+            "vecBCRdist requires length >= 5 because it trims three N-terminal and two C-terminal residues."
+        )
+    return list(cdrs.itertuples(index=False, name=None))
+
+
+class BCRDistEncoder(BaseEstimator, TransformerMixin):
+    """Minimal BCR adaptation of clustcrdist.encoding.TCRDistEncoder.
+    Kept from clustcrdist.encoding.TCRDistEncoder:
+    1. The vecTCRdist MDS, amino-acid encoding, trimming, gap placement, and square-root weighting are retained.
+    2. The TCR V-gene dictionary path is replaced by observed AIRR ``cdr1_aa``, ``cdr2_aa``, and ``cdr3_aa``.
+    """
+
+    def __init__(
+        self,
+        distance_matrix: np.ndarray = TCRDIST_DM,
+        aa_dim: int = 8,
+        mds_eps: float = 1e-5,
+        cdr1_num_pos: int = 16,
+        cdr2_num_pos: int = 16,
+        num_pos: int = 32,
+        n_trim: int = 3,
+        c_trim: int = 2,
+        cdr3_weight: float = 3,
+        cdr1_weight: float = 1,
+        cdr2_weight: float = 1,
+        gap_penalty: float = 4,
+        cdr1_col: str = "cdr1_aa",
+        cdr2_col: str = "cdr2_aa",
+        cdr3_col: str = "cdr3_aa",
+    ):
+        self.distance_matrix = distance_matrix
+        self.aa_dim = aa_dim
+        self.mds_eps = mds_eps
+        self.cdr1_num_pos = cdr1_num_pos
+        self.cdr2_num_pos = cdr2_num_pos
+        self.num_pos = num_pos
+        self.n_trim = n_trim
+        self.c_trim = c_trim
+        self.cdr3_weight = cdr3_weight
+        self.cdr1_weight = cdr1_weight
+        self.cdr2_weight = cdr2_weight
+        self.gap_penalty = gap_penalty
+        self.cdr1_col = cdr1_col
+        self.cdr2_col = cdr2_col
+        self.cdr3_col = cdr3_col
+
+    def _calc_mds_vecs(self):
+        """Kept from TCRDistEncoder: embed the AA-plus-gap distance matrix."""
+        mds = MDS(
+            n_components=self.aa_dim,
+            eps=self.mds_eps,
+            dissimilarity="precomputed",
+            random_state=11,
+            n_init=4,
+            normalized_stress=False,
+        )
+        return mds.fit_transform(self.dm)
+
+    def _calc_tcrdist_aa_vectors(self, sqrt: bool = True):
+        """Kept from TCRDistEncoder, with the BCRdist gap penalty."""
+        self.dm = np.zeros((21, 21))
+        self.dm[:20, :20] = self.distance_matrix
+        self.dm[:20, 20] = self.gap_penalty
+        self.dm[20, :20] = self.gap_penalty
+        if sqrt:
+            self.dm = np.sqrt(self.dm)
+        vectors = self._calc_mds_vecs()
+        return {amino_acid: vector for amino_acid, vector in zip(AALPHABET + GAPCHAR, vectors)}
+
+    @staticmethod
+    def _trim_and_gap(cdr: str, num_pos: int, n_trim: int = 0, c_trim: int = 0) -> str:
+        """Generalize vecTCRdist's _trim_and_gap_cdr3 to an observed BCR CDR."""
+        if len(cdr) < n_trim + c_trim:
+            raise ValueError(f"Sequence '{cdr}' is too short for n_trim={n_trim} and c_trim={c_trim}")
+        gappos = min(6, 3 + (len(cdr) - 5) // 2) - n_trim
+        end = -c_trim if c_trim else len(cdr)
+        sequence = cdr[n_trim:end]
+        gappos = max(0, min(gappos, len(sequence), num_pos))
+        afterlen = min(num_pos - gappos, len(sequence) - gappos)
+        numgaps = max(0, num_pos - len(sequence))
+        suffix = sequence[-afterlen:] if afterlen else ""
+        fullseq = sequence[:gappos] + GAPCHAR * numgaps + suffix
+        if len(fullseq) != num_pos:
+            raise ValueError(f"Encoded CDR length is {len(fullseq)}, expected {num_pos}")
+        return fullseq
+
+    def _trim_and_gap_cdr3(self, cdr3: str) -> str:
+        """Kept vecTCRdist CDR3 interface and BCRdist trim parameters."""
+        return self._trim_and_gap(cdr3, self.num_pos, self.n_trim, self.c_trim)
+
+    def _encode_sequence(self, sequence: str) -> np.ndarray:
+        """Kept from TCRDistEncoder: concatenate amino-acid MDS vectors."""
+        return np.concatenate([self.aa_vectors_[amino_acid] for amino_acid in sequence])
+
+    def _gapped_encode_cdr(self, cdr: str, num_pos: int, n_trim: int = 0, c_trim: int = 0) -> np.ndarray:
+        return self._encode_sequence(self._trim_and_gap(cdr, num_pos, n_trim, c_trim))
+
+    def _gapped_encode_cdr3(self, cdr3: str) -> np.ndarray:
+        """Kept vecTCRdist CDR3 interface."""
+        return self._encode_sequence(self._trim_and_gap_cdr3(cdr3))
+
+    def _gapped_encoder_bcr_cdrs(self, bcr: tuple) -> np.ndarray:
+        """Replace vecTCRdist's V-gene-plus-CDR3 encoder with observed CDR1/2/3."""
+        cdr1, cdr2, cdr3 = bcr
+        cdr1_vec = np.sqrt(self.cdr1_weight) * self._gapped_encode_cdr(cdr1, self.cdr1_num_pos)
+        cdr2_vec = np.sqrt(self.cdr2_weight) * self._gapped_encode_cdr(cdr2, self.cdr2_num_pos)
+        cdr3_vec = np.sqrt(self.cdr3_weight) * self._gapped_encode_cdr3(cdr3)
+        return np.concatenate([cdr1_vec, cdr2_vec, cdr3_vec])
+
+    def _gapped_encode_bcr_cdrs(self, bcrs: pd.DataFrame) -> np.ndarray:
+        """Replace _gapped_encode_tcr_chains with observed BCR CDR input."""
+        bcr_tuples = setup_bcr_cdr_strings(bcrs, self.cdr1_col, self.cdr2_col, self.cdr3_col)
+        vectors = np.array([self._gapped_encoder_bcr_cdrs(bcr) for bcr in bcr_tuples], dtype=np.float32)
+        if vectors.shape != (len(bcr_tuples), self.m):
+            raise RuntimeError("Unexpected vecBCRdist embedding shape")
+        return vectors
+
+    def fit(self, x=None, y=None):
+        """Keep vecTCRdist fitting, but remove setup_gene_cdr_strings/combo_xcr.tsv."""
+        del y
+        self.aa_vectors_ = self._calc_tcrdist_aa_vectors()
+        self.m = self.aa_dim * (self.cdr1_num_pos + self.cdr2_num_pos + self.num_pos)
+        if x is not None:
+            setup_bcr_cdr_strings(x, self.cdr1_col, self.cdr2_col, self.cdr3_col)
+        return self
+
+    def transform(self, x: pd.DataFrame) -> np.ndarray:
+        """Replace vecTCRdist's V-gene/junction DataFrame transform branch."""
+        check_is_fitted(self, ("aa_vectors_", "m"))
+        if not isinstance(x, pd.DataFrame):
+            raise TypeError("BCRDistEncoder expects an AIRR pandas DataFrame")
+        return self._gapped_encode_bcr_cdrs(x)
+
+
+def vec_bcrdist(cdr_sequences: pd.DataFrame, aa_dim: int = 8):
+    """Embed observed BCR CDR1/2/3 using the BCR adaptation of vecTCRdist."""
+    encoder = BCRDistEncoder(aa_dim=aa_dim)
+    embeddings = encoder.fit_transform(cdr_sequences)
+    return torch.from_numpy(embeddings)
